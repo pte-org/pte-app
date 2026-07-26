@@ -72,7 +72,7 @@ void main() {
 
   test('cancel() cancels the pending timer', () async {
     await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
-    var cancelled = false;
+    const cancelled = false;
     final scheduler = ProactiveRefreshScheduler(
       tokenStore: tokenStore,
       onRefreshDue: () async {},

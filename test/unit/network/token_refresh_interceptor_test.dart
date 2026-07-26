@@ -86,7 +86,6 @@ void main() {
     dio = Dio()
       ..httpClientAdapter = adapter
       ..interceptors.add(TokenRefreshInterceptor(
-        refreshDio: refreshDio,
         refresher: TokenRefresher(
           refreshDio: refreshDio,
           tokenStore: tokenStore,

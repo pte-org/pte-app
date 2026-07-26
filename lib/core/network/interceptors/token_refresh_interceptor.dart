@@ -8,19 +8,17 @@ import '../token_refresher.dart';
 /// request that failed with 401 — including outbox-flush requests fired
 /// by the sync engine (Phase 2) after reconnecting.
 ///
-/// The retry runs on [refreshDio], a Dio instance with no interceptors
-/// attached, so this can never recurse into itself. The actual refresh
-/// call (and its single-flight guard) is owned by [refresher], shared
-/// with `ProactiveRefreshScheduler` so both paths can never race each
-/// other into two concurrent refresh requests.
+/// The retry runs on [refresher]'s [TokenRefresher.refreshDio] — the one
+/// and only Dio instance with no interceptors attached, so this can never
+/// recurse into itself. There is deliberately no second `refreshDio` field
+/// here: owning it in exactly one place (`TokenRefresher`) is what
+/// guarantees the interceptor and the proactive scheduler can never end up
+/// retrying against a different, interceptor-laden Dio instance
+/// (QUAL-002, Phase 1 quality gate).
 class TokenRefreshInterceptor extends Interceptor {
-  TokenRefreshInterceptor({
-    required this.refresher,
-    required this.refreshDio,
-  });
+  TokenRefreshInterceptor({required this.refresher});
 
   final TokenRefresher refresher;
-  final Dio refreshDio;
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
@@ -48,6 +46,6 @@ class TokenRefreshInterceptor extends Interceptor {
     final retryOptions = options.copyWith(
       headers: {...options.headers, 'Authorization': 'Bearer $accessToken'},
     );
-    return refreshDio.fetch<dynamic>(retryOptions);
+    return refresher.refreshDio.fetch<dynamic>(retryOptions);
   }
 }

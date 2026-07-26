@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_strings.dart';
+import 'features/auth/auth_module.dart';
 
 void main() {
+  setupAuthModule();
   runApp(const PteApp());
 }
 
