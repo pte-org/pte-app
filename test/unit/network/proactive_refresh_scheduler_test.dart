@@ -92,4 +92,40 @@ void main() {
     // (Phase 4 established this pattern for TimerService).
     expect(cancelled, isFalse);
   });
+
+  test('a failed refresh re-arms a short retry instead of silently stranding the app', () async {
+    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
+    final scheduledDelays = <Duration>[];
+    final scheduledCallbacks = <void Function()>[];
+    var attempt = 0;
+
+    final scheduler = ProactiveRefreshScheduler(
+      tokenStore: tokenStore,
+      onRefreshDue: () async {
+        attempt++;
+        if (attempt == 1) throw Exception('network down');
+      },
+      now: () => fakeNow,
+      retryDelay: const Duration(seconds: 30),
+      createTimer: (delay, cb) {
+        scheduledDelays.add(delay);
+        scheduledCallbacks.add(cb);
+        return Timer(const Duration(days: 999), () {});
+      },
+    );
+
+    scheduler.scheduleFromTokenStore();
+    scheduledCallbacks.first(); // first attempt fails
+    await Future<void>.delayed(Duration.zero);
+
+    expect(attempt, 1);
+    expect(scheduledDelays.length, 2); // initial schedule + retry
+    expect(scheduledDelays.last, const Duration(seconds: 30));
+
+    scheduledCallbacks.last(); // retry succeeds
+    await Future<void>.delayed(Duration.zero);
+
+    expect(attempt, 2);
+    expect(scheduledDelays.length, 2); // no further retry after success
+  });
 }
