@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/interceptors/token_refresh_interceptor.dart';
+import 'package:pte_app/core/network/token_refresher.dart';
 import 'package:pte_app/core/storage/token_store.dart';
 
 class _FakeSecureStorage extends Mock implements FlutterSecureStorage {}
@@ -86,8 +87,11 @@ void main() {
       ..httpClientAdapter = adapter
       ..interceptors.add(TokenRefreshInterceptor(
         refreshDio: refreshDio,
-        tokenStore: tokenStore,
-        refreshEndpoint: '/api/iam/auth/refresh',
+        refresher: TokenRefresher(
+          refreshDio: refreshDio,
+          tokenStore: tokenStore,
+          refreshEndpoint: '/api/iam/auth/refresh',
+        ),
       ));
   });
 
