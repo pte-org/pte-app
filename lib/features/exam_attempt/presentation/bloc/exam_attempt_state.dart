@@ -1,4 +1,5 @@
 import '../../domain/task_view.dart';
+import '../../domain/timer_snapshot.dart';
 
 /// Separate immutable classes, no boolean-flag shape — `AttemptCompleted`
 /// is its own first-class terminal state, never inferred by checking
@@ -16,10 +17,11 @@ final class AttemptStarting extends ExamAttemptState {
 }
 
 final class AttemptInProgress extends ExamAttemptState {
-  const AttemptInProgress(this.attemptPublicId, this.task);
+  const AttemptInProgress(this.attemptPublicId, this.task, this.timerSnapshot);
 
   final String attemptPublicId;
   final TaskView task;
+  final TimerSnapshot timerSnapshot;
 }
 
 final class AttemptCompleted extends ExamAttemptState {

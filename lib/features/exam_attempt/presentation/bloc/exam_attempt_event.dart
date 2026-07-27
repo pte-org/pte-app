@@ -1,3 +1,5 @@
+import '../../domain/timer_snapshot.dart';
+
 sealed class ExamAttemptEvent {
   const ExamAttemptEvent();
 }
@@ -18,4 +20,21 @@ final class SessionResolutionRequested extends ExamAttemptEvent {
 /// event arriving after `AttemptCompleted` (phase-03 Design Constraints).
 final class NextTaskRequested extends ExamAttemptEvent {
   const NextTaskRequested();
+}
+
+/// Dispatched internally by the `TimerService.ticks` subscription — not
+/// intended to be dispatched by UI code directly.
+final class TimerSnapshotUpdated extends ExamAttemptEvent {
+  const TimerSnapshotUpdated(this.snapshot);
+
+  final TimerSnapshot snapshot;
+}
+
+/// Dispatched internally when a timer poll detects `currentOrderIndex`
+/// changed without the client itself having requested `next-task` (e.g. a
+/// proctor-initiated advance) — triggers the same task refresh path as
+/// [NextTaskRequested] rather than continuing to display a countdown for a
+/// task that is no longer current (phase-04 Design Constraints).
+final class TimerTaskAdvancedExternally extends ExamAttemptEvent {
+  const TimerTaskAdvancedExternally();
 }
