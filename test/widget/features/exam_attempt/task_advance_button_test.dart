@@ -59,7 +59,15 @@ void main() {
     ) async {
       await tester.pumpWidget(buildSubject());
       await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
+      // Note: not pumpAndSettle — the button shows an indefinitely
+      // spinning CircularProgressIndicator once `_isAdvancing` is true
+      // (production code never resets it, expecting the widget to be
+      // navigated away instead), so pumpAndSettle would time out waiting
+      // for that animation to finish. A bounded pump is sufficient to let
+      // the awaited Futures in `_advance()` resolve.
+      await tester.pump();
+      await pumpEventQueue();
+      await tester.pump();
 
       expect(cubit.calls, ['flushPendingEdit']);
       verify(() => syncEngine.flushOne('item-1')).called(1);
@@ -69,7 +77,9 @@ void main() {
     testWidgets('syncEngine.flushOne is called exactly once per tap, not per rebuild', (tester) async {
       await tester.pumpWidget(buildSubject());
       await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await pumpEventQueue();
+      await tester.pump();
 
       verify(() => syncEngine.flushOne('item-1')).called(1);
     });
@@ -87,7 +97,9 @@ void main() {
       await tester.pump();
 
       completer.complete();
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await pumpEventQueue();
+      await tester.pump();
 
       expect(cubit.calls, ['flushPendingEdit']);
       verify(() => syncEngine.flushOne('item-1')).called(1);
