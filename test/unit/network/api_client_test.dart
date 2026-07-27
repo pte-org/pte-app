@@ -94,4 +94,35 @@ void main() {
       throwsA(isA<UnknownApiException>()),
     );
   });
+
+  test('409 response maps to ConflictException carrying the response body message', () async {
+    final requestOptions = RequestOptions(path: '/api/x');
+    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data'))).thenThrow(
+      DioException(
+        requestOptions: requestOptions,
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: requestOptions,
+          statusCode: 409,
+          data: {'success': false, 'data': null, 'message': 'NOT_CURRENT_TASK'},
+        ),
+      ),
+    );
+
+    expect(
+      () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
+      throwsA(isA<ConflictException>().having((e) => e.message, 'message', 'NOT_CURRENT_TASK')),
+    );
+  });
+
+  test('submitAnswer() posts to the attempt answers endpoint with pinnedItemPublicId and payload', () async {
+    final response = Response<void>(requestOptions: RequestOptions(path: '/api/x'), statusCode: 200);
+    when(() => dio.post<void>(any(), data: any(named: 'data'))).thenAnswer((_) async => response);
+
+    await apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello');
+
+    final captured = verify(() => dio.post<void>(captureAny(), data: captureAny(named: 'data'))).captured;
+    expect(captured[0], '/api/exam-delivery/attempts/attempt-1/answers');
+    expect(captured[1], {'pinnedItemPublicId': 'item-1', 'payload': 'hello'});
+  });
 }

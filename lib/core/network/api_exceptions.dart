@@ -32,6 +32,18 @@ final class RateLimitException extends ApiException {
   const RateLimitException(super.message);
 }
 
+/// 409 — a conflict the server considers final on the answers endpoint
+/// (stale/non-current task, expired response window, or an
+/// already-submitted answer). Phase 2 maps every 409 here to
+/// `terminalRejected` as a conservative-but-correct heuristic, since all
+/// three currently-known causes are in fact terminal; Phase 7 replaces
+/// this with precise type-dispatch once typed subclasses exist for each
+/// cause (phase-02 Design Constraints). [message] carries the response
+/// body's distinguishing `message` field for diagnostics.
+final class ConflictException extends ApiException {
+  const ConflictException(super.message);
+}
+
 /// No response reached the server at all (DNS, connection refused,
 /// timeout) — as opposed to [ApiException]'s "server responded with an
 /// error status."

@@ -25,6 +25,21 @@ class ApiClient {
     return _run(() => _dio.put<T>(path, data: data));
   }
 
+  /// Submits one buffered answer. **Only `SyncEngine._flushOne` may call
+  /// this** — no widget or UI-facing `Bloc` submits an answer directly; the
+  /// outbox DAO's `upsertAnswer` is the only write path available to them
+  /// (phase-02 Design Constraints). Do not add a shortcut call site.
+  Future<Response<void>> submitAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
+  }) {
+    return post<void>(
+      '/api/exam-delivery/attempts/$attemptPublicId/answers',
+      data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
+    );
+  }
+
   Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
     try {
       return await call();
@@ -41,8 +56,20 @@ class ApiClient {
     return switch (statusCode) {
       401 || 403 => AuthException('Authentication failed ($statusCode)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
+      409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
       429 => RateLimitException('Rate limited ($statusCode)'),
       _ => UnknownApiException('Unexpected response ($statusCode)'),
     };
+  }
+
+  /// Extracts the response body's `message` field — the only place the
+  /// real `pte-api` distinguishes between the different 409 causes on this
+  /// endpoint (HTTP status is identical for all of them).
+  String? _serverMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic> && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return null;
   }
 }
