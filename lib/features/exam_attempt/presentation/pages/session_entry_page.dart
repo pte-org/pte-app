@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../data/repositories/manual_session_entry_repository.dart';
 import '../bloc/exam_attempt_bloc.dart';
 import '../bloc/exam_attempt_event.dart';
 import '../bloc/exam_attempt_state.dart';
@@ -52,7 +54,10 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
                 ElevatedButton(
                   onPressed: state is AttemptStarting
                       ? null
-                      : () => context.read<ExamAttemptBloc>().add(const SessionResolutionRequested()),
+                      : () {
+                          GetIt.instance<SessionIdInputBuffer>().value = _controller.text;
+                          context.read<ExamAttemptBloc>().add(const SessionResolutionRequested());
+                        },
                   child: state is AttemptStarting
                       ? const CircularProgressIndicator()
                       : const Text(AppStrings.sessionEntryStartButton),
