@@ -30,26 +30,36 @@ class TaskTypeDispatcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Keyed on pinnedItemPublicId so Flutter tears down and recreates the
+    // Element (and therefore the screen's cubit/controller) on every task
+    // change — including consecutive tasks of the same type, which would
+    // otherwise reuse the same Element and silently carry the previous
+    // task's cubit/draft state (and its now-stale pinnedItemPublicId) into
+    // the new task (phase-05 Design Constraints: "a stale value here would
+    // silently misfile an answer against the wrong task").
+    final key = ValueKey(task.pinnedItemPublicId);
     return switch (task.taskType) {
       _taskTypeMcReadingSingle => McReadingSingleScreen(
+        key: key,
         task: task,
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
       _taskTypeWriteEssay => WriteEssayScreen(
+        key: key,
         task: task,
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
-      _ => _UnsupportedTaskTypePlaceholder(taskType: task.taskType),
+      _ => _UnsupportedTaskTypePlaceholder(key: key, taskType: task.taskType),
     };
   }
 }
 
 class _UnsupportedTaskTypePlaceholder extends StatelessWidget {
-  const _UnsupportedTaskTypePlaceholder({required this.taskType});
+  const _UnsupportedTaskTypePlaceholder({super.key, required this.taskType});
 
   final String taskType;
 

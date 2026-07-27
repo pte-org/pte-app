@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
+import '../../domain/word_count.dart';
 import 'task_answer_cubit.dart';
 import 'write_essay_state.dart';
 
@@ -38,7 +39,7 @@ class WriteEssayCubit extends TaskAnswerCubit<WriteEssayState> {
   Timer? _debounceTimer;
 
   void draftChanged(String text) {
-    emit(state.copyWith(draftText: text));
+    emit(state.copyWith(draftText: text, wordCount: countWords(text)));
     _debounceTimer?.cancel();
     _debounceTimer = _scheduler(_debounce, () => unawaited(_persist()));
   }
