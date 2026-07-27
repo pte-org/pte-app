@@ -164,6 +164,36 @@ void main() {
   );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'an unexpected non-ApiException failure (e.g. a malformed-response parse error) still reaches AttemptError, '
+    'never left stranded in AttemptStarting',
+    setUp: () {
+      when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenThrow(const FormatException('bad json'));
+    },
+    build: buildBloc,
+    act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+    expect: () => [isA<AttemptStarting>(), isA<AttemptError>()],
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'completed:false with task:null (a contract violation) results in AttemptError without ever arming SyncEngine',
+    setUp: () {
+      when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async =>
+            const AttemptTaskResponse(attemptPublicId: 'attempt-1', attemptStatus: 'IN_PROGRESS', completed: false),
+      );
+    },
+    build: buildBloc,
+    act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+    expect: () => [isA<AttemptStarting>(), isA<AttemptError>()],
+    verify: (_) {
+      verifyNever(() => syncEngine.startSync(any()));
+      verifyNever(() => syncEngine.flushNow(any()));
+    },
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
     'setActiveTask is called with the correct pinnedItemPublicId on every task transition, and null immediately before AttemptCompleted',
     setUp: () {
       when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');

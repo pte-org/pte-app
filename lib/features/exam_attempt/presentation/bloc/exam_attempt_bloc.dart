@@ -46,7 +46,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     try {
       final sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId(event.rawInput);
       final response = await _repository.startOrResumeAttempt(sessionPublicId);
-      if (!response.completed) {
+      // Guarded by `response.task != null` too, not just `!completed` —
+      // a contract-violating completed:false/task:null response must
+      // never arm SyncEngine, or it's left running for an attempt that
+      // _emitFromResponse below is about to reject as an error, orphaning
+      // a background sync session and crashing the next legitimate
+      // startSync (QUAL-302, Phase 3 quality gate).
+      if (!response.completed && response.task != null) {
         // Resume reconciliation: any Phase 2 outbox rows left over from a
         // prior app session for this attempt get an immediate flush
         // attempt, rather than passively waiting on the next canary event
@@ -57,10 +63,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         await _syncEngine.flushNow(response.attemptPublicId);
       }
       _emitFromResponse(response, emit);
-    } on SessionResolutionException catch (e) {
-      emit(AttemptError(e));
-    } on ApiException catch (e) {
-      emit(AttemptError(e));
+    } catch (e) {
+      // Any failure here — SessionResolutionException, a mapped
+      // ApiException, or an unexpected shape error from a malformed
+      // response — must still reach AttemptError; otherwise the bloc is
+      // stranded in AttemptStarting forever (QUAL-301, Phase 3 quality
+      // gate, mirroring Phase 1's AuthBloc QUAL-103 fix).
+      emit(AttemptError(_asAttemptException(e)));
     }
   }
 
@@ -70,10 +79,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     try {
       final response = await _repository.fetchNextTask(attemptPublicId);
       _emitFromResponse(response, emit);
-    } on ApiException catch (e) {
-      emit(AttemptError(e));
+    } catch (e) {
+      emit(AttemptError(_asAttemptException(e)));
     }
   }
+
+  Exception _asAttemptException(Object error) => error is Exception ? error : UnknownApiException(error.toString());
 
   void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {
     if (response.completed) {
