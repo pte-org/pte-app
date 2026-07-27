@@ -2,6 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -20,6 +21,8 @@ class _MockSessionEntryRepository extends Mock implements SessionEntryRepository
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
 class _MockTimerService extends Mock implements TimerService {}
+
+class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
 
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
@@ -54,6 +57,7 @@ void main() {
   late _MockSessionEntryRepository sessionEntryRepository;
   late _MockSyncEngine syncEngine;
   late _MockTimerService timerService;
+  late _MockMediaUploadCoordinator mediaUploadCoordinator;
 
   setUpAll(() {
     // Required because `timerService.seedFromTask(any())` is stubbed below —
@@ -67,6 +71,9 @@ void main() {
     sessionEntryRepository = _MockSessionEntryRepository();
     syncEngine = _MockSyncEngine();
     timerService = _MockTimerService();
+    mediaUploadCoordinator = _MockMediaUploadCoordinator();
+    when(() => mediaUploadCoordinator.start()).thenReturn(null);
+    when(() => mediaUploadCoordinator.stop()).thenReturn(null);
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
@@ -86,6 +93,7 @@ void main() {
         sessionEntryRepository: sessionEntryRepository,
         syncEngine: syncEngine,
         timerService: timerService,
+        mediaUploadCoordinator: mediaUploadCoordinator,
       );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
@@ -149,6 +157,7 @@ void main() {
       sessionEntryRepository: _AlternativeSessionEntryRepository('deep-link-session'),
       syncEngine: syncEngine,
       timerService: timerService,
+      mediaUploadCoordinator: mediaUploadCoordinator,
     ),
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'ignored-by-fake')),
     expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],

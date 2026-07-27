@@ -5,6 +5,7 @@ import '../network/network_canary.dart';
 import '../sync/sync_engine.dart';
 import 'app_database.dart';
 import 'dao/answer_outbox_dao.dart';
+import 'dao/pending_media_upload_dao.dart';
 
 /// GetIt registration for the offline answer outbox and its background
 /// sync engine — shared infrastructure Phase 3 onward starts/stops via the
@@ -14,6 +15,7 @@ void setupStorageModule() {
 
   getIt.registerLazySingleton<AppDatabase>(() => AppDatabase());
   getIt.registerLazySingleton<AnswerOutboxDao>(() => getIt<AppDatabase>().answerOutboxDao);
+  getIt.registerLazySingleton<PendingMediaUploadDao>(() => getIt<AppDatabase>().pendingMediaUploadDao);
   getIt.registerLazySingleton<NetworkCanary>(() => NetworkCanary());
 
   getIt.registerLazySingleton<SyncEngine>(

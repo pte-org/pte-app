@@ -22,4 +22,10 @@ class AppStrings {
   static const String wordCountBoundsSeparator = ', ';
   static const String wordCountBoundsClose = ')';
   static const String unsupportedTaskTypePrefix = 'Unsupported task type: ';
+
+  static const String readAloudStartRecordingLabel = 'Start recording';
+  static const String readAloudStopRecordingLabel = 'Stop recording';
+  static const String readAloudRecordingIndicator = 'Recording…';
+  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
+  static const String readAloudStillUploadingLabel = 'Still uploading…';
 }

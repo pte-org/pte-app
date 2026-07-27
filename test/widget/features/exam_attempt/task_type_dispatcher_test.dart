@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
@@ -21,6 +24,12 @@ class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
+
+class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
+
+class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
+
+class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
   return TaskView(
@@ -43,11 +52,17 @@ void main() {
   late _MockExamAttemptBloc bloc;
   late _MockAnswerOutboxDao outboxDao;
   late _MockSyncEngine syncEngine;
+  late _MockAudioRecorderService audioRecorderService;
+  late _MockPendingMediaUploadDao mediaDao;
+  late _MockMediaUploadCoordinator mediaUploadCoordinator;
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
     outboxDao = _MockAnswerOutboxDao();
     syncEngine = _MockSyncEngine();
+    audioRecorderService = _MockAudioRecorderService();
+    mediaDao = _MockPendingMediaUploadDao();
+    mediaUploadCoordinator = _MockMediaUploadCoordinator();
     when(
       () => outboxDao.upsertAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
@@ -67,7 +82,15 @@ void main() {
       home: BlocProvider<ExamAttemptBloc>.value(
         value: bloc,
         child: Scaffold(
-          body: TaskTypeDispatcher(task: task, attemptPublicId: 'attempt-1', outboxDao: outboxDao, syncEngine: syncEngine),
+          body: TaskTypeDispatcher(
+            task: task,
+            attemptPublicId: 'attempt-1',
+            outboxDao: outboxDao,
+            syncEngine: syncEngine,
+            audioRecorderService: audioRecorderService,
+            mediaDao: mediaDao,
+            mediaUploadCoordinator: mediaUploadCoordinator,
+          ),
         ),
       ),
     );
@@ -107,12 +130,15 @@ void main() {
     });
 
     testWidgets('an unsupported taskType renders the placeholder text, not a blank screen', (tester) async {
+      // Not READ_ALOUD — Phase 6 wired that taskType to a real screen, so
+      // this needs a genuinely unsupported type to still exercise the
+      // placeholder path.
       final task = TaskView(
         pinnedItemPublicId: 'item-3',
         orderIndex: 1,
         totalTasks: 5,
         section: 'SPEAKING',
-        taskType: 'READ_ALOUD',
+        taskType: 'UNKNOWN_TASK_TYPE',
         title: 'Unsupported',
         prepSeconds: 30,
         responseSeconds: 60,
@@ -123,7 +149,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject(task));
 
-      expect(find.text('Unsupported task type: READ_ALOUD'), findsOneWidget);
+      expect(find.text('Unsupported task type: UNKNOWN_TASK_TYPE'), findsOneWidget);
     });
   });
 }

@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
+import '../../../../core/storage/dao/pending_media_upload_dao.dart';
+import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
+import '../../domain/audio_recorder_service.dart';
 import '../../domain/task_view.dart';
 import '../pages/mc_reading_single_screen.dart';
+import '../pages/read_aloud_screen.dart';
 import '../pages/write_essay_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
+const String _taskTypeReadAloud = 'READ_ALOUD';
 
 /// Switches on `TaskView.taskType` to select the right task screen.
-/// `READ_ALOUD` (Phase 6) is not yet built — surfaced as an explicit
-/// unsupported-type placeholder rather than a silent blank screen, so
-/// Phase 6 has this exact seam to plug into (phase-05 Steps).
 class TaskTypeDispatcher extends StatelessWidget {
   const TaskTypeDispatcher({
     super.key,
@@ -21,12 +23,18 @@ class TaskTypeDispatcher extends StatelessWidget {
     required this.attemptPublicId,
     required this.outboxDao,
     required this.syncEngine,
+    required this.audioRecorderService,
+    required this.mediaDao,
+    required this.mediaUploadCoordinator,
   });
 
   final TaskView task;
   final String attemptPublicId;
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
+  final AudioRecorderService audioRecorderService;
+  final PendingMediaUploadDao mediaDao;
+  final MediaUploadCoordinator mediaUploadCoordinator;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +59,15 @@ class TaskTypeDispatcher extends StatelessWidget {
         task: task,
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeReadAloud => ReadAloudScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
       ),
       _ => _UnsupportedTaskTypePlaceholder(key: key, taskType: task.taskType),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_exceptions.dart';
+import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/repositories/exam_attempt_repository.dart';
 import '../../domain/repositories/session_entry_repository.dart';
@@ -27,10 +28,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required SessionEntryRepository sessionEntryRepository,
     required SyncEngine syncEngine,
     required TimerService timerService,
+    required MediaUploadCoordinator mediaUploadCoordinator,
   })  : _repository = repository,
         _sessionEntryRepository = sessionEntryRepository,
         _syncEngine = syncEngine,
         _timerService = timerService,
+        _mediaUploadCoordinator = mediaUploadCoordinator,
         super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
@@ -46,6 +49,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   final SessionEntryRepository _sessionEntryRepository;
   final SyncEngine _syncEngine;
   final TimerService _timerService;
+  final MediaUploadCoordinator _mediaUploadCoordinator;
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
 
@@ -124,6 +128,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       _syncEngine.setActiveTask(null);
       _syncEngine.stopSync();
       _timerService.stop();
+      _mediaUploadCoordinator.stop();
       emit(AttemptCompleted(response.attemptPublicId));
       return;
     }
@@ -138,6 +143,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
     _attemptPublicId = response.attemptPublicId;
     _syncEngine.setActiveTask(task.pinnedItemPublicId);
+    // Started on every in-progress transition, not just the first — a
+    // no-op while already running (MediaUploadCoordinator.start()'s own
+    // guard), so any READ_ALOUD row left over from a prior app session
+    // resumes its background canary/periodic retry loop rather than being
+    // limited to whatever attempt was running when it was first recorded
+    // (phase-06 Design Constraints).
+    _mediaUploadCoordinator.start();
     _timerService.seedFromTask(task);
     _timerService.startPolling(response.attemptPublicId);
     emit(AttemptInProgress(response.attemptPublicId, task, _timerService.currentSnapshot));
