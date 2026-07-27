@@ -8,4 +8,8 @@ class AppStrings {
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
   static const String sessionEntryStartButton = 'Start';
+
+  static const String examPhasePrepLabel = 'Preparation';
+  static const String examPhaseResponseLabel = 'Response';
+  static const String examTaskCounterOf = ' / ';
 }

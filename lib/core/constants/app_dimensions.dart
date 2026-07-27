@@ -5,4 +5,5 @@ class AppDimensions {
 
   static const double spacingMedium = 16.0;
   static const double radiusMedium = 8.0;
+  static const double examBottomBarHeight = 64.0;
 }

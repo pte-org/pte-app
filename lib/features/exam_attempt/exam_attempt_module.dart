@@ -4,8 +4,11 @@ import '../../core/network/api_client.dart';
 import '../../core/sync/sync_engine.dart';
 import 'data/repositories/exam_attempt_repository_impl.dart';
 import 'data/repositories/manual_session_entry_repository.dart';
+import 'data/repositories/timer_repository_impl.dart';
 import 'domain/repositories/exam_attempt_repository.dart';
 import 'domain/repositories/session_entry_repository.dart';
+import 'domain/repositories/timer_repository.dart';
+import 'domain/timer_service.dart';
 import 'presentation/bloc/exam_attempt_bloc.dart';
 
 /// GetIt registration for attempt lifecycle + the placeholder session-entry
@@ -21,11 +24,20 @@ void setupExamAttemptModule() {
     () => ExamAttemptRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
 
+  getIt.registerLazySingleton<TimerRepository>(
+    () => TimerRepositoryImpl(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton<TimerService>(
+    () => TimerService(timerRepository: getIt<TimerRepository>()),
+  );
+
   getIt.registerLazySingleton<ExamAttemptBloc>(
     () => ExamAttemptBloc(
       repository: getIt(),
       sessionEntryRepository: getIt(),
       syncEngine: getIt<SyncEngine>(),
+      timerService: getIt<TimerService>(),
     ),
   );
 }

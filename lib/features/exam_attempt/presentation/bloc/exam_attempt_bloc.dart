@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_exceptions.dart';
@@ -5,6 +7,8 @@ import '../../../../core/sync/sync_engine.dart';
 import '../../domain/repositories/exam_attempt_repository.dart';
 import '../../domain/repositories/session_entry_repository.dart';
 import '../../domain/task_view.dart';
+import '../../domain/timer_service.dart';
+import '../../domain/timer_snapshot.dart';
 import 'exam_attempt_event.dart';
 import 'exam_attempt_state.dart';
 
@@ -22,17 +26,28 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required ExamAttemptRepository repository,
     required SessionEntryRepository sessionEntryRepository,
     required SyncEngine syncEngine,
+    required TimerService timerService,
   })  : _repository = repository,
         _sessionEntryRepository = sessionEntryRepository,
         _syncEngine = syncEngine,
+        _timerService = timerService,
         super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
+    on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
+    on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
+    _timerTicksSubscription = _timerService.ticks.listen((snapshot) => add(TimerSnapshotUpdated(snapshot)));
+    _taskAdvancedSubscription = _timerService.taskAdvancedExternally.listen(
+      (_) => add(const TimerTaskAdvancedExternally()),
+    );
   }
 
   final ExamAttemptRepository _repository;
   final SessionEntryRepository _sessionEntryRepository;
   final SyncEngine _syncEngine;
+  final TimerService _timerService;
+  late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
+  late final StreamSubscription<void> _taskAdvancedSubscription;
 
   /// Tracks the running attempt so a stray `NextTaskRequested` after
   /// completion (or before any attempt started) is a no-op, not a crash.
@@ -86,11 +101,29 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
   Exception _asAttemptException(Object error) => error is Exception ? error : UnknownApiException(error.toString());
 
+  void _onTimerSnapshotUpdated(TimerSnapshotUpdated event, Emitter<ExamAttemptState> emit) {
+    final currentState = state;
+    if (currentState is! AttemptInProgress) return;
+    emit(AttemptInProgress(currentState.attemptPublicId, currentState.task, event.snapshot));
+  }
+
+  Future<void> _onTimerTaskAdvancedExternally(
+    TimerTaskAdvancedExternally event,
+    Emitter<ExamAttemptState> emit,
+  ) {
+    // A proctor-initiated (or otherwise external) task advance must not be
+    // trusted as "still the currently displayed task" — re-fetch through
+    // the same path a normal NextTaskRequested would (phase-04 Design
+    // Constraints).
+    return _onNextTaskRequested(const NextTaskRequested(), emit);
+  }
+
   void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {
     if (response.completed) {
       _attemptPublicId = null;
       _syncEngine.setActiveTask(null);
       _syncEngine.stopSync();
+      _timerService.stop();
       emit(AttemptCompleted(response.attemptPublicId));
       return;
     }
@@ -105,6 +138,15 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
     _attemptPublicId = response.attemptPublicId;
     _syncEngine.setActiveTask(task.pinnedItemPublicId);
-    emit(AttemptInProgress(response.attemptPublicId, task));
+    _timerService.seedFromTask(task);
+    _timerService.startPolling(response.attemptPublicId);
+    emit(AttemptInProgress(response.attemptPublicId, task, _timerService.currentSnapshot));
+  }
+
+  @override
+  Future<void> close() {
+    unawaited(_timerTicksSubscription.cancel());
+    unawaited(_taskAdvancedSubscription.cancel());
+    return super.close();
   }
 }
