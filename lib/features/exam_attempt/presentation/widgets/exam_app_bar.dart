@@ -9,11 +9,6 @@ import '../../domain/timer_snapshot.dart';
 import '../bloc/exam_attempt_bloc.dart';
 import '../bloc/exam_attempt_state.dart';
 
-const int _timerSegmentDigits = 2;
-const int _secondsPerMinute = 60;
-const String _timerPadDigit = '0';
-const String _timerSeparator = ':';
-
 /// Phase indicator + `orderIndex`/`totalTasks` + countdown display. Reads
 /// only the [TimerSnapshot] slice of [ExamAttemptState] via [BlocSelector]
 /// so unrelated attempt-state changes elsewhere never force a rebuild here
@@ -64,11 +59,7 @@ class ExamAppBar extends StatelessWidget {
   }
 
   String _formatRemaining(Duration remaining) {
-    final minutes = remaining.inMinutes.toString().padLeft(_timerSegmentDigits, _timerPadDigit);
-    final seconds = (remaining.inSeconds % _secondsPerMinute).toString().padLeft(
-      _timerSegmentDigits,
-      _timerPadDigit,
-    );
-    return '$minutes$_timerSeparator$seconds';
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    return '${twoDigits(remaining.inMinutes)}:${twoDigits(remaining.inSeconds % 60)}';
   }
 }

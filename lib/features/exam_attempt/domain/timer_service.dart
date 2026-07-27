@@ -41,6 +41,14 @@ class TimerService {
   Timer? _pollTimer;
   Timer? _tickTimer;
 
+  /// Bumped by [stop] (and therefore by [startPolling], which calls it
+  /// first) so a poll/tick callback scheduled by a now-superseded
+  /// `startPolling` call — including one already in-flight awaiting
+  /// `fetchTimerState` when a new task transition starts polling again —
+  /// recognizes it's stale and does nothing, rather than reconciling with
+  /// an orphaned chain no `Timer.cancel()` could reach in time.
+  int _generation = 0;
+
   /// Emits on every server reconciliation and on the local sub-second UI
   /// tick between polls.
   Stream<TimerSnapshot> get ticks => _ticksController.stream;
@@ -52,13 +60,14 @@ class TimerService {
   Stream<void> get taskAdvancedExternally => _taskAdvancedController.stream;
 
   TimerSnapshot get currentSnapshot {
-    final remaining = _targetRemaining - _stopwatch.elapsed;
     return TimerSnapshot(
       phase: _phase,
-      remaining: remaining.isNegative ? Duration.zero : remaining,
+      remaining: _nonNegative(_targetRemaining - _stopwatch.elapsed),
       currentOrderIndex: _currentOrderIndex,
     );
   }
+
+  static Duration _nonNegative(Duration duration) => duration.isNegative ? Duration.zero : duration;
 
   /// Bootstraps the countdown from a freshly-fetched [TaskView], before any
   /// timer poll has happened. Derives `phase` by comparing `serverNow`
@@ -94,7 +103,7 @@ class TimerService {
   }
 
   void _seed(Duration remaining) {
-    _targetRemaining = remaining.isNegative ? Duration.zero : remaining;
+    _targetRemaining = _nonNegative(remaining);
     _stopwatch
       ..reset()
       ..start();
@@ -105,37 +114,49 @@ class TimerService {
   /// and a lightweight local sub-second tick loop for a smooth countdown
   /// display between polls — both driven by the same injectable
   /// [TimerScheduler], not two independent timer mechanisms (phase-04
-  /// Design Constraints).
+  /// Design Constraints). Calls [stop] first so calling this again on a
+  /// later task transition (as `ExamAttemptBloc` does on every
+  /// `NextTaskRequested`) can never leave a prior poll/tick chain running
+  /// orphaned alongside the new one.
   void startPolling(String attemptPublicId, {Duration interval = _defaultPollInterval}) {
-    _scheduleLocalTick();
-    unawaited(_poll(attemptPublicId, interval));
+    stop();
+    final generation = _generation;
+    _scheduleLocalTick(generation);
+    unawaited(_poll(attemptPublicId, interval, generation));
   }
 
-  void _scheduleLocalTick() {
+  void _scheduleLocalTick(int generation) {
     _tickTimer = _scheduler(_localTickInterval, () {
+      if (generation != _generation) return;
       _ticksController.add(currentSnapshot);
-      _scheduleLocalTick();
+      _scheduleLocalTick(generation);
     });
   }
 
-  Future<void> _poll(String attemptPublicId, Duration interval) async {
+  Future<void> _poll(String attemptPublicId, Duration interval, int generation) async {
     try {
       final response = await _timerRepository.fetchTimerState(attemptPublicId);
+      if (generation != _generation) return;
       reconcileFromServer(response);
     } catch (_) {
       // Silent retry — connectivity state is the Bloc's concern, not this
       // loop's; never block on a single failed poll (mirrors the Phase 0
       // reference `TimerService._poll`).
     }
+    if (generation != _generation) return;
     _pollTimer = _scheduler(interval, () {
-      unawaited(_poll(attemptPublicId, interval));
+      if (generation != _generation) return;
+      unawaited(_poll(attemptPublicId, interval, generation));
     });
   }
 
   /// Cancels both timers without closing the streams — safe to call between
   /// attempts since this service is a long-lived singleton (mirrors
-  /// `SyncEngine.stopSync`).
+  /// `SyncEngine.stopSync`). Bumps [_generation] so any callback already
+  /// scheduled by the just-cancelled chain — including one in-flight
+  /// awaiting [TimerRepository.fetchTimerState] — recognizes it's stale.
   void stop() {
+    _generation++;
     _pollTimer?.cancel();
     _tickTimer?.cancel();
     _pollTimer = null;
