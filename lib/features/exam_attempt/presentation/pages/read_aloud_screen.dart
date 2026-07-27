@@ -85,34 +85,30 @@ class _RecordingBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BlocBuilder<ReadAloudCubit, ReadAloudState>(
-            builder: (context, state) {
-              return Text(
+      child: BlocBuilder<ReadAloudCubit, ReadAloudState>(
+        builder: (context, state) {
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
                 state.isRecording
                     ? AppStrings.readAloudRecordingIndicator
                     : (state.hasRecorded
                           ? _uploadStatusLabel(state)
                           : AppStrings.readAloudNotRecordedYetLabel),
-              );
-            },
-          ),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          BlocBuilder<ReadAloudCubit, ReadAloudState>(
-            builder: (context, state) {
-              return ElevatedButton(
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              ElevatedButton(
                 onPressed: state.isRecording
                     ? () => context.read<ReadAloudCubit>().stopRecording()
                     : () => context.read<ReadAloudCubit>().startRecording(),
                 child: Text(
                   state.isRecording ? AppStrings.readAloudStopRecordingLabel : AppStrings.readAloudStartRecordingLabel,
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -110,8 +110,7 @@ class MediaUploadCoordinator {
         current = await switch (PendingMediaUploadStatus.values.byName(current.status)) {
           PendingMediaUploadStatus.recorded => _presign(current),
           PendingMediaUploadStatus.uploading => _upload(current),
-          PendingMediaUploadStatus.uploaded => _complete(current),
-          PendingMediaUploadStatus.completing => _complete(current),
+          PendingMediaUploadStatus.uploaded || PendingMediaUploadStatus.completing => _complete(current),
           PendingMediaUploadStatus.ready => current,
         };
       }
@@ -157,14 +156,16 @@ class MediaUploadCoordinator {
       current = await _presign(current);
     }
 
-    try {
-      await _rawUploadClient.putFile(current.uploadUrl!, file, contentType: _contentType);
-    } on RawUploadException catch (e) {
-      if (!e.looksExpired) rethrow;
-      // Expired/invalid presigned URL — request a fresh one and retry the
-      // PUT against the same local file. Never re-record.
-      current = await _presign(current);
-      await _rawUploadClient.putFile(current.uploadUrl!, file, contentType: _contentType);
+    // Retry once with a fresh presign if the URL turns out expired/invalid.
+    // Never re-record — only the PUT is repeated, against the same local file.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _rawUploadClient.putFile(current.uploadUrl!, file, contentType: _contentType);
+        break;
+      } on RawUploadException catch (e) {
+        if (!e.looksExpired || attempt == 1) rethrow;
+        current = await _presign(current);
+      }
     }
 
     await _mediaDao.markUploaded(current.attemptPublicId, current.pinnedItemPublicId);
