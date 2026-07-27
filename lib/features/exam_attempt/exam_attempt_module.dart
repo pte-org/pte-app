@@ -59,6 +59,10 @@ void setupExamAttemptModule() {
       mediaRepository: getIt<MediaRepository>(),
       rawUploadClient: getIt<RawUploadClient>(),
       canary: getIt<NetworkCanary>(),
+      // Explicit, not the constructor's own default — a single source of
+      // truth with the recorder's actual AudioEncoder, so the two can
+      // never silently drift out of sync.
+      contentType: readAloudContentType,
     ),
   );
 

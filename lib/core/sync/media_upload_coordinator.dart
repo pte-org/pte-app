@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:logger/logger.dart';
 
 import '../network/media_repository.dart';
@@ -61,6 +62,14 @@ class MediaUploadCoordinator {
   Timer? _periodicTimer;
   bool _isScanning = false;
 
+  /// Guards a single row against concurrent advancement from two different
+  /// triggers — e.g. [attemptUpload] firing right after recording stops at
+  /// the same moment a periodic [scanAll] tick reaches the same row. Keyed
+  /// on `attemptPublicId|pinnedItemPublicId`; [scanAll]'s own `_isScanning`
+  /// only single-flights the scan loop itself, not a directly-called
+  /// [attemptUpload] racing it.
+  final Set<String> _inFlightRows = {};
+
   /// Starts the background scan loop — a connectivity-restore subscription
   /// plus a periodic fallback tick, so an offline-recorded row is retried
   /// beyond its initial post-recording attempt (phase-06 Design
@@ -104,29 +113,35 @@ class MediaUploadCoordinator {
   }
 
   Future<void> _advance(PendingMediaUpload initial) async {
-    var current = initial;
+    final key = '${initial.attemptPublicId}|${initial.pinnedItemPublicId}';
+    if (!_inFlightRows.add(key)) return;
     try {
-      while (current.status != PendingMediaUploadStatus.ready.name) {
-        current = await switch (PendingMediaUploadStatus.values.byName(current.status)) {
-          PendingMediaUploadStatus.recorded => _presign(current),
-          PendingMediaUploadStatus.uploading => _upload(current),
-          PendingMediaUploadStatus.uploaded || PendingMediaUploadStatus.completing => _complete(current),
-          PendingMediaUploadStatus.ready => current,
-        };
+      var current = initial;
+      try {
+        while (current.status != PendingMediaUploadStatus.ready.name) {
+          current = await switch (PendingMediaUploadStatus.values.byName(current.status)) {
+            PendingMediaUploadStatus.recorded => _presign(current),
+            PendingMediaUploadStatus.uploading => _upload(current),
+            PendingMediaUploadStatus.uploaded || PendingMediaUploadStatus.completing => _complete(current),
+            PendingMediaUploadStatus.ready => current,
+          };
+        }
+        await _submitToOutbox(current);
+      } catch (e, stackTrace) {
+        // Left at whatever status it reached — retried on the next
+        // canary/periodic trigger, mirroring SyncEngine's leave-pending
+        // behavior. No terminal-rejected equivalent exists for the media
+        // pipeline (phase-06 Risks: unbounded retry is the correct
+        // behavior here, not a gap).
+        _logger.w(
+          'Media upload advance failed for ${current.pinnedItemPublicId}, left at ${current.status} for next tick',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        await _mediaDao.markError(current.attemptPublicId, current.pinnedItemPublicId, e.toString());
       }
-      await _submitToOutbox(current);
-    } catch (e, stackTrace) {
-      // Left at whatever status it reached — retried on the next
-      // canary/periodic trigger, mirroring SyncEngine's leave-pending
-      // behavior. No terminal-rejected equivalent exists for the media
-      // pipeline (phase-06 Risks: unbounded retry is the correct
-      // behavior here, not a gap).
-      _logger.w(
-        'Media upload advance failed for ${current.pinnedItemPublicId}, left at ${current.status} for next tick',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      await _mediaDao.markError(current.attemptPublicId, current.pinnedItemPublicId, e.toString());
+    } finally {
+      _inFlightRows.remove(key);
     }
   }
 
@@ -140,7 +155,15 @@ class MediaUploadCoordinator {
       uploadUrl: presign.uploadUrl,
       uploadUrlExpiresAt: expiresAt,
     );
-    return (await _mediaDao.getRow(row.attemptPublicId, row.pinnedItemPublicId))!;
+    // Built locally rather than re-queried — every field just written is
+    // already known here, and nothing else can write to this row
+    // concurrently (single coordinator, per-row in-flight guard).
+    return row.copyWith(
+      mediaPublicId: Value(presign.mediaPublicId),
+      uploadUrl: Value(presign.uploadUrl),
+      uploadUrlExpiresAt: Value(expiresAt),
+      status: PendingMediaUploadStatus.uploading.name,
+    );
   }
 
   Future<PendingMediaUpload> _upload(PendingMediaUpload row) async {
@@ -169,14 +192,14 @@ class MediaUploadCoordinator {
     }
 
     await _mediaDao.markUploaded(current.attemptPublicId, current.pinnedItemPublicId);
-    return (await _mediaDao.getRow(current.attemptPublicId, current.pinnedItemPublicId))!;
+    return current.copyWith(status: PendingMediaUploadStatus.uploaded.name);
   }
 
   Future<PendingMediaUpload> _complete(PendingMediaUpload row) async {
     await _mediaDao.markCompleting(row.attemptPublicId, row.pinnedItemPublicId);
     await _mediaRepository.completeUpload(row.mediaPublicId!);
     await _mediaDao.markReady(row.attemptPublicId, row.pinnedItemPublicId);
-    return (await _mediaDao.getRow(row.attemptPublicId, row.pinnedItemPublicId))!;
+    return row.copyWith(status: PendingMediaUploadStatus.ready.name);
   }
 
   Future<void> _submitToOutbox(PendingMediaUpload row) async {
