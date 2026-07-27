@@ -4,4 +4,8 @@ class AppStrings {
   const AppStrings._();
 
   static const String appTitle = 'PTE Student';
+
+  static const String sessionEntryTitle = 'Enter session ID';
+  static const String sessionEntryFieldLabel = 'Session ID';
+  static const String sessionEntryStartButton = 'Start';
 }
