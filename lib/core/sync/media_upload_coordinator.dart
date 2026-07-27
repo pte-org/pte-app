@@ -112,6 +112,10 @@ class MediaUploadCoordinator {
       final rows = await _mediaDao.queryNonReady();
       for (final row in rows) {
         await _advance(row);
+        // A 429 mid-scan must stop the rest of this pass immediately —
+        // see SyncEngine._flush's identical reasoning (phase-07 Design
+        // Constraints).
+        if (_backoff.isActive) break;
       }
     } finally {
       _isScanning = false;

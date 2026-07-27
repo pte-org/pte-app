@@ -148,25 +148,28 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // _emitFromResponse — force-submit and running out of tasks are
       // indistinguishable from the UI's perspective (phase-07 Design
       // Constraints).
-      _attemptPublicId = null;
-      _syncEngine.setActiveTask(null);
-      _syncEngine.stopSync();
-      _timerService.stop();
-      _mediaUploadCoordinator.stop();
-      emit(AttemptCompleted(attemptPublicId));
+      _completeAttempt(attemptPublicId, emit);
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
     }
   }
 
+  /// Shared terminal teardown for both the natural end-of-tasks path
+  /// ([_emitFromResponse]) and [_onForceSubmitRequested] — kept as one
+  /// place so the two paths can't drift out of sync (phase-07 Design
+  /// Constraints: force-submit must reach the identical terminal state).
+  void _completeAttempt(String attemptPublicId, Emitter<ExamAttemptState> emit) {
+    _attemptPublicId = null;
+    _syncEngine.setActiveTask(null);
+    _syncEngine.stopSync();
+    _timerService.stop();
+    _mediaUploadCoordinator.stop();
+    emit(AttemptCompleted(attemptPublicId));
+  }
+
   void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {
     if (response.completed) {
-      _attemptPublicId = null;
-      _syncEngine.setActiveTask(null);
-      _syncEngine.stopSync();
-      _timerService.stop();
-      _mediaUploadCoordinator.stop();
-      emit(AttemptCompleted(response.attemptPublicId));
+      _completeAttempt(response.attemptPublicId, emit);
       return;
     }
 
