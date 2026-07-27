@@ -94,13 +94,9 @@ class SyncEngine {
   Future<void> flushOne(String pinnedItemPublicId) async {
     final attemptId = _runningAttemptId;
     if (attemptId == null) return;
-    final rows = await _outboxDao.queryByAttempt(attemptId);
-    for (final row in rows) {
-      if (row.pinnedItemPublicId == pinnedItemPublicId && row.status == AnswerSyncStatus.pending.name) {
-        await _flushOne(row);
-        return;
-      }
-    }
+    final row = await _outboxDao.getAnswer(attemptId, pinnedItemPublicId);
+    if (row == null || row.status != AnswerSyncStatus.pending.name) return;
+    await _flushOne(row);
   }
 
   Future<void> _flush(String attemptPublicId) async {

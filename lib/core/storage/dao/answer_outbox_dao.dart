@@ -48,6 +48,17 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
         .get();
   }
 
+  /// A single row by its composite key, or `null` if none exists. Used by
+  /// `SyncEngine.flushOne` to target exactly the requested task without a
+  /// full per-attempt fetch.
+  Future<AnswerOutbox?> getAnswer(String attemptPublicId, String pinnedItemPublicId) {
+    return (select(answerOutboxTable)
+          ..where(
+            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
+          ))
+        .getSingleOrNull();
+  }
+
   Future<void> markSynced(String attemptPublicId, String pinnedItemPublicId) =>
       _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.synced);
 
@@ -55,19 +66,8 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
   Future<void> markPending(String attemptPublicId, String pinnedItemPublicId) =>
       _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.pending);
 
-  Future<void> markTerminalRejected(String attemptPublicId, String pinnedItemPublicId, String reason) {
-    return (update(answerOutboxTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
-        .write(
-          AnswerOutboxTableCompanion(
-            status: Value(AnswerSyncStatus.terminalRejected.name),
-            lastSyncError: Value(reason),
-            updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
-          ),
-        );
-  }
+  Future<void> markTerminalRejected(String attemptPublicId, String pinnedItemPublicId, String reason) =>
+      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.terminalRejected, lastSyncError: reason);
 
   Future<void> deleteByAttempt(String attemptPublicId) {
     return (delete(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).go();
@@ -80,7 +80,12 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
     return customStatement('PRAGMA wal_checkpoint(RESTART);');
   }
 
-  Future<void> _updateStatus(String attemptPublicId, String pinnedItemPublicId, AnswerSyncStatus status) {
+  Future<void> _updateStatus(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    AnswerSyncStatus status, {
+    String? lastSyncError,
+  }) {
     return (update(answerOutboxTable)
           ..where(
             (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
@@ -88,6 +93,7 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
         .write(
           AnswerOutboxTableCompanion(
             status: Value(status.name),
+            lastSyncError: lastSyncError == null ? const Value.absent() : Value(lastSyncError),
             updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
           ),
         );

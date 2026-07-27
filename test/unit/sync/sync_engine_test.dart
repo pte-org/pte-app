@@ -158,7 +158,7 @@ void main() {
       }
 
       when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'active')]);
-      when(() => dao.queryByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'active')]);
+      when(() => dao.getAnswer('attempt-1', 'active')).thenAnswer((_) async => _row(pinnedItemPublicId: 'active'));
       when(
         () => apiClient.submitAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
