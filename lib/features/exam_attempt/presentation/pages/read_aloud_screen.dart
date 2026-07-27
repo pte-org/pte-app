@@ -9,6 +9,7 @@ import '../../../../core/storage/dao/pending_media_upload_dao.dart';
 import '../../../../core/storage/pending_media_upload_status.dart';
 import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../../domain/audio_recorder_service.dart';
 import '../../domain/task_view.dart';
 import '../cubit/read_aloud_cubit.dart';
@@ -99,15 +100,13 @@ class _RecordingBody extends StatelessWidget {
                 },
               ),
               const SizedBox(height: AppDimensions.spacingMedium),
-              ElevatedButton(
+              PrimaryButton(
+                label: state.recordingPhase == RecordingPhase.recording
+                    ? AppStrings.readAloudStopRecordingLabel
+                    : AppStrings.readAloudStartRecordingLabel,
                 onPressed: state.recordingPhase == RecordingPhase.recording
                     ? () => context.read<ReadAloudCubit>().stopRecording()
                     : () => context.read<ReadAloudCubit>().startRecording(),
-                child: Text(
-                  state.recordingPhase == RecordingPhase.recording
-                      ? AppStrings.readAloudStopRecordingLabel
-                      : AppStrings.readAloudStartRecordingLabel,
-                ),
               ),
             ],
           );
