@@ -6,6 +6,9 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -15,6 +18,8 @@ class _MockExamAttemptRepository extends Mock implements ExamAttemptRepository {
 class _MockSessionEntryRepository extends Mock implements SessionEntryRepository {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
+
+class _MockTimerService extends Mock implements TimerService {}
 
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
@@ -48,21 +53,32 @@ void main() {
   late _MockExamAttemptRepository repository;
   late _MockSessionEntryRepository sessionEntryRepository;
   late _MockSyncEngine syncEngine;
+  late _MockTimerService timerService;
 
   setUp(() {
     repository = _MockExamAttemptRepository();
     sessionEntryRepository = _MockSessionEntryRepository();
     syncEngine = _MockSyncEngine();
+    timerService = _MockTimerService();
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
     when(() => syncEngine.stopSync()).thenReturn(null);
+    when(() => timerService.ticks).thenAnswer((_) => const Stream<TimerSnapshot>.empty());
+    when(() => timerService.taskAdvancedExternally).thenAnswer((_) => const Stream<void>.empty());
+    when(() => timerService.seedFromTask(any())).thenReturn(null);
+    when(() => timerService.startPolling(any())).thenReturn(null);
+    when(() => timerService.stop()).thenReturn(null);
+    when(() => timerService.currentSnapshot).thenReturn(
+      const TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 30), currentOrderIndex: 1),
+    );
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
         repository: repository,
         sessionEntryRepository: sessionEntryRepository,
         syncEngine: syncEngine,
+        timerService: timerService,
       );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
@@ -125,6 +141,7 @@ void main() {
       repository: repository,
       sessionEntryRepository: _AlternativeSessionEntryRepository('deep-link-session'),
       syncEngine: syncEngine,
+      timerService: timerService,
     ),
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'ignored-by-fake')),
     expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
