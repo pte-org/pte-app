@@ -55,6 +55,13 @@ void main() {
   late _MockSyncEngine syncEngine;
   late _MockTimerService timerService;
 
+  setUpAll(() {
+    // Required because `timerService.seedFromTask(any())` is stubbed below —
+    // mocktail needs a fallback TaskView instance to satisfy `any()`
+    // matching in null-safe mode.
+    registerFallbackValue(_task());
+  });
+
   setUp(() {
     repository = _MockExamAttemptRepository();
     sessionEntryRepository = _MockSessionEntryRepository();
