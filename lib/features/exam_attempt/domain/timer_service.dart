@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:logger/logger.dart';
+
 import 'repositories/timer_repository.dart';
 import 'task_view.dart';
 import 'timer_phase.dart';
@@ -22,14 +24,20 @@ const Duration _localTickInterval = Duration(seconds: 1);
 /// [TaskView]; every later reconciliation adopts the server's own `phase`
 /// field directly instead of re-deriving it (phase-04 Design Constraints).
 class TimerService {
-  TimerService({required TimerRepository timerRepository, Stopwatch? stopwatch, TimerScheduler? scheduler})
-    : _timerRepository = timerRepository,
-      _stopwatch = stopwatch ?? Stopwatch(),
-      _scheduler = scheduler ?? Timer.new;
+  TimerService({
+    required TimerRepository timerRepository,
+    Stopwatch? stopwatch,
+    TimerScheduler? scheduler,
+    Logger? logger,
+  }) : _timerRepository = timerRepository,
+       _stopwatch = stopwatch ?? Stopwatch(),
+       _scheduler = scheduler ?? Timer.new,
+       _logger = logger ?? Logger();
 
   final TimerRepository _timerRepository;
   final Stopwatch _stopwatch;
   final TimerScheduler _scheduler;
+  final Logger _logger;
 
   final StreamController<TimerSnapshot> _ticksController = StreamController<TimerSnapshot>.broadcast();
   final StreamController<void> _taskAdvancedController = StreamController<void>.broadcast();
@@ -138,10 +146,14 @@ class TimerService {
       final response = await _timerRepository.fetchTimerState(attemptPublicId);
       if (generation != _generation) return;
       reconcileFromServer(response);
-    } catch (_) {
+    } catch (e, stackTrace) {
       // Silent retry — connectivity state is the Bloc's concern, not this
       // loop's; never block on a single failed poll (mirrors the Phase 0
-      // reference `TimerService._poll`).
+      // reference `TimerService._poll`). Still logged, matching
+      // `ProactiveRefreshScheduler`/`SyncEngine`'s equivalent retry loops,
+      // so a failure is observable somewhere even though nothing here
+      // surfaces it to the user.
+      _logger.w('Timer poll failed, retrying in $interval', error: e, stackTrace: stackTrace);
     }
     if (generation != _generation) return;
     _pollTimer = _scheduler(interval, () {
