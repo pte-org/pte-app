@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
@@ -276,4 +279,127 @@ void main() {
       ]);
     },
   );
+
+  group('ForceSubmitRequested (Step 10)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'dispatched from AttemptInProgress transitions to AttemptCompleted on a successful forceSubmit(), '
+      'tearing down exactly like the natural end-of-tasks path',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {});
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptCompleted>()],
+      verify: (_) {
+        verify(() => repository.forceSubmit('attempt-1')).called(1);
+        verify(() => syncEngine.stopSync()).called(1);
+        verify(() => timerService.stop()).called(1);
+        verify(() => mediaUploadCoordinator.stop()).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a forceSubmit() failure emits AttemptError, not a crash or hang',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => repository.forceSubmit('attempt-1')).thenThrow(const NetworkException('connection refused'));
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptError>()],
+      verify: (_) {
+        // Failure must NOT run the teardown sequence — the attempt is
+        // still considered running.
+        verifyNever(() => syncEngine.stopSync());
+        verifyNever(() => timerService.stop());
+        verifyNever(() => mediaUploadCoordinator.stop());
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'ForceSubmitRequested with no attempt running (e.g. before any SessionResolutionRequested) is a no-op, not a crash',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const ForceSubmitRequested()),
+      expect: () => [],
+      verify: (_) {
+        verifyNever(() => repository.forceSubmit(any()));
+      },
+    );
+  });
+
+  group('SyncTaskRejectedExternally regression (Step 8/9 wiring)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'when SyncEngine.taskRejectedExternally emits, the bloc re-fetches next-task the same way '
+      'TimerTaskAdvancedExternally does — advancing past the server-rejected stale task',
+      setUp: () {
+        final rejectedController = StreamController<void>.broadcast();
+        addTearDown(rejectedController.close);
+        // Overrides the blanket Stream.empty() stub from the outer setUp so
+        // this test can emit on it directly.
+        when(() => syncEngine.taskRejectedExternally).thenAnswer((_) => rejectedController.stream);
+
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-1'),
+          ),
+        );
+        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-2'),
+          ),
+        );
+
+        _rejectedControllerForTest = rejectedController;
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        _rejectedControllerForTest!.add(null);
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => repository.fetchNextTask('attempt-1')).called(1);
+        verify(() => syncEngine.setActiveTask('item-2')).called(1);
+      },
+    );
+  });
 }
+
+/// Holds the per-test StreamController so `act` can reach it after `setUp`
+/// constructs it — `blocTest`'s `setUp`/`act` don't share a closure scope
+/// otherwise.
+StreamController<void>? _rejectedControllerForTest;

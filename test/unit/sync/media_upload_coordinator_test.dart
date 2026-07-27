@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/network/media_presign_response.dart';
 import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/network_canary.dart';
@@ -14,6 +15,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
+import 'package:pte_app/core/sync/rate_limit_backoff.dart';
 import 'package:pte_app/core/sync/sync_engine.dart' show PeriodicTimerFactory;
 
 class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
@@ -79,7 +81,7 @@ void main() {
     await canaryController.close();
   });
 
-  MediaUploadCoordinator buildCoordinator({PeriodicTimerFactory? createPeriodicTimer}) {
+  MediaUploadCoordinator buildCoordinator({PeriodicTimerFactory? createPeriodicTimer, RateLimitBackoff? backoff}) {
     return MediaUploadCoordinator(
       mediaDao: mediaDao,
       outboxDao: outboxDao,
@@ -87,6 +89,7 @@ void main() {
       rawUploadClient: rawUploadClient,
       canary: canary,
       createPeriodicTimer: createPeriodicTimer,
+      backoff: backoff,
     );
   }
 
@@ -401,6 +404,87 @@ void main() {
 
       expect(timerFactoryCalls, 1);
     });
+  });
+
+  group('429 rate-limit backoff via shared RateLimitBackoff (Step 11 — mirrors SyncEngine Step 9)', () {
+    test(
+      'a RateLimitException from requestPresign suppresses further upload attempts (attemptUpload and scanAll '
+      'both return immediately) until the fake-clock backoff window elapses — proving the shared RateLimitBackoff '
+      'class behaves identically at this call site too',
+      () async {
+        var currentTime = DateTime(2026, 1, 1, 0, 0, 0);
+        final backoff = RateLimitBackoff(
+          baseInterval: const Duration(seconds: 1),
+          maxInterval: const Duration(seconds: 32),
+          now: () => currentTime,
+        );
+
+        final row = _row(status: PendingMediaUploadStatus.recorded);
+        when(() => mediaDao.getRow('attempt-1', 'item-1')).thenAnswer((_) async => row);
+        when(() => mediaDao.queryNonReady()).thenAnswer((_) async => [row]);
+        when(
+          () => mediaDao.markError(any(), any(), any()),
+        ).thenAnswer((_) async {});
+        when(() => mediaRepository.requestPresign(any())).thenThrow(
+          const RateLimitException('Rate limited (429)'),
+        );
+
+        final coordinator = buildCoordinator(backoff: backoff);
+
+        await coordinator.attemptUpload('attempt-1', 'item-1');
+        verify(() => mediaRepository.requestPresign(any())).called(1);
+        expect(backoff.isActive, isTrue, reason: 'a 429 from presign must arm the cooldown immediately');
+        // RateLimitException is NOT the generic catch-all path — no
+        // markError call for this case (that's only the unrecognized
+        // catch-all branch).
+        verifyNever(() => mediaDao.markError(any(), any(), any()));
+
+        // Further attempts (both the direct attemptUpload and the
+        // background scanAll loop) must return immediately while the
+        // cooldown is active — no additional requestPresign call.
+        await coordinator.attemptUpload('attempt-1', 'item-1');
+        await coordinator.scanAll();
+        verifyNever(() => mediaRepository.requestPresign(any()));
+
+        // Advance the fake clock past the 1s cooldown window.
+        currentTime = currentTime.add(const Duration(seconds: 2));
+        expect(backoff.isActive, isFalse, reason: 'the cooldown window has elapsed per the fake clock');
+
+        // Now stub the full happy path so the next attempt succeeds and
+        // resets the backoff.
+        stubHappyPath();
+        await coordinator.attemptUpload('attempt-1', 'item-1');
+        verify(
+          () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'media-1'),
+        ).called(1);
+        expect(backoff.isActive, isFalse, reason: 'a successful upload must reset() the backoff');
+      },
+    );
+
+    test(
+      'a RateLimitException from completeUpload also arms the shared backoff and suppresses further attempts',
+      () async {
+        final currentTime = DateTime(2026, 1, 1, 0, 0, 0);
+        final backoff = RateLimitBackoff(now: () => currentTime);
+
+        final row = _row(
+          status: PendingMediaUploadStatus.uploaded,
+          mediaPublicId: 'media-1',
+          uploadUrl: 'https://minio.example.com/fresh',
+          uploadUrlExpiresAt: DateTime.now().add(const Duration(minutes: 10)).millisecondsSinceEpoch,
+        );
+        when(() => mediaDao.getRow('attempt-1', 'item-1')).thenAnswer((_) async => row);
+        when(() => mediaDao.markCompleting(any(), any())).thenAnswer((_) async {});
+        when(() => mediaRepository.completeUpload(any())).thenThrow(const RateLimitException('Rate limited (429)'));
+
+        final coordinator = buildCoordinator(backoff: backoff);
+        await coordinator.attemptUpload('attempt-1', 'item-1');
+
+        expect(backoff.isActive, isTrue);
+        verifyNever(() => mediaDao.markError(any(), any(), any()));
+        verifyNever(() => mediaDao.markReady(any(), any()));
+      },
+    );
   });
 
   group('Regression: per-row in-flight guard prevents concurrent double-processing', () {

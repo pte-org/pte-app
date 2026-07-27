@@ -125,4 +125,95 @@ void main() {
     expect(captured[0], '/api/exam-delivery/attempts/attempt-1/answers');
     expect(captured[1], {'pinnedItemPublicId': 'item-1', 'payload': 'hello'});
   });
+
+  DioException conflictWithMessage(String message) {
+    final requestOptions = RequestOptions(path: '/api/exam-delivery/attempts/attempt-1/answers');
+    return DioException(
+      requestOptions: requestOptions,
+      type: DioExceptionType.badResponse,
+      response: Response(
+        requestOptions: requestOptions,
+        statusCode: 409,
+        data: {'success': false, 'data': null, 'message': message},
+      ),
+    );
+  }
+
+  group('submitAnswer() typed-409 dispatch (Step 8)', () {
+    test('a 409 with message "NOT_CURRENT_TASK" produces NotCurrentTaskException, not the generic ConflictException', () async {
+      when(() => dio.post<void>(any(), data: any(named: 'data'))).thenThrow(conflictWithMessage('NOT_CURRENT_TASK'));
+
+      await expectLater(
+        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
+        throwsA(
+          isA<NotCurrentTaskException>()
+              .having((e) => e.message, 'message', 'NOT_CURRENT_TASK')
+              .having((e) => e, 'exact runtime type', isNot(isA<ResponseWindowExpiredException>())),
+        ),
+      );
+    });
+
+    test('a 409 with message "RESPONSE_WINDOW_EXPIRED" produces ResponseWindowExpiredException, not the generic ConflictException', () async {
+      when(
+        () => dio.post<void>(any(), data: any(named: 'data')),
+      ).thenThrow(conflictWithMessage('RESPONSE_WINDOW_EXPIRED'));
+
+      await expectLater(
+        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
+        throwsA(
+          isA<ResponseWindowExpiredException>()
+              .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED')
+              .having((e) => e, 'exact runtime type', isNot(isA<NotCurrentTaskException>())),
+        ),
+      );
+    });
+
+    test('a 409 with message "ANSWER_ALREADY_SUBMITTED" falls back to the generic ConflictException, not a crash', () async {
+      when(
+        () => dio.post<void>(any(), data: any(named: 'data')),
+      ).thenThrow(conflictWithMessage('ANSWER_ALREADY_SUBMITTED'));
+
+      await expectLater(
+        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
+        throwsA(
+          isA<ConflictException>()
+              .having((e) => e.message, 'message', 'ANSWER_ALREADY_SUBMITTED')
+              .having((e) => e, 'not a typed subclass', isNot(isA<NotCurrentTaskException>()))
+              .having((e) => e, 'not a typed subclass', isNot(isA<ResponseWindowExpiredException>())),
+        ),
+      );
+    });
+
+    test('a 409 with an unrecognized message falls back to the generic ConflictException, not a crash or unhandled type', () async {
+      when(
+        () => dio.post<void>(any(), data: any(named: 'data')),
+      ).thenThrow(conflictWithMessage('SOME_FUTURE_UNKNOWN_CODE'));
+
+      await expectLater(
+        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
+        throwsA(
+          isA<ConflictException>()
+              .having((e) => e.message, 'message', 'SOME_FUTURE_UNKNOWN_CODE')
+              .having((e) => e, 'not a typed subclass', isNot(isA<NotCurrentTaskException>()))
+              .having((e) => e, 'not a typed subclass', isNot(isA<ResponseWindowExpiredException>())),
+        ),
+      );
+    });
+
+    test('a 409 on this endpoint with no recognized message field still falls back to generic ConflictException', () async {
+      final requestOptions = RequestOptions(path: '/api/exam-delivery/attempts/attempt-1/answers');
+      when(() => dio.post<void>(any(), data: any(named: 'data'))).thenThrow(
+        DioException(
+          requestOptions: requestOptions,
+          type: DioExceptionType.badResponse,
+          response: Response(requestOptions: requestOptions, statusCode: 409),
+        ),
+      );
+
+      await expectLater(
+        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
+        throwsA(isA<ConflictException>()),
+      );
+    });
+  });
 }

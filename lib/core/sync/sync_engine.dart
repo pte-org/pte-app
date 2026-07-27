@@ -141,6 +141,13 @@ class SyncEngine {
         if (activeTaskId != null && answer.pinnedItemPublicId == activeTaskId) continue;
         await _flushOne(answer);
         flushedAny = true;
+        // A 429 mid-pass must stop the rest of this pass immediately, not
+        // just skip retrying the row that received it — the remaining
+        // rows would otherwise fire more doomed requests into the same
+        // rate-limit window and needlessly compound the backoff's
+        // exponential growth within a single tick (phase-07 Design
+        // Constraints).
+        if (_backoff.isActive) break;
       }
       if (flushedAny) {
         await _outboxDao.checkpointWal();
