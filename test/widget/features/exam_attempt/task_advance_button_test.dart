@@ -58,15 +58,17 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(buildSubject());
-      await tester.tap(find.byType(ElevatedButton));
       // Note: not pumpAndSettle — the button shows an indefinitely
       // spinning CircularProgressIndicator once `_isAdvancing` is true
       // (production code never resets it, expecting the widget to be
       // navigated away instead), so pumpAndSettle would time out waiting
-      // for that animation to finish. A bounded pump is sufficient to let
-      // the awaited Futures in `_advance()` resolve.
-      await tester.pump();
-      await pumpEventQueue();
+      // for that animation to finish. `tester.tap` itself awaits its
+      // built-in pump, and the awaited Futures in `_advance()` are
+      // already-resolved mocked Futures, so microtasks drain without
+      // needing any additional real-time wait (`pumpEventQueue` must NOT
+      // be used here — it relies on real `Timer`s, which never fire under
+      // `testWidgets`'s fake-async zone, and hangs indefinitely).
+      await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
       expect(cubit.calls, ['flushPendingEdit']);
@@ -77,8 +79,6 @@ void main() {
     testWidgets('syncEngine.flushOne is called exactly once per tap, not per rebuild', (tester) async {
       await tester.pumpWidget(buildSubject());
       await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      await pumpEventQueue();
       await tester.pump();
 
       verify(() => syncEngine.flushOne('item-1')).called(1);
@@ -98,7 +98,6 @@ void main() {
 
       completer.complete();
       await tester.pump();
-      await pumpEventQueue();
       await tester.pump();
 
       expect(cubit.calls, ['flushPendingEdit']);
