@@ -29,15 +29,29 @@ class ApiClient {
   /// this** — no widget or UI-facing `Bloc` submits an answer directly; the
   /// outbox DAO's `upsertAnswer` is the only write path available to them
   /// (phase-02 Design Constraints). Do not add a shortcut call site.
+  ///
+  /// A 409 here is remapped from the generic [ConflictException] to
+  /// [NotCurrentTaskException]/[ResponseWindowExpiredException] by
+  /// inspecting the response body's `message` field — this endpoint-specific
+  /// remap, not a change to [_mapError] itself, is what keeps every other
+  /// 409 call site's behavior untouched (phase-07 Design Constraints).
   Future<Response<void>> submitAnswer({
     required String attemptPublicId,
     required String pinnedItemPublicId,
     required String payload,
-  }) {
-    return post<void>(
-      '/api/exam-delivery/attempts/$attemptPublicId/answers',
-      data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
-    );
+  }) async {
+    try {
+      return await post<void>(
+        '/api/exam-delivery/attempts/$attemptPublicId/answers',
+        data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
+        _ => e,
+      };
+    }
   }
 
   Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
@@ -57,7 +71,7 @@ class ApiClient {
       401 || 403 => AuthException('Authentication failed ($statusCode)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
       409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
-      429 => RateLimitException('Rate limited ($statusCode)'),
+      429 => RateLimitException('Rate limited ($statusCode)', retryAfter: _retryAfter(e)),
       _ => UnknownApiException('Unexpected response ($statusCode)'),
     };
   }
@@ -71,5 +85,15 @@ class ApiClient {
       return data['message'] as String;
     }
     return null;
+  }
+
+  /// Parses a numeric `Retry-After` header (seconds), the only form the
+  /// gateway's rate limiter is expected to send. `null` if absent or in the
+  /// HTTP-date form, letting the caller fall back to its own backoff.
+  Duration? _retryAfter(DioException e) {
+    final header = e.response?.headers.value('retry-after');
+    if (header == null) return null;
+    final seconds = int.tryParse(header);
+    return seconds == null ? null : Duration(seconds: seconds);
   }
 }

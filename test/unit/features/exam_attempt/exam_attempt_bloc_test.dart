@@ -78,6 +78,7 @@ void main() {
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
     when(() => syncEngine.stopSync()).thenReturn(null);
+    when(() => syncEngine.taskRejectedExternally).thenAnswer((_) => const Stream<void>.empty());
     when(() => timerService.ticks).thenAnswer((_) => const Stream<TimerSnapshot>.empty());
     when(() => timerService.taskAdvancedExternally).thenAnswer((_) => const Stream<void>.empty());
     when(() => timerService.seedFromTask(any())).thenReturn(null);

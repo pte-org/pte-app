@@ -7,6 +7,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../domain/timer_phase.dart';
 import '../../domain/timer_snapshot.dart';
 import '../bloc/exam_attempt_bloc.dart';
+import '../bloc/exam_attempt_event.dart';
 import '../bloc/exam_attempt_state.dart';
 
 /// Phase indicator + `orderIndex`/`totalTasks` + countdown display. Reads
@@ -44,11 +45,44 @@ class ExamAppBar extends StatelessWidget {
                 '${snapshot.currentOrderIndex}${AppStrings.examTaskCounterOf}$totalTasks',
                 style: const TextStyle(color: AppColors.onPrimary),
               ),
+              const SizedBox(width: AppDimensions.spacingMedium),
+              IconButton(
+                icon: const Icon(Icons.send, color: AppColors.onPrimary),
+                tooltip: AppStrings.forceSubmitButtonLabel,
+                onPressed: () => _confirmAndForceSubmit(context),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  /// Force-submit is irreversible (phase-07 Design Constraints) — always
+  /// gated behind an explicit confirm step, never dispatched directly from
+  /// the tap.
+  Future<void> _confirmAndForceSubmit(BuildContext context) async {
+    final bloc = context.read<ExamAttemptBloc>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.forceSubmitDialogTitle),
+        content: const Text(AppStrings.forceSubmitDialogMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.forceSubmitDialogCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(AppStrings.forceSubmitDialogConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      bloc.add(const ForceSubmitRequested());
+    }
   }
 
   String _phaseLabel(TimerPhase phase) {

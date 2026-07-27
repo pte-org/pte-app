@@ -29,4 +29,11 @@ class AppStrings {
   static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
   static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+
+  static const String forceSubmitButtonLabel = 'Submit exam';
+  static const String forceSubmitDialogTitle = 'Submit exam now?';
+  static const String forceSubmitDialogMessage =
+      'This ends your attempt immediately, including any tasks not yet answered. This cannot be undone.';
+  static const String forceSubmitDialogConfirm = 'Submit';
+  static const String forceSubmitDialogCancel = 'Cancel';
 }

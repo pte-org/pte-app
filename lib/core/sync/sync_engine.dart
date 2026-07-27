@@ -8,6 +8,7 @@ import '../network/network_canary.dart';
 import '../storage/answer_sync_status.dart';
 import '../storage/app_database.dart';
 import '../storage/dao/answer_outbox_dao.dart';
+import 'rate_limit_backoff.dart';
 
 /// Matches [Timer.periodic]'s signature so a fake factory can be injected
 /// for deterministic tests (no real wall-clock waits).
@@ -32,12 +33,14 @@ class SyncEngine {
     Duration periodicInterval = const Duration(seconds: 30),
     PeriodicTimerFactory? createPeriodicTimer,
     Logger? logger,
+    RateLimitBackoff? backoff,
   })  : _outboxDao = outboxDao,
         _apiClient = apiClient,
         _canary = canary,
         _periodicInterval = periodicInterval,
         _createPeriodicTimer = createPeriodicTimer ?? Timer.periodic,
-        _logger = logger ?? Logger();
+        _logger = logger ?? Logger(),
+        _backoff = backoff ?? RateLimitBackoff();
 
   final AnswerOutboxDao _outboxDao;
   final ApiClient _apiClient;
@@ -45,12 +48,23 @@ class SyncEngine {
   final Duration _periodicInterval;
   final PeriodicTimerFactory _createPeriodicTimer;
   final Logger _logger;
+  final RateLimitBackoff _backoff;
 
   String? _runningAttemptId;
   String? _activeTaskId;
   StreamSubscription<void>? _canarySubscription;
   Timer? _periodicTimer;
   bool _isFlushing = false;
+
+  final StreamController<void> _taskRejectedController = StreamController<void>.broadcast();
+
+  /// Emits whenever a background flush discovers the currently-displayed
+  /// task has already been closed out server-side
+  /// (`NotCurrentTaskException`/`ResponseWindowExpiredException`) — the
+  /// client's local view of "current task" is stale and must re-fetch
+  /// `next-task`, the same idea as `TimerService.taskAdvancedExternally`
+  /// for a different trigger (phase-07 Design Constraints).
+  Stream<void> get taskRejectedExternally => _taskRejectedController.stream;
 
   /// Starts background outbox flushing for [attemptPublicId]. A no-op if
   /// already running for the *same* attempt. Throws [StateError] if called
@@ -117,7 +131,7 @@ class SyncEngine {
   }
 
   Future<void> _flush(String attemptPublicId) async {
-    if (_isFlushing) return;
+    if (_isFlushing || _backoff.isActive) return;
     _isFlushing = true;
     try {
       final pending = await _outboxDao.queryPendingByAttempt(attemptPublicId);
@@ -144,7 +158,23 @@ class SyncEngine {
         payload: answer.payload,
       );
       await _outboxDao.markSynced(answer.attemptPublicId, answer.pinnedItemPublicId);
+      _backoff.reset();
+    } on NotCurrentTaskException catch (e) {
+      // The server has already closed this task out from under the
+      // client — the local "current task" view is stale, so the UI must
+      // re-fetch next-task rather than sit on a task the server considers
+      // done (phase-07 Design Constraints).
+      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+      _taskRejectedController.add(null);
+    } on ResponseWindowExpiredException catch (e) {
+      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+      _taskRejectedController.add(null);
     } on ConflictException catch (e) {
+      // Generic fallback — an already-submitted answer or any other/future
+      // 409 cause not yet given its own type. Still terminal (Phase 2's
+      // conservative baseline), but no task-refetch signal: unlike the two
+      // typed causes above, this doesn't necessarily mean the client's
+      // current-task view is stale.
       await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
     } on ValidationException catch (e) {
       // The server rejected this exact payload as malformed — retrying
@@ -152,16 +182,28 @@ class SyncEngine {
       // blip (QUAL-201, Phase 2 quality gate). Not a 409, but
       // non-retryable for the same underlying reason.
       await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+    } on RateLimitException catch (e) {
+      // A signal about the whole client's request rate, not this one row
+      // — back off every flush attempt (not just this row) until the
+      // cooldown elapses, rather than retrying the same burst on the very
+      // next tick (phase-07 Design Constraints).
+      _backoff.registerRateLimited(retryAfter: e.retryAfter);
+      _logger.w('Answer flush rate-limited, backing off', error: e);
     } on ApiException catch (e) {
-      // Transient (network/server/rate-limit) or session-level
-      // (AuthException) — leave pending, retried on the next canary event
-      // or periodic tick. AuthException is deliberately NOT marked
-      // terminal here: it signals a broken session, not an invalid
-      // payload, so abandoning just this one row wouldn't fix anything —
-      // it retries indefinitely until the session recovers. No bounded
-      // retry/backoff exists yet for this case (non-goal for this phase,
-      // QUAL-201).
+      // Transient (network/server) or session-level (AuthException) —
+      // leave pending, retried on the next canary event or periodic tick.
+      // AuthException is deliberately NOT marked terminal here: it signals
+      // a broken session, not an invalid payload, so abandoning just this
+      // one row wouldn't fix anything — it retries indefinitely until the
+      // session recovers.
       _logger.w('Answer flush failed, left pending for next tick', error: e);
     }
+  }
+
+  /// Terminal teardown: closes the task-rejection stream. Not called
+  /// between attempts — only at app/service teardown, mirroring
+  /// `TimerService.dispose`.
+  void dispose() {
+    unawaited(_taskRejectedController.close());
   }
 }

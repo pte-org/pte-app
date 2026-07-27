@@ -28,20 +28,44 @@ final class ValidationException extends ApiException {
 /// 429 — Redis token-bucket rate limit (20/s burst 40). Distinct from
 /// `AuthException`/`ValidationException` per FR-11 so callers can
 /// backoff-and-retry instead of treating it as a hard failure.
+/// [retryAfter], when the server/gateway supplies a `Retry-After` header,
+/// is the authoritative cooldown; callers fall back to their own
+/// exponential backoff when it's `null` (phase-07 Design Constraints).
 final class RateLimitException extends ApiException {
-  const RateLimitException(super.message);
+  const RateLimitException(super.message, {this.retryAfter});
+
+  final Duration? retryAfter;
 }
 
 /// 409 — a conflict the server considers final on the answers endpoint
 /// (stale/non-current task, expired response window, or an
-/// already-submitted answer). Phase 2 maps every 409 here to
-/// `terminalRejected` as a conservative-but-correct heuristic, since all
-/// three currently-known causes are in fact terminal; Phase 7 replaces
-/// this with precise type-dispatch once typed subclasses exist for each
-/// cause (phase-02 Design Constraints). [message] carries the response
+/// already-submitted answer). A generic 409 with no recognized `message`
+/// body (including `ANSWER_ALREADY_SUBMITTED`) stays this type and is
+/// still treated as terminal — the conservative fallback Phase 2
+/// established. [NotCurrentTaskException] and [ResponseWindowExpiredException]
+/// are the two causes precise enough to warrant their own type (phase-02/07
+/// Design Constraints); `base` (not `final`) so they can extend it while
+/// [ApiException]'s own sealed exhaustiveness only needs to know about this
+/// type, not every conflict subclass. [message] carries the response
 /// body's distinguishing `message` field for diagnostics.
-final class ConflictException extends ApiException {
+base class ConflictException extends ApiException {
   const ConflictException(super.message);
+}
+
+/// A submission targeted an item that isn't the attempt's current task —
+/// `pte-api`'s `NotCurrentTaskException` (`message: "NOT_CURRENT_TASK"`).
+/// The local outbox row is terminal; the client's view of "current task" is
+/// stale and must re-fetch `next-task` (phase-07 Design Constraints).
+final class NotCurrentTaskException extends ConflictException {
+  const NotCurrentTaskException(super.message);
+}
+
+/// A submission arrived after the server-computed response deadline —
+/// `pte-api`'s `ResponseWindowExpiredException`
+/// (`message: "RESPONSE_WINDOW_EXPIRED"`). Same terminal-and-refetch
+/// handling as [NotCurrentTaskException] (phase-07 Design Constraints).
+final class ResponseWindowExpiredException extends ConflictException {
+  const ResponseWindowExpiredException(super.message);
 }
 
 /// No response reached the server at all (DNS, connection refused,

@@ -39,9 +39,14 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     on<NextTaskRequested>(_onNextTaskRequested);
     on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
     on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
+    on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
+    on<ForceSubmitRequested>(_onForceSubmitRequested);
     _timerTicksSubscription = _timerService.ticks.listen((snapshot) => add(TimerSnapshotUpdated(snapshot)));
     _taskAdvancedSubscription = _timerService.taskAdvancedExternally.listen(
       (_) => add(const TimerTaskAdvancedExternally()),
+    );
+    _taskRejectedSubscription = _syncEngine.taskRejectedExternally.listen(
+      (_) => add(const SyncTaskRejectedExternally()),
     );
   }
 
@@ -52,6 +57,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   final MediaUploadCoordinator _mediaUploadCoordinator;
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
+  late final StreamSubscription<void> _taskRejectedSubscription;
 
   /// Tracks the running attempt so a stray `NextTaskRequested` after
   /// completion (or before any attempt started) is a no-op, not a crash.
@@ -122,6 +128,37 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     return _onNextTaskRequested(const NextTaskRequested(), emit);
   }
 
+  Future<void> _onSyncTaskRejectedExternally(
+    SyncTaskRejectedExternally event,
+    Emitter<ExamAttemptState> emit,
+  ) {
+    // The server already closed the current task out from under the
+    // client (stale/expired submission) — same re-fetch path, the local
+    // "current task" view is equally stale here (phase-07 Design
+    // Constraints).
+    return _onNextTaskRequested(const NextTaskRequested(), emit);
+  }
+
+  Future<void> _onForceSubmitRequested(ForceSubmitRequested event, Emitter<ExamAttemptState> emit) async {
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    try {
+      await _repository.forceSubmit(attemptPublicId);
+      // Same terminal outcome as the natural end-of-tasks path in
+      // _emitFromResponse — force-submit and running out of tasks are
+      // indistinguishable from the UI's perspective (phase-07 Design
+      // Constraints).
+      _attemptPublicId = null;
+      _syncEngine.setActiveTask(null);
+      _syncEngine.stopSync();
+      _timerService.stop();
+      _mediaUploadCoordinator.stop();
+      emit(AttemptCompleted(attemptPublicId));
+    } catch (e) {
+      emit(AttemptError(_asAttemptException(e)));
+    }
+  }
+
   void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {
     if (response.completed) {
       _attemptPublicId = null;
@@ -159,6 +196,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   Future<void> close() {
     unawaited(_timerTicksSubscription.cancel());
     unawaited(_taskAdvancedSubscription.cancel());
+    unawaited(_taskRejectedSubscription.cancel());
     return super.close();
   }
 }

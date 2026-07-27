@@ -38,3 +38,19 @@ final class TimerSnapshotUpdated extends ExamAttemptEvent {
 final class TimerTaskAdvancedExternally extends ExamAttemptEvent {
   const TimerTaskAdvancedExternally();
 }
+
+/// Dispatched internally when `SyncEngine` discovers (via a background
+/// flush) that the currently-displayed task was already rejected as
+/// stale/expired by the server — triggers the same task refresh path as
+/// [TimerTaskAdvancedExternally], since the client's local "current task"
+/// view is equally stale here (phase-07 Design Constraints).
+final class SyncTaskRejectedExternally extends ExamAttemptEvent {
+  const SyncTaskRejectedExternally();
+}
+
+/// User-initiated, irreversible: ends the attempt immediately regardless of
+/// remaining tasks via `POST .../submit`. UI dispatches this only after an
+/// explicit confirmation step (phase-07 Design Constraints).
+final class ForceSubmitRequested extends ExamAttemptEvent {
+  const ForceSubmitRequested();
+}

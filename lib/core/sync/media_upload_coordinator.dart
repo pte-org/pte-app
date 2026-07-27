@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:logger/logger.dart';
 
+import '../network/api_exceptions.dart';
 import '../network/media_repository.dart';
 import '../network/network_canary.dart';
 import '../network/raw_upload_client.dart';
@@ -11,6 +12,7 @@ import '../storage/app_database.dart';
 import '../storage/dao/answer_outbox_dao.dart';
 import '../storage/dao/pending_media_upload_dao.dart';
 import '../storage/pending_media_upload_status.dart';
+import 'rate_limit_backoff.dart';
 import 'sync_engine.dart';
 
 /// Drives every `PendingMediaUploadTable` row through presign → upload →
@@ -38,6 +40,7 @@ class MediaUploadCoordinator {
     PeriodicTimerFactory? createPeriodicTimer,
     Logger? logger,
     String contentType = 'audio/wav',
+    RateLimitBackoff? backoff,
   }) : _mediaDao = mediaDao,
        _outboxDao = outboxDao,
        _mediaRepository = mediaRepository,
@@ -46,7 +49,8 @@ class MediaUploadCoordinator {
        _periodicInterval = periodicInterval,
        _createPeriodicTimer = createPeriodicTimer ?? Timer.periodic,
        _logger = logger ?? Logger(),
-       _contentType = contentType;
+       _contentType = contentType,
+       _backoff = backoff ?? RateLimitBackoff();
 
   final PendingMediaUploadDao _mediaDao;
   final AnswerOutboxDao _outboxDao;
@@ -57,6 +61,7 @@ class MediaUploadCoordinator {
   final PeriodicTimerFactory _createPeriodicTimer;
   final Logger _logger;
   final String _contentType;
+  final RateLimitBackoff _backoff;
 
   StreamSubscription<void>? _canarySubscription;
   Timer? _periodicTimer;
@@ -91,6 +96,7 @@ class MediaUploadCoordinator {
   /// Immediate one-off attempt for a specific row — called right after
   /// recording stops, independent of the scan loop's cadence.
   Future<void> attemptUpload(String attemptPublicId, String pinnedItemPublicId) async {
+    if (_backoff.isActive) return;
     final row = await _mediaDao.getRow(attemptPublicId, pinnedItemPublicId);
     if (row == null || row.status == PendingMediaUploadStatus.ready.name) return;
     await _advance(row);
@@ -100,7 +106,7 @@ class MediaUploadCoordinator {
   /// advance each one. Single-flight, mirroring [SyncEngine._flush]'s
   /// `_isFlushing` guard.
   Future<void> scanAll() async {
-    if (_isScanning) return;
+    if (_isScanning || _backoff.isActive) return;
     _isScanning = true;
     try {
       final rows = await _mediaDao.queryNonReady();
@@ -127,6 +133,15 @@ class MediaUploadCoordinator {
           };
         }
         await _submitToOutbox(current);
+        _backoff.reset();
+      } on RateLimitException catch (e) {
+        // Shares the same gateway rate limit as SyncEngine's answer
+        // submission (requestPresign/completeUpload both go through
+        // ApiClient) — back off every row, not just this one, until the
+        // cooldown elapses (phase-07 Design Constraints). The raw PUT to
+        // MinIO never throws this: it doesn't go through the gateway.
+        _backoff.registerRateLimited(retryAfter: e.retryAfter);
+        _logger.w('Media upload rate-limited, backing off', error: e);
       } catch (e, stackTrace) {
         // Left at whatever status it reached — retried on the next
         // canary/periodic trigger, mirroring SyncEngine's leave-pending
