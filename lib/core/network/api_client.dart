@@ -70,6 +70,7 @@ class ApiClient {
     return switch (statusCode) {
       401 || 403 => AuthException('Authentication failed ($statusCode)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
+      404 => NotFoundException(_serverMessage(e) ?? 'Not found ($statusCode)'),
       409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
       429 => RateLimitException('Rate limited ($statusCode)', retryAfter: _retryAfter(e)),
       _ => UnknownApiException('Unexpected response ($statusCode)'),

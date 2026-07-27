@@ -4,11 +4,13 @@ import 'core/constants/app_strings.dart';
 import 'core/storage/storage_module.dart';
 import 'features/auth/auth_module.dart';
 import 'features/exam_attempt/exam_attempt_module.dart';
+import 'features/report/report_module.dart';
 
 void main() {
   setupAuthModule();
   setupStorageModule();
   setupExamAttemptModule();
+  setupReportModule();
   runApp(const PteApp());
 }
 

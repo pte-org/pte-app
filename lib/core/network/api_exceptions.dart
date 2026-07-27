@@ -68,6 +68,16 @@ final class ResponseWindowExpiredException extends ConflictException {
   const ResponseWindowExpiredException(super.message);
 }
 
+/// 404 — the resource genuinely doesn't exist *or* exists but isn't visible
+/// to the caller yet, indistinguishably (e.g. `pte-api`'s reporting
+/// endpoint returns the same `REPORT_NOT_FOUND` 404 for both "not yet
+/// published" and "not owned" — phase-08 Design Constraints). Callers for
+/// whom 404 is an expected steady state (not a failure) branch on this type
+/// specifically rather than falling through to [UnknownApiException].
+final class NotFoundException extends ApiException {
+  const NotFoundException(super.message);
+}
+
 /// No response reached the server at all (DNS, connection refused,
 /// timeout) — as opposed to [ApiException]'s "server responded with an
 /// error status."

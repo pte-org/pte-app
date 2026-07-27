@@ -36,4 +36,15 @@ class AppStrings {
       'This ends your attempt immediately, including any tasks not yet answered. This cannot be undone.';
   static const String forceSubmitDialogConfirm = 'Submit';
   static const String forceSubmitDialogCancel = 'Cancel';
+
+  static const String reportScreenTitle = 'Your report';
+  static const String reportNotPublishedTitle = 'Waiting for your report';
+  static const String reportNotPublishedMessage =
+      'Your host hasn\'t published this report yet. Pull down to check again.';
+  static const String reportErrorTitle = 'Something went wrong';
+  static const String reportErrorMessage = 'We couldn\'t load your report. Pull down to try again.';
+  static const String reportOverallSectionTitle = 'Overall';
+  static const String reportCommunicativeSkillsSectionTitle = 'Communicative skills';
+  static const String reportEnablingSkillsSectionTitle = 'Enabling skills';
+  static const String reportInsufficientDataLabel = 'Insufficient data';
 }
