@@ -55,6 +55,11 @@ class ProactiveRefreshScheduler {
   Future<void> _fireRefresh() async {
     try {
       await onRefreshDue();
+      // Re-arm for the next cycle — this must fire again on every
+      // subsequent expiry, not just once after login (QUAL-101, Phase 1
+      // quality gate), or every cycle after the first silently falls back
+      // to the reactive 401 path.
+      scheduleFromTokenStore();
     } catch (e, stackTrace) {
       // A proactive-refresh failure must not silently strand the app on
       // the reactive 401-interceptor as its only remaining fallback —

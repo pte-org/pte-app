@@ -126,6 +126,35 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(attempt, 2);
-    expect(scheduledDelays.length, 2); // no further retry after success
+    // initial schedule + retry + re-armed next cycle after the retry succeeds
+    expect(scheduledDelays.length, 3);
+  });
+
+  test('a successful refresh re-arms the next proactive cycle, not just a one-shot after login', () async {
+    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
+    final scheduledCallbacks = <void Function()>[];
+
+    final scheduler = ProactiveRefreshScheduler(
+      tokenStore: tokenStore,
+      onRefreshDue: () async => refreshDueCalls++,
+      now: () => fakeNow,
+      createTimer: (delay, cb) {
+        scheduledCallbacks.add(cb);
+        return Timer(const Duration(days: 999), () {});
+      },
+    );
+
+    scheduler.scheduleFromTokenStore();
+    scheduledCallbacks.first(); // first proactive refresh fires and succeeds
+    await Future<void>.delayed(Duration.zero);
+
+    expect(refreshDueCalls, 1);
+    expect(scheduledCallbacks.length, 2); // re-armed for the next cycle
+
+    scheduledCallbacks.last(); // second proactive refresh fires and succeeds
+    await Future<void>.delayed(Duration.zero);
+
+    expect(refreshDueCalls, 2);
+    expect(scheduledCallbacks.length, 3); // re-armed again
   });
 }

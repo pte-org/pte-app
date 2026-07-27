@@ -16,7 +16,12 @@ import 'presentation/bloc/auth_bloc.dart';
 /// GetIt registration for auth + the shared networking primitives every
 /// later feature module depends on (`ApiClient`, `TokenStore`). Real-module
 /// counterpart to Phase 0's `_example_module.dart` template.
-Dio _newGatewayDio() => Dio(BaseOptions(baseUrl: AppConfig.gatewayBaseUrl));
+Dio _newGatewayDio() => Dio(BaseOptions(
+      baseUrl: AppConfig.gatewayBaseUrl,
+      connectTimeout: AppConfig.connectTimeout,
+      receiveTimeout: AppConfig.receiveTimeout,
+      sendTimeout: AppConfig.sendTimeout,
+    ));
 
 void setupAuthModule() {
   final getIt = GetIt.instance;

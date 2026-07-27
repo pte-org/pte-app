@@ -29,8 +29,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final claims = await _repository.login(email: event.email, password: event.password);
       _scheduler.scheduleFromTokenStore();
       emit(AuthAuthenticated(claims));
-    } on ApiException catch (e) {
-      emit(AuthError(e));
+    } catch (e) {
+      // Any failure here — a mapped ApiException or an unexpected shape
+      // error from a malformed 2xx body — must still reach AuthError;
+      // otherwise the bloc is stranded in AuthAuthenticating forever with
+      // no route back to a state the UI can act on (QUAL-103, Phase 1
+      // quality gate).
+      emit(AuthError(e is ApiException ? e : UnknownApiException(e.toString())));
     }
   }
 
