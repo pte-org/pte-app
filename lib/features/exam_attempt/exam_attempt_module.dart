@@ -1,7 +1,6 @@
 import 'package:get_it/get_it.dart';
 
 import '../../core/network/api_client.dart';
-import '../../core/storage/dao/answer_outbox_dao.dart';
 import '../../core/sync/sync_engine.dart';
 import 'data/repositories/exam_attempt_repository_impl.dart';
 import 'data/repositories/manual_session_entry_repository.dart';
@@ -16,10 +15,7 @@ import 'presentation/bloc/exam_attempt_bloc.dart';
 void setupExamAttemptModule() {
   final getIt = GetIt.instance;
 
-  getIt.registerLazySingleton<SessionIdInputBuffer>(() => SessionIdInputBuffer());
-  getIt.registerLazySingleton<SessionEntryRepository>(
-    () => ManualSessionEntryRepository(readInput: () => getIt<SessionIdInputBuffer>().value),
-  );
+  getIt.registerLazySingleton<SessionEntryRepository>(() => const ManualSessionEntryRepository());
 
   getIt.registerLazySingleton<ExamAttemptRepository>(
     () => ExamAttemptRepositoryImpl(apiClient: getIt<ApiClient>()),
@@ -29,7 +25,6 @@ void setupExamAttemptModule() {
     () => ExamAttemptBloc(
       repository: getIt(),
       sessionEntryRepository: getIt(),
-      outboxDao: getIt<AnswerOutboxDao>(),
       syncEngine: getIt<SyncEngine>(),
     ),
   );

@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_exceptions.dart';
-import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/repositories/exam_attempt_repository.dart';
 import '../../domain/repositories/session_entry_repository.dart';
@@ -12,15 +11,19 @@ import 'exam_attempt_state.dart';
 /// No `BuildContext` here — navigation/side effects are driven by the UI
 /// listening to this bloc's state changes, matching Phase 1's `AuthBloc`
 /// constraint.
+///
+/// Depends on `SyncEngine` only, never `AnswerOutboxDao` directly — resume
+/// reconciliation is composed entirely through `SyncEngine.startSync` +
+/// `SyncEngine.flushNow`, so the outbox's own storage details stay inside
+/// Phase 2 (phase-03 Design Constraints: "the repository itself has no
+/// outbox dependency" applies equally to this Bloc).
 class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   ExamAttemptBloc({
     required ExamAttemptRepository repository,
     required SessionEntryRepository sessionEntryRepository,
-    required AnswerOutboxDao outboxDao,
     required SyncEngine syncEngine,
   })  : _repository = repository,
         _sessionEntryRepository = sessionEntryRepository,
-        _outboxDao = outboxDao,
         _syncEngine = syncEngine,
         super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
@@ -29,7 +32,6 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
   final ExamAttemptRepository _repository;
   final SessionEntryRepository _sessionEntryRepository;
-  final AnswerOutboxDao _outboxDao;
   final SyncEngine _syncEngine;
 
   /// Tracks the running attempt so a stray `NextTaskRequested` after
@@ -42,17 +44,17 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   ) async {
     emit(const AttemptStarting());
     try {
-      final sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId();
+      final sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId(event.rawInput);
       final response = await _repository.startOrResumeAttempt(sessionPublicId);
       if (!response.completed) {
         // Resume reconciliation: any Phase 2 outbox rows left over from a
         // prior app session for this attempt get an immediate flush
-        // attempt via startSync, rather than passively waiting on the
-        // next canary event or periodic tick (phase-03 Design
-        // Constraints). Read-only from this Bloc layer — the repository
-        // itself has no outbox dependency.
-        await _outboxDao.queryByAttempt(response.attemptPublicId);
+        // attempt, rather than passively waiting on the next canary event
+        // or periodic tick (phase-03 Design Constraints). startSync alone
+        // only arms future triggers; flushNow is what makes the attempt
+        // actually immediate.
         _syncEngine.startSync(response.attemptPublicId);
+        await _syncEngine.flushNow(response.attemptPublicId);
       }
       _emitFromResponse(response, emit);
     } on SessionResolutionException catch (e) {

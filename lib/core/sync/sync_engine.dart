@@ -93,6 +93,17 @@ class SyncEngine {
     _activeTaskId = pinnedItemPublicId;
   }
 
+  /// Triggers an immediate flush pass for [attemptPublicId], independent
+  /// of the canary/periodic triggers. Used by resume reconciliation
+  /// (Phase 3) so outbox rows left over from a prior app session get an
+  /// attempt right away instead of waiting up to `periodicInterval` for
+  /// the first tick. A no-op if [attemptPublicId] isn't the currently
+  /// running attempt.
+  Future<void> flushNow(String attemptPublicId) {
+    if (_runningAttemptId != attemptPublicId) return Future.value();
+    return _flush(attemptPublicId);
+  }
+
   /// Flushes exactly one row by id, bypassing the active-task exclusion.
   /// Used only by the flush-before-navigate hook (Phase 5/6) and
   /// force-submit (Phase 7) — an explicit action the student actually took,

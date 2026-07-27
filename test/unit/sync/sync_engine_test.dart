@@ -189,6 +189,35 @@ void main() {
     expect(() => engine.startSync('attempt-1'), returnsNormally);
   });
 
+  test('flushNow triggers an immediate flush pass for the running attempt, independent of any canary/periodic trigger', () async {
+    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+    when(
+      () => apiClient.submitAnswer(
+        attemptPublicId: any(named: 'attemptPublicId'),
+        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+        payload: any(named: 'payload'),
+      ),
+    ).thenAnswer((_) async => _okResponse());
+    when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+
+    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+    engine.startSync('attempt-1');
+    await engine.flushNow('attempt-1');
+
+    verify(
+      () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+    ).called(1);
+  });
+
+  test('flushNow is a no-op if attemptPublicId is not the currently running attempt', () async {
+    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+    engine.startSync('attempt-1');
+
+    await engine.flushNow('attempt-2');
+
+    verifyNever(() => dao.queryPendingByAttempt(any()));
+  });
+
   test(
     'a pending row matching setActiveTask is never selected by a canary- or periodic-triggered flush, '
     'but flushOne still flushes it directly',

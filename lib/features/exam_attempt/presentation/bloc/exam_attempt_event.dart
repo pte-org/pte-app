@@ -2,10 +2,15 @@ sealed class ExamAttemptEvent {
   const ExamAttemptEvent();
 }
 
-/// Resolves a session ID via `SessionEntryRepository`, then starts or
-/// resumes the attempt for it.
+/// Resolves [rawInput] into a session ID via `SessionEntryRepository`,
+/// then starts or resumes the attempt for it. `rawInput`'s meaning is
+/// entirely owned by whichever `SessionEntryRepository` is registered
+/// (raw manual text today; a deep-link URI or a picked list item's ID
+/// later) — this event only carries it through untouched.
 final class SessionResolutionRequested extends ExamAttemptEvent {
-  const SessionResolutionRequested();
+  const SessionResolutionRequested({required this.rawInput});
+
+  final String rawInput;
 }
 
 /// Advances to the next task for the currently running attempt. A no-op
