@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
 import '../../domain/timer_phase.dart';
 import '../../domain/timer_snapshot.dart';
 import '../bloc/exam_attempt_bloc.dart';
@@ -63,24 +64,14 @@ class ExamAppBar extends StatelessWidget {
   /// the tap.
   Future<void> _confirmAndForceSubmit(BuildContext context) async {
     final bloc = context.read<ExamAttemptBloc>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text(AppStrings.forceSubmitDialogTitle),
-        content: const Text(AppStrings.forceSubmitDialogMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(AppStrings.forceSubmitDialogCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(AppStrings.forceSubmitDialogConfirm),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: AppStrings.forceSubmitDialogTitle,
+      message: AppStrings.forceSubmitDialogMessage,
+      confirmLabel: AppStrings.forceSubmitDialogConfirm,
+      cancelLabel: AppStrings.forceSubmitDialogCancel,
     );
-    if (confirmed ?? false) {
+    if (confirmed) {
       bloc.add(const ForceSubmitRequested());
     }
   }

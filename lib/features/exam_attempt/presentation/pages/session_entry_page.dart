@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../bloc/exam_attempt_bloc.dart';
 import '../bloc/exam_attempt_event.dart';
 import '../bloc/exam_attempt_state.dart';
@@ -49,15 +50,12 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
                   decoration: const InputDecoration(labelText: AppStrings.sessionEntryFieldLabel),
                 ),
                 const SizedBox(height: AppDimensions.spacingMedium),
-                ElevatedButton(
-                  onPressed: state is AttemptStarting
-                      ? null
-                      : () => context
-                          .read<ExamAttemptBloc>()
-                          .add(SessionResolutionRequested(rawInput: _controller.text)),
-                  child: state is AttemptStarting
-                      ? const CircularProgressIndicator()
-                      : const Text(AppStrings.sessionEntryStartButton),
+                PrimaryButton(
+                  label: AppStrings.sessionEntryStartButton,
+                  isLoading: state is AttemptStarting,
+                  onPressed: () => context
+                      .read<ExamAttemptBloc>()
+                      .add(SessionResolutionRequested(rawInput: _controller.text)),
                 ),
               ],
             ),

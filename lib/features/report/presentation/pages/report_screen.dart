@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/loading_view.dart';
+import '../../../../core/widgets/status_banner.dart';
 import '../../domain/report_response.dart';
 import '../../domain/repositories/report_repository.dart';
 import '../bloc/report_bloc.dart';
@@ -47,10 +49,24 @@ class _ReportScreenState extends State<ReportScreen> {
         body: BlocBuilder<ReportBloc, ReportState>(
           builder: (context, state) {
             return switch (state) {
-              ReportLoading() => const Center(child: CircularProgressIndicator()),
-              ReportNotPublished() => _refreshable(context, const _NotPublishedView()),
+              ReportLoading() => const LoadingView(),
+              ReportNotPublished() => _refreshable(
+                context,
+                const StatusBanner(
+                  icon: Icons.hourglass_empty,
+                  title: AppStrings.reportNotPublishedTitle,
+                  message: AppStrings.reportNotPublishedMessage,
+                ),
+              ),
               ReportReady(:final report) => _refreshable(context, _ReportReadyView(report: report)),
-              ReportError() => _refreshable(context, const _ErrorView()),
+              ReportError() => _refreshable(
+                context,
+                const StatusBanner(
+                  icon: Icons.error_outline,
+                  title: AppStrings.reportErrorTitle,
+                  message: AppStrings.reportErrorMessage,
+                ),
+              ),
             };
           },
         ),
@@ -64,46 +80,6 @@ class _ReportScreenState extends State<ReportScreen> {
         context.read<ReportBloc>().add(ReportRefreshRequested(widget.attemptPublicId));
       },
       child: ListView(padding: const EdgeInsets.all(AppDimensions.spacingMedium), children: [child]),
-    );
-  }
-}
-
-class _NotPublishedView extends StatelessWidget {
-  const _NotPublishedView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingMedium * 4),
-      child: Column(
-        children: [
-          const Icon(Icons.hourglass_empty),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          Text(AppStrings.reportNotPublishedTitle, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppDimensions.spacingMedium / 2),
-          const Text(AppStrings.reportNotPublishedMessage, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingMedium * 4),
-      child: Column(
-        children: [
-          const Icon(Icons.error_outline),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          Text(AppStrings.reportErrorTitle, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppDimensions.spacingMedium / 2),
-          const Text(AppStrings.reportErrorMessage, textAlign: TextAlign.center),
-        ],
-      ),
     );
   }
 }

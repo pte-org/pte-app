@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/storage/pending_media_upload_status.dart';
 import '../../../../core/sync/sync_engine.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../bloc/exam_attempt_bloc.dart';
 import '../bloc/exam_attempt_event.dart';
 import '../cubit/read_aloud_cubit.dart';
@@ -43,15 +43,10 @@ class _ReadAloudAdvanceButtonState extends State<ReadAloudAdvanceButton> {
     return BlocSelector<ReadAloudCubit, ReadAloudState, bool>(
       selector: (state) => state.uploadStatus == PendingMediaUploadStatus.ready,
       builder: (context, isReady) {
-        return ElevatedButton(
-          onPressed: (isReady && !_isAdvancing) ? _advance : null,
-          child: _isAdvancing
-              ? const SizedBox(
-                  width: AppDimensions.advanceButtonSpinnerSize,
-                  height: AppDimensions.advanceButtonSpinnerSize,
-                  child: CircularProgressIndicator(strokeWidth: AppDimensions.advanceButtonSpinnerStrokeWidth),
-                )
-              : Text(isReady ? AppStrings.taskAdvanceButtonLabel : AppStrings.readAloudStillUploadingLabel),
+        return PrimaryButton(
+          label: isReady ? AppStrings.taskAdvanceButtonLabel : AppStrings.readAloudStillUploadingLabel,
+          onPressed: isReady ? _advance : null,
+          isLoading: _isAdvancing,
         );
       },
     );
