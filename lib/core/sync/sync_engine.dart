@@ -57,6 +57,12 @@ class SyncEngine {
   /// for a *different* attempt while already running — most likely a
   /// missing `stopSync()` after the previous attempt ended, so this fails
   /// loudly rather than silently running two attempts concurrently.
+  ///
+  /// Background flushing begins immediately — call [setActiveTask] before
+  /// or in the same synchronous turn as `startSync` whenever the first
+  /// task is already known, so no window exists where a background trigger
+  /// could flush that task's row before it's marked active (QUAL-202,
+  /// Phase 2 quality gate).
   void startSync(String attemptPublicId) {
     final running = _runningAttemptId;
     if (running != null) {
@@ -129,9 +135,21 @@ class SyncEngine {
       await _outboxDao.markSynced(answer.attemptPublicId, answer.pinnedItemPublicId);
     } on ConflictException catch (e) {
       await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+    } on ValidationException catch (e) {
+      // The server rejected this exact payload as malformed — retrying
+      // the same bytes forever cannot succeed, unlike a network/server
+      // blip (QUAL-201, Phase 2 quality gate). Not a 409, but
+      // non-retryable for the same underlying reason.
+      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
     } on ApiException catch (e) {
-      // Transient (network/server) — leave pending, retried automatically
-      // on the next canary event or periodic tick.
+      // Transient (network/server/rate-limit) or session-level
+      // (AuthException) — leave pending, retried on the next canary event
+      // or periodic tick. AuthException is deliberately NOT marked
+      // terminal here: it signals a broken session, not an invalid
+      // payload, so abandoning just this one row wouldn't fix anything —
+      // it retries indefinitely until the session recovers. No bounded
+      // retry/backoff exists yet for this case (non-goal for this phase,
+      // QUAL-201).
       _logger.w('Answer flush failed, left pending for next tick', error: e);
     }
   }

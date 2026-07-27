@@ -113,6 +113,48 @@ void main() {
     verifyNever(() => dao.markSynced(any(), any()));
   });
 
+  test('a ValidationException also results in markTerminalRejected — retrying the same malformed payload forever cannot succeed', () async {
+    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+    when(
+      () => apiClient.submitAnswer(
+        attemptPublicId: any(named: 'attemptPublicId'),
+        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+        payload: any(named: 'payload'),
+      ),
+    ).thenThrow(const ValidationException('Request rejected (400)'));
+    when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
+
+    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+    engine.startSync('attempt-1');
+    canaryController.add(null);
+    await Future<void>.delayed(Duration.zero);
+
+    verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'Request rejected (400)')).called(1);
+    verifyNever(() => dao.markSynced(any(), any()));
+  });
+
+  test(
+    'an AuthException leaves the row pending (session-level failure, not a row-specific one — retries indefinitely by design)',
+    () async {
+      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.submitAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenThrow(const AuthException('Authentication failed (401)'));
+
+      final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+      engine.startSync('attempt-1');
+      canaryController.add(null);
+      await Future<void>.delayed(Duration.zero);
+
+      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
+    },
+  );
+
   test('a NetworkException leaves the row untouched for the next tick (no mark* call)', () async {
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
