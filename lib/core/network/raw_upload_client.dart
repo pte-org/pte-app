@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../config/app_config.dart';
+
 /// Thin, deliberately uninterceptored `PUT` client for presigned MinIO
 /// uploads. The presigned URL itself is the credential (900s TTL) —
 /// attaching the app's bearer `Authorization` header would send it to a
@@ -9,7 +11,16 @@ import 'package:dio/dio.dart';
 /// Constraints). Never reuse `ApiClient`'s gateway `Dio` instance for this
 /// call; this class's [Dio] carries zero interceptors, always.
 class RawUploadClient {
-  RawUploadClient({Dio? dio}) : _dio = dio ?? Dio();
+  RawUploadClient({Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: AppConfig.connectTimeout,
+              receiveTimeout: AppConfig.receiveTimeout,
+              sendTimeout: AppConfig.sendTimeout,
+            ),
+          );
 
   final Dio _dio;
 

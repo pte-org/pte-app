@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/storage/dao/pending_media_upload_dao.dart';
+import '../../../../core/storage/pending_media_upload_status.dart';
 import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/audio_recorder_service.dart';
@@ -115,6 +116,9 @@ class _RecordingBody extends StatelessWidget {
 
   String _uploadStatusLabel(ReadAloudState state) {
     final status = state.uploadStatus;
-    return status == null ? AppStrings.readAloudNotRecordedYetLabel : status.name;
+    if (status == null) return AppStrings.readAloudNotRecordedYetLabel;
+    return status == PendingMediaUploadStatus.ready
+        ? AppStrings.readAloudUploadReadyLabel
+        : AppStrings.readAloudStillUploadingLabel;
   }
 }

@@ -28,4 +28,5 @@ class AppStrings {
   static const String readAloudRecordingIndicator = 'Recording…';
   static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
+  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
 }
