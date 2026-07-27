@@ -92,19 +92,21 @@ class _RecordingBody extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                state.isRecording
-                    ? AppStrings.readAloudRecordingIndicator
-                    : (state.hasRecorded
-                          ? _uploadStatusLabel(state)
-                          : AppStrings.readAloudNotRecordedYetLabel),
+                switch (state.recordingPhase) {
+                  RecordingPhase.recording => AppStrings.readAloudRecordingIndicator,
+                  RecordingPhase.recorded => _uploadStatusLabel(state),
+                  RecordingPhase.idle => AppStrings.readAloudNotRecordedYetLabel,
+                },
               ),
               const SizedBox(height: AppDimensions.spacingMedium),
               ElevatedButton(
-                onPressed: state.isRecording
+                onPressed: state.recordingPhase == RecordingPhase.recording
                     ? () => context.read<ReadAloudCubit>().stopRecording()
                     : () => context.read<ReadAloudCubit>().startRecording(),
                 child: Text(
-                  state.isRecording ? AppStrings.readAloudStopRecordingLabel : AppStrings.readAloudStartRecordingLabel,
+                  state.recordingPhase == RecordingPhase.recording
+                      ? AppStrings.readAloudStopRecordingLabel
+                      : AppStrings.readAloudStartRecordingLabel,
                 ),
               ),
             ],

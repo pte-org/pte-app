@@ -54,14 +54,22 @@ class ReadAloudCubit extends Cubit<ReadAloudState> {
   Future<void> startRecording() async {
     final path = await _resolveFilePath(attemptPublicId, pinnedItemPublicId);
     await _recorder.start(path);
-    emit(state.copyWith(isRecording: true));
+    emit(state.copyWith(recordingPhase: RecordingPhase.recording));
   }
 
   Future<void> stopRecording() async {
     final path = await _recorder.stop();
-    emit(state.copyWith(isRecording: false));
-    if (path == null) return;
-    emit(state.copyWith(hasRecorded: true));
+    if (path == null) {
+      // A failed re-record attempt must not discard a prior successful
+      // recording's `recorded` phase — only fall back to `idle` if there
+      // wasn't one already (matches the pre-refactor boolean behavior:
+      // `hasRecorded` was left untouched here).
+      if (state.recordingPhase != RecordingPhase.recorded) {
+        emit(state.copyWith(recordingPhase: RecordingPhase.idle));
+      }
+      return;
+    }
+    emit(state.copyWith(recordingPhase: RecordingPhase.recorded));
     await _mediaDao.upsertRecorded(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
