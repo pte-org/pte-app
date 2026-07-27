@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
-import 'package:pte_app/core/storage/token_store.dart';
 import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,20 +12,10 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
-class _MockTokenStore extends Mock implements TokenStore {}
-
 class _MockProactiveRefreshScheduler extends Mock implements ProactiveRefreshScheduler {}
-
-String _fakeJwt(Map<String, dynamic> claims) {
-  String encodeSegment(Object value) => base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
-  return '${encodeSegment({
-        'alg': 'RS256'
-      })}.${encodeSegment(claims)}.sig';
-}
 
 void main() {
   late _MockAuthRepository repository;
-  late _MockTokenStore tokenStore;
   late _MockProactiveRefreshScheduler scheduler;
 
   setUpAll(() {
@@ -37,19 +24,17 @@ void main() {
 
   setUp(() {
     repository = _MockAuthRepository();
-    tokenStore = _MockTokenStore();
     scheduler = _MockProactiveRefreshScheduler();
   });
 
-  AuthBloc buildBloc() => AuthBloc(repository: repository, tokenStore: tokenStore, scheduler: scheduler);
+  AuthBloc buildBloc() => AuthBloc(repository: repository, scheduler: scheduler);
 
   blocTest<AuthBloc, AuthState>(
     'LoginRequested success emits Authenticating then Authenticated, and starts the proactive scheduler',
     setUp: () {
-      when(() => repository.login(email: any(named: 'email'), password: any(named: 'password')))
-          .thenAnswer((_) async {});
-      when(() => tokenStore.readAccessToken())
-          .thenAnswer((_) async => _fakeJwt({'roles': ['STUDENT'], 'tenant_id': 't1'}));
+      when(() => repository.login(email: any(named: 'email'), password: any(named: 'password'))).thenAnswer(
+        (_) async => const JwtClaims(roles: ['STUDENT'], tenantId: 't1'),
+      );
       when(() => scheduler.scheduleFromTokenStore()).thenReturn(null);
     },
     build: buildBloc,

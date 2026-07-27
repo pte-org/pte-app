@@ -2,9 +2,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Persists the refresh token via `flutter_secure_storage` exclusively —
 /// never `SharedPreferences`. Access tokens are short-lived (900s) and
-/// held in memory only, not worth the secure-storage round-trip cost;
-/// they don't need to survive a process restart since a restart already
-/// requires a refresh-token round-trip regardless.
+/// held in memory only, not worth the secure-storage round-trip cost.
+///
+/// Note: no code path currently reads the persisted refresh token on app
+/// startup to restore a session — `AuthBloc` only has `LoginRequested`/
+/// `LogoutRequested`. A cold restart therefore requires a fresh login
+/// today, even though the refresh token (7-day TTL) is still there.
+/// Session-restore-on-launch is out of this phase's scope, not assumed
+/// to work — add an `AuthCheckRequested`-style bootstrap event if a later
+/// phase needs it.
 class TokenStore {
   TokenStore({required FlutterSecureStorage secureStorage, DateTime Function()? now})
       : _secureStorage = secureStorage,
@@ -33,7 +39,7 @@ class TokenStore {
     _accessTokenExpiresAt = _now().add(Duration(seconds: expiresInSeconds));
   }
 
-  Future<String?> readAccessToken() async => _accessToken;
+  String? get accessToken => _accessToken;
 
   Future<String?> readRefreshToken() => _secureStorage.read(key: refreshTokenKey);
 

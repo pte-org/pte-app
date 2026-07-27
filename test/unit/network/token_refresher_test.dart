@@ -54,7 +54,7 @@ void main() {
 
     expect(adapter.callCount, 1);
     expect(results[0], results[1]);
-    expect(await tokenStore.readAccessToken(), results[0]);
+    expect(tokenStore.accessToken, results[0]);
   });
 
   test('a later refresh() call after the first completes issues a new request (not stuck single-flight forever)', () async {

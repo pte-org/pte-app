@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -9,6 +11,13 @@ import 'package:pte_app/features/auth/data/repositories/auth_repository_impl.dar
 class _MockApiClient extends Mock implements ApiClient {}
 
 class _MockTokenStore extends Mock implements TokenStore {}
+
+String _fakeJwt(Map<String, dynamic> claims) {
+  String encodeSegment(Object value) => base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+  return '${encodeSegment({
+        'alg': 'RS256'
+      })}.${encodeSegment(claims)}.sig';
+}
 
 void main() {
   late _MockApiClient apiClient;
@@ -25,13 +34,17 @@ void main() {
     repository = AuthRepositoryImpl(apiClient: apiClient, tokenStore: tokenStore);
   });
 
-  test('login posts credentials and saves the returned tokens', () async {
+  test('login posts credentials, saves the returned tokens, and returns the decoded claims', () async {
+    final accessToken = _fakeJwt({
+      'roles': ['STUDENT'],
+      'tenant_id': 't1',
+    });
     when(() => apiClient.post<Map<String, dynamic>>('/api/iam/auth/login', data: any(named: 'data')))
         .thenAnswer((_) async => Response(
               requestOptions: RequestOptions(path: '/api/iam/auth/login'),
               statusCode: 200,
               data: {
-                'accessToken': 'access-1',
+                'accessToken': accessToken,
                 'refreshToken': 'refresh-1',
                 'tokenType': 'Bearer',
                 'expiresInSeconds': 900,
@@ -43,7 +56,7 @@ void main() {
           expiresInSeconds: any(named: 'expiresInSeconds'),
         )).thenAnswer((_) async {});
 
-    await repository.login(email: 'a@b.com', password: 'secret');
+    final claims = await repository.login(email: 'a@b.com', password: 'secret');
 
     final captured = verify(() => apiClient.post<Map<String, dynamic>>(
           '/api/iam/auth/login',
@@ -51,8 +64,10 @@ void main() {
         )).captured.single as Map<String, dynamic>;
     expect(captured['email'], 'a@b.com');
     expect(captured['password'], 'secret');
-    verify(() => tokenStore.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1', expiresInSeconds: 900))
+    verify(() => tokenStore.saveTokens(accessToken: accessToken, refreshToken: 'refresh-1', expiresInSeconds: 900))
         .called(1);
+    expect(claims.roles, ['STUDENT']);
+    expect(claims.tenantId, 't1');
   });
 
   test('logout reads the refresh token, posts it to the logout endpoint, then clears local tokens', () async {

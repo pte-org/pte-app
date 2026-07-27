@@ -30,7 +30,7 @@ void main() {
     );
 
     verify(() => secureStorage.write(key: TokenStore.refreshTokenKey, value: 'refresh-1')).called(1);
-    expect(await tokenStore.readAccessToken(), 'access-1');
+    expect(tokenStore.accessToken, 'access-1');
     expect(tokenStore.accessTokenExpiresAt, isNotNull);
     expect(tokenStore.accessTokenExpiresAt!.isAfter(DateTime.now()), isTrue);
   });
@@ -48,7 +48,7 @@ void main() {
     await tokenStore.clear();
 
     verify(() => secureStorage.delete(key: TokenStore.refreshTokenKey)).called(1);
-    expect(await tokenStore.readAccessToken(), isNull);
+    expect(tokenStore.accessToken, isNull);
     expect(tokenStore.accessTokenExpiresAt, isNull);
   });
 
@@ -57,6 +57,6 @@ void main() {
     await tokenStore.saveTokens(accessToken: 'access-2', refreshToken: 'refresh-2', expiresInSeconds: 900);
 
     verify(() => secureStorage.write(key: TokenStore.refreshTokenKey, value: 'refresh-2')).called(1);
-    expect(await tokenStore.readAccessToken(), 'access-2');
+    expect(tokenStore.accessToken, 'access-2');
   });
 }

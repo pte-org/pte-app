@@ -16,6 +16,8 @@ import 'presentation/bloc/auth_bloc.dart';
 /// GetIt registration for auth + the shared networking primitives every
 /// later feature module depends on (`ApiClient`, `TokenStore`). Real-module
 /// counterpart to Phase 0's `_example_module.dart` template.
+Dio _newGatewayDio() => Dio(BaseOptions(baseUrl: AppConfig.gatewayBaseUrl));
+
 void setupAuthModule() {
   final getIt = GetIt.instance;
 
@@ -24,19 +26,21 @@ void setupAuthModule() {
 
   // refreshDio: no interceptors, so the refresh call and its retry can
   // never recurse into TokenRefreshInterceptor.
-  final refreshDio = Dio(BaseOptions(baseUrl: AppConfig.gatewayBaseUrl));
   getIt.registerLazySingleton<TokenRefresher>(
     () => TokenRefresher(
-      refreshDio: refreshDio,
+      refreshDio: _newGatewayDio(),
       tokenStore: getIt(),
       refreshEndpoint: '/api/iam/auth/refresh',
     ),
   );
 
-  final dio = Dio(BaseOptions(baseUrl: AppConfig.gatewayBaseUrl))
-    ..interceptors.add(AuthHeaderInterceptor(tokenStore: getIt()))
-    ..interceptors.add(TokenRefreshInterceptor(refresher: getIt()));
-  getIt.registerLazySingleton<ApiClient>(() => ApiClient(dio: dio));
+  getIt.registerLazySingleton<ApiClient>(
+    () => ApiClient(
+      dio: _newGatewayDio()
+        ..interceptors.add(AuthHeaderInterceptor(tokenStore: getIt()))
+        ..interceptors.add(TokenRefreshInterceptor(refresher: getIt())),
+    ),
+  );
 
   getIt.registerLazySingleton<ProactiveRefreshScheduler>(
     () => ProactiveRefreshScheduler(
@@ -50,6 +54,6 @@ void setupAuthModule() {
   );
 
   getIt.registerLazySingleton<AuthBloc>(
-    () => AuthBloc(repository: getIt(), tokenStore: getIt(), scheduler: getIt()),
+    () => AuthBloc(repository: getIt(), scheduler: getIt()),
   );
 }

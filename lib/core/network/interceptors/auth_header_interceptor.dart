@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 
 import '../../storage/token_store.dart';
@@ -15,11 +13,7 @@ class AuthHeaderInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    unawaited(_attachToken(options, handler));
-  }
-
-  Future<void> _attachToken(RequestOptions options, RequestInterceptorHandler handler) async {
-    final accessToken = await tokenStore.readAccessToken();
+    final accessToken = tokenStore.accessToken;
     if (accessToken != null) {
       options.headers['Authorization'] = 'Bearer $accessToken';
     }
