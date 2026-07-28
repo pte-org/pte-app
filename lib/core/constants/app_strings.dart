@@ -5,6 +5,20 @@ class AppStrings {
 
   static const String appTitle = 'PTE Student';
 
+  static const String loginTitle = 'Sign in';
+  static const String loginEmailLabel = 'Email';
+  static const String loginPasswordLabel = 'Password';
+  static const String loginSubmit = 'Sign in';
+  static const String loginEmailRequired = 'Email is required';
+  static const String loginPasswordRequired = 'Password is required';
+  static const String loginFailure =
+      'Sign-in failed. Check your credentials and try again.';
+
+  static const String hostConsoleTitle = 'Host Console';
+  static const String hostConsoleWelcome = 'Welcome to the Host workspace.';
+  static const String logout = 'Log out';
+  static const String studentWorkspacePlaceholder = 'PTE Student';
+
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
   static const String sessionEntryStartButton = 'Start';
@@ -26,9 +40,11 @@ class AppStrings {
   static const String readAloudStartRecordingLabel = 'Start recording';
   static const String readAloudStopRecordingLabel = 'Stop recording';
   static const String readAloudRecordingIndicator = 'Recording…';
-  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
+  static const String readAloudNotRecordedYetLabel =
+      'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
-  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+  static const String readAloudUploadReadyLabel =
+      'Uploaded — ready to continue.';
 
   static const String forceSubmitButtonLabel = 'Submit exam';
   static const String forceSubmitDialogTitle = 'Submit exam now?';
@@ -42,9 +58,11 @@ class AppStrings {
   static const String reportNotPublishedMessage =
       'Your host hasn\'t published this report yet. Pull down to check again.';
   static const String reportErrorTitle = 'Something went wrong';
-  static const String reportErrorMessage = 'We couldn\'t load your report. Pull down to try again.';
+  static const String reportErrorMessage =
+      'We couldn\'t load your report. Pull down to try again.';
   static const String reportOverallSectionTitle = 'Overall';
-  static const String reportCommunicativeSkillsSectionTitle = 'Communicative skills';
+  static const String reportCommunicativeSkillsSectionTitle =
+      'Communicative skills';
   static const String reportEnablingSkillsSectionTitle = 'Enabling skills';
   static const String reportInsufficientDataLabel = 'Insufficient data';
 }

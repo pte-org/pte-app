@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'core/constants/app_strings.dart';
+import 'app.dart';
 import 'core/storage/storage_module.dart';
 import 'features/auth/auth_module.dart';
 import 'features/exam_attempt/exam_attempt_module.dart';
+import 'features/host_console/host_console_module.dart';
 import 'features/report/report_module.dart';
 
 void main() {
@@ -11,17 +12,6 @@ void main() {
   setupStorageModule();
   setupExamAttemptModule();
   setupReportModule();
+  setupHostConsoleModule();
   runApp(const PteApp());
-}
-
-class PteApp extends StatelessWidget {
-  const PteApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: AppStrings.appTitle,
-      home: Scaffold(body: Center(child: Text(AppStrings.appTitle))),
-    );
-  }
 }
