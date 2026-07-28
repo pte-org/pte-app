@@ -6,6 +6,7 @@ import 'features/authoring/authoring_module.dart';
 import 'features/auth/auth_module.dart';
 import 'features/exam_attempt/exam_attempt_module.dart';
 import 'features/host_console/host_console_module.dart';
+import 'features/host_users/host_users_module.dart';
 import 'features/report/report_module.dart';
 import 'features/scheduling/scheduling_module.dart';
 
@@ -15,6 +16,7 @@ void main() {
   setupExamAttemptModule();
   setupReportModule();
   setupHostConsoleModule();
+  setupHostUsersModule();
   setupAuthoringModule();
   setupSchedulingModule();
   runApp(const PteApp());

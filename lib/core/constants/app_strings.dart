@@ -103,6 +103,19 @@ class AppStrings {
       'Session changed on the server. The latest state has been reloaded.';
   static const String sessionMutationFailure =
       'The session could not be updated. Try again.';
+  static const String manageParticipants = 'Manage participants';
+  static const String participantManagementTitle = 'Enrollment and proctor';
+  static const String studentsTitle = 'Eligible students';
+  static const String proctorsTitle = 'Eligible proctors';
+  static const String enrollStudent = 'Enroll student';
+  static const String assignProctor = 'Assign proctor';
+  static const String usersLoadFailure = 'Eligible users could not be loaded.';
+  static const String noEligibleUsers = 'No eligible users found.';
+  static const String participantCommandSuccess = 'Command completed.';
+  static const String participantCommandFailure =
+      'Command failed. Your selection was preserved.';
+  static const String participantConfirmation = 'Confirm participant action?';
+  static const String confirm = 'Confirm';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';

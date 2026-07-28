@@ -6,13 +6,19 @@ import '../../../authoring/presentation/pages/blueprint_list_page.dart';
 import '../../../authoring/presentation/pages/question_list_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../scheduling/presentation/pages/session_list_page.dart';
+import '../../domain/host_access_policy.dart';
 
 class HostConsolePage extends StatelessWidget {
   const HostConsolePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final isAdmin =
+        authState is AuthAuthenticated &&
+        HostAccessPolicy.isHostAdmin(authState.claims);
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.hostConsoleTitle),
@@ -48,7 +54,7 @@ class HostConsolePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const SessionListPage(),
+                  builder: (_) => SessionListPage(isAdmin: isAdmin),
                 ),
               ),
               child: const Text(AppStrings.sessionsTitle),

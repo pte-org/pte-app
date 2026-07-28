@@ -7,9 +7,11 @@ import 'domain/usecases/create_session.dart';
 import 'domain/usecases/load_session.dart';
 import 'domain/usecases/load_sessions.dart';
 import 'domain/usecases/load_snapshot_options.dart';
+import 'domain/usecases/manage_participants.dart';
 import 'domain/usecases/update_session_composition.dart';
 import 'domain/usecases/update_session_status.dart';
 import 'presentation/bloc/session_create_bloc.dart';
+import 'presentation/bloc/participant_command_bloc.dart';
 import 'presentation/bloc/session_detail_bloc.dart';
 import 'presentation/bloc/session_list_bloc.dart';
 
@@ -38,6 +40,18 @@ void setupSchedulingModule() {
   );
   getIt.registerLazySingleton<CloseSession>(
     () => CloseSession(repository: getIt<SchedulingRepository>()),
+  );
+  getIt.registerLazySingleton<EnrollStudent>(
+    () => EnrollStudent(repository: getIt<SchedulingRepository>()),
+  );
+  getIt.registerLazySingleton<AssignProctor>(
+    () => AssignProctor(repository: getIt<SchedulingRepository>()),
+  );
+  getIt.registerFactory<EnrollmentBloc>(
+    () => EnrollmentBloc(enrollStudent: getIt<EnrollStudent>()),
+  );
+  getIt.registerFactory<ProctorAssignmentBloc>(
+    () => ProctorAssignmentBloc(assignProctor: getIt<AssignProctor>()),
   );
   getIt.registerFactory<SessionListBloc>(
     () => SessionListBloc(loadSessions: getIt<LoadSessions>()),

@@ -15,20 +15,24 @@ import 'session_create_page.dart';
 import 'session_detail_page.dart';
 
 class SessionListPage extends StatelessWidget {
-  const SessionListPage({super.key});
+  const SessionListPage({super.key, this.isAdmin = false});
+
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
           GetIt.instance<SessionListBloc>()..add(const SessionListRequested()),
-      child: const _SessionListView(),
+      child: _SessionListView(isAdmin: isAdmin),
     );
   }
 }
 
 class _SessionListView extends StatelessWidget {
-  const _SessionListView();
+  const _SessionListView({required this.isAdmin});
+
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +87,7 @@ class _SessionListView extends StatelessWidget {
           create: (_) =>
               GetIt.instance<SessionDetailBloc>()
                 ..add(SessionDetailRequested(publicId)),
-          child: const SessionDetailPage(),
+          child: SessionDetailPage(isAdmin: isAdmin),
         ),
       ),
     );

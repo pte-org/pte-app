@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/scheduling_repository.dart';
+import '../../domain/participant_types.dart';
 import '../../domain/session_types.dart';
 import '../models/session_model.dart';
 
@@ -103,5 +104,39 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       );
     }
     return List.unmodifiable(options.values);
+  }
+
+  @override
+  Future<EnrollmentResult> enrollStudent(
+    String sessionPublicId,
+    String studentPublicId,
+  ) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '$_sessionsPath/$sessionPublicId/enrollments',
+      data: {'studentPublicId': studentPublicId},
+    );
+    final data = response.data!;
+    return EnrollmentResult(
+      publicId: data['publicId'] as String,
+      sessionPublicId: data['sessionPublicId'] as String,
+      studentPublicId: data['studentPublicId'] as String,
+    );
+  }
+
+  @override
+  Future<ProctorAssignmentResult> assignProctor(
+    String sessionPublicId,
+    String proctorPublicId,
+  ) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '$_sessionsPath/$sessionPublicId/proctors',
+      data: {'proctorPublicId': proctorPublicId},
+    );
+    final data = response.data!;
+    return ProctorAssignmentResult(
+      publicId: data['publicId'] as String,
+      sessionPublicId: data['sessionPublicId'] as String,
+      proctorPublicId: data['proctorPublicId'] as String,
+    );
   }
 }

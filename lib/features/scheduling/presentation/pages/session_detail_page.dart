@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../host_users/domain/usecases/load_host_users.dart';
 import '../../domain/session_types.dart';
 import '../bloc/session_detail_bloc.dart';
+import '../bloc/participant_command_bloc.dart';
 import '../bloc/session_detail_event.dart';
 import '../bloc/session_detail_state.dart';
+import 'participant_management_page.dart';
 
 class SessionDetailPage extends StatelessWidget {
-  const SessionDetailPage({super.key});
+  const SessionDetailPage({super.key, this.isAdmin = false});
+
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +27,16 @@ class SessionDetailPage extends StatelessWidget {
         builder: (context, state) => switch (state) {
           SessionDetailInitial() ||
           SessionDetailLoading() => const LoadingView(),
-          SessionDetailData() => _SessionDetailBody(data: state),
+          SessionDetailData() => _SessionDetailBody(
+            data: state,
+            isAdmin: isAdmin,
+          ),
           SessionDetailFailure(:final data) when data != null =>
-            _SessionDetailBody(data: data, mutationFailed: true),
+            _SessionDetailBody(
+              data: data,
+              isAdmin: isAdmin,
+              mutationFailed: true,
+            ),
           SessionDetailFailure() => const Center(
             child: Text(AppStrings.sessionsLoadFailure),
           ),
@@ -34,8 +47,13 @@ class SessionDetailPage extends StatelessWidget {
 }
 
 class _SessionDetailBody extends StatefulWidget {
-  const _SessionDetailBody({required this.data, this.mutationFailed = false});
+  const _SessionDetailBody({
+    required this.data,
+    required this.isAdmin,
+    this.mutationFailed = false,
+  });
   final SessionDetailData data;
+  final bool isAdmin;
   final bool mutationFailed;
 
   @override
@@ -123,6 +141,11 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
             onPressed: busy ? null : () => _confirmLifecycle(open: false),
             child: const Text(AppStrings.closeSession),
           ),
+        if (widget.isAdmin)
+          ElevatedButton(
+            onPressed: _manageParticipants,
+            child: const Text(AppStrings.manageParticipants),
+          ),
       ],
     );
   }
@@ -146,6 +169,21 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
       ),
     );
   }
+
+  Future<void> _manageParticipants() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => GetIt.instance<EnrollmentBloc>()),
+          BlocProvider(create: (_) => GetIt.instance<ProctorAssignmentBloc>()),
+        ],
+        child: ParticipantManagementPage(
+          sessionPublicId: widget.data.session.publicId,
+          loadUsers: GetIt.instance<LoadHostUsers>().call,
+        ),
+      ),
+    ),
+  );
 
   Future<void> _confirmLifecycle({required bool open}) async {
     final confirmed = await showDialog<bool>(
