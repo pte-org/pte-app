@@ -181,9 +181,26 @@ class _LiveProctorPageState extends State<LiveProctorPage> {
     );
   }
 
-  void _flagViolation() {
+  Future<void> _flagViolation() async {
     final attemptId = _attemptController.text.trim();
     if (attemptId.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.liveViolationConfirmation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(AppStrings.confirm),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
     context.read<LiveProctorBloc>().add(
       ViolationFlagRequested(
         attemptPublicId: attemptId,

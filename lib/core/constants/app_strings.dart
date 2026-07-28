@@ -168,6 +168,7 @@ class AppStrings {
   static const String liveFlagViolation = 'Flag violation';
   static const String liveViolationsTitle = 'Live violations';
   static const String liveCommandConfirmation = 'Confirm proctor command?';
+  static const String liveViolationConfirmation = 'Confirm violation flag?';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
