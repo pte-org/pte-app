@@ -134,6 +134,26 @@ class AppStrings {
   static const String taskTypeLabel = 'Task type';
   static const String rawScoreLabel = 'Raw score';
   static const String loadMore = 'Load more';
+  static const String notificationAuditTitle = 'Notification delivery audit';
+  static const String notificationAuditEmpty = 'No notification records yet.';
+  static const String notificationAuditFailure =
+      'Notification records could not be loaded.';
+  static const String violationAuditTitle = 'Session violation audit';
+  static const String violationAuditEmpty = 'No violations recorded.';
+  static const String violationAuditFailure =
+      'Violation records could not be loaded.';
+  static const String publicIdLabel = 'Public ID';
+  static const String recipientLabel = 'Recipient';
+  static const String notificationTypeLabel = 'Notification type';
+  static const String subjectLabel = 'Subject';
+  static const String deliveryStatusLabel = 'Delivery status';
+  static const String sentAtLabel = 'Sent at';
+  static const String notSent = 'Not sent';
+  static const String violationTypeLabel = 'Violation type';
+  static const String violationDetailLabel = 'Detail';
+  static const String sequenceLabel = 'Sequence';
+  static const String integrityHashLabel = 'Integrity hash';
+  static const String detectedAtLabel = 'Detected at';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';

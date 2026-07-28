@@ -7,6 +7,9 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../host_users/domain/usecases/load_host_users.dart';
+import '../../../host_audit/presentation/bloc/violation_audit_bloc.dart';
+import '../../../host_audit/presentation/bloc/violation_audit_event.dart';
+import '../../../host_audit/presentation/pages/violation_audit_page.dart';
 import '../../../scoring_review/presentation/bloc/scoring_review_bloc.dart';
 import '../../../scoring_review/presentation/bloc/scoring_review_event.dart';
 import '../../../scoring_review/presentation/pages/session_scoring_page.dart';
@@ -153,6 +156,10 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
           onPressed: _manageScoring,
           child: const Text(AppStrings.scoringReviewTitle),
         ),
+        ElevatedButton(
+          onPressed: _viewViolations,
+          child: const Text(AppStrings.violationAuditTitle),
+        ),
       ],
     );
   }
@@ -201,6 +208,19 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
         child: SessionScoringPage(
           sessionPublicId: widget.data.session.publicId,
           isAdmin: widget.isAdmin,
+        ),
+      ),
+    ),
+  );
+
+  Future<void> _viewViolations() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (_) =>
+            GetIt.instance<ViolationAuditBloc>()
+              ..add(ViolationAuditRequested(widget.data.session.publicId)),
+        child: ViolationAuditPage(
+          sessionPublicId: widget.data.session.publicId,
         ),
       ),
     ),
