@@ -7,6 +7,9 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../host_users/domain/usecases/load_host_users.dart';
+import '../../../scoring_review/presentation/bloc/scoring_review_bloc.dart';
+import '../../../scoring_review/presentation/bloc/scoring_review_event.dart';
+import '../../../scoring_review/presentation/pages/session_scoring_page.dart';
 import '../../domain/session_types.dart';
 import '../bloc/session_detail_bloc.dart';
 import '../bloc/participant_command_bloc.dart';
@@ -146,6 +149,10 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
             onPressed: _manageParticipants,
             child: const Text(AppStrings.manageParticipants),
           ),
+        ElevatedButton(
+          onPressed: _manageScoring,
+          child: const Text(AppStrings.scoringReviewTitle),
+        ),
       ],
     );
   }
@@ -180,6 +187,20 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
         child: ParticipantManagementPage(
           sessionPublicId: widget.data.session.publicId,
           loadUsers: GetIt.instance<LoadHostUsers>().call,
+        ),
+      ),
+    ),
+  );
+
+  Future<void> _manageScoring() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (_) =>
+            GetIt.instance<ScoringReviewBloc>()
+              ..add(ScoringReviewRequested(widget.data.session.publicId)),
+        child: SessionScoringPage(
+          sessionPublicId: widget.data.session.publicId,
+          isAdmin: widget.isAdmin,
         ),
       ),
     ),

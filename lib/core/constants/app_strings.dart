@@ -116,6 +116,24 @@ class AppStrings {
       'Command failed. Your selection was preserved.';
   static const String participantConfirmation = 'Confirm participant action?';
   static const String confirm = 'Confirm';
+  static const String scoringReviewTitle = 'Scoring and review';
+  static const String requestScoring = 'Request scoring';
+  static const String publishResults = 'Publish results';
+  static const String pendingReviewsTitle = 'Pending essay reviews';
+  static const String pendingReviewsEmpty = 'No essays are waiting for review.';
+  static const String scoringReviewsLoadFailure =
+      'Pending reviews could not be loaded.';
+  static const String scoringCommandFailure =
+      'The scoring command could not be completed.';
+  static const String scoringConflict =
+      'The backend gate rejected this action. Refresh and check pending reviews.';
+  static const String scoringCommandSuccess = 'Command accepted.';
+  static const String approveReview = 'Approve review';
+  static const String reviewConfirmation = 'Approve this scored essay?';
+  static const String attemptLabel = 'Attempt';
+  static const String taskTypeLabel = 'Task type';
+  static const String rawScoreLabel = 'Raw score';
+  static const String loadMore = 'Load more';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
