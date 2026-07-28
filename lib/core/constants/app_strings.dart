@@ -71,6 +71,38 @@ class AppStrings {
   static const String snapshotSource = 'Source blueprint';
   static const String edit = 'Edit';
   static const String delete = 'Delete';
+  static const String sessionsTitle = 'Exam sessions';
+  static const String sessionsEmpty = 'No exam sessions yet.';
+  static const String sessionsLoadFailure = 'Sessions could not be loaded.';
+  static const String createSession = 'Create session';
+  static const String createSessionTitle = 'Schedule exam session';
+  static const String sessionNameLabel = 'Session name';
+  static const String snapshotIdLabel = 'Published snapshot ID';
+  static const String opensAtLabel = 'Opens at (ISO-8601)';
+  static const String closesAtLabel = 'Closes at (ISO-8601)';
+  static const String sessionWindowHint = 'Example: 2026-07-29T08:00:00Z';
+  static const String sessionValidationFailure =
+      'Enter a name, snapshot ID, and a valid future session window.';
+  static const String sessionCreateFailure =
+      'Session could not be created. Try again.';
+  static const String sessionDetailTitle = 'Session detail';
+  static const String sessionStatusLabel = 'Status';
+  static const String sessionSnapshotLabel = 'Snapshot';
+  static const String sessionWindowLabel = 'Availability';
+  static const String compositionTitle = 'Task composition';
+  static const String compositionHint =
+      'Select all task types for a full mock, or a subset for practice.';
+  static const String compositionEmpty = 'This snapshot has no task types.';
+  static const String saveComposition = 'Save composition';
+  static const String compositionValidationFailure =
+      'Select at least one task type.';
+  static const String openSession = 'Open session';
+  static const String closeSession = 'Close session';
+  static const String sessionTransitionConfirmation = 'Confirm session action?';
+  static const String sessionConflict =
+      'Session changed on the server. The latest state has been reloaded.';
+  static const String sessionMutationFailure =
+      'The session could not be updated. Try again.';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';

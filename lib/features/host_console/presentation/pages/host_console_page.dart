@@ -6,6 +6,7 @@ import '../../../authoring/presentation/pages/blueprint_list_page.dart';
 import '../../../authoring/presentation/pages/question_list_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../scheduling/presentation/pages/session_list_page.dart';
 
 class HostConsolePage extends StatelessWidget {
   const HostConsolePage({super.key});
@@ -43,6 +44,14 @@ class HostConsolePage extends StatelessWidget {
                 ),
               ),
               child: const Text(AppStrings.blueprintsTitle),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SessionListPage(),
+                ),
+              ),
+              child: const Text(AppStrings.sessionsTitle),
             ),
           ],
         ),
