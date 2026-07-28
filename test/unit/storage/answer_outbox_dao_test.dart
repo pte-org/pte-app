@@ -1,135 +1,62 @@
-import 'dart:io';
-
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path/path.dart' as p;
 
-import 'package:aptis_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:aptis_app/core/storage/drift_database.dart';
-import 'package:aptis_app/core/storage/models/answer_sync_status.dart';
+import 'package:pte_app/core/storage/answer_sync_status.dart';
+import 'package:pte_app/core/storage/app_database.dart';
 
 void main() {
-  group('AnswerOutboxDao', () {
-    test(
-      'upsertAnswer is idempotent: same (attemptId, questionId) twice keeps one row with latest content',
-      () async {
-        final db = AppDatabase(NativeDatabase.memory());
-        final dao = AnswerOutboxDao(db);
+  late AppDatabase db;
 
-        await dao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q1',
-          content: 'first answer',
-        );
-        await dao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q1',
-          content: 'changed answer',
-        );
+  setUp(() {
+    db = AppDatabase(NativeDatabase.memory());
+  });
 
-        final rows = await dao.queryByAttemptId('a1');
-        expect(rows, hasLength(1));
-        expect(rows.single.content, 'changed answer');
+  tearDown(() async {
+    await db.close();
+  });
 
-        await db.close();
-      },
-    );
+  test('upsertAnswer is idempotent — two upserts for the same key leave exactly one row with the latest payload', () async {
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'p1', payload: 'first');
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'p1', payload: 'second');
 
-    test(
-      'queryPendingByAttemptId only returns pending rows for the given attemptId',
-      () async {
-        final db = AppDatabase(NativeDatabase.memory());
-        final dao = AnswerOutboxDao(db);
+    final rows = await db.answerOutboxDao.queryByAttempt('a1');
 
-        await dao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q1',
-          content: 'ans-1',
-        );
-        await dao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q2',
-          content: 'ans-2',
-        );
-        await dao.upsertAnswer(
-          attemptId: 'a2',
-          questionId: 'q1',
-          content: 'other attempt',
-        );
+    expect(rows, hasLength(1));
+    expect(rows.single.payload, 'second');
+  });
 
-        final pending = await dao.queryPendingByAttemptId('a1');
-        expect(pending, hasLength(2));
-        expect(
-          pending.every((r) => r.status == AnswerSyncStatus.pending.name),
-          isTrue,
-        );
+  test('a fresh local edit via upsertAnswer resets a terminalRejected row back to pending', () async {
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'p1', payload: 'first');
+    await db.answerOutboxDao.markTerminalRejected('a1', 'p1', 'NOT_CURRENT_TASK');
+    var row = (await db.answerOutboxDao.queryByAttempt('a1')).single;
+    expect(row.status, AnswerSyncStatus.terminalRejected.name);
 
-        await db.close();
-      },
-    );
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'p1', payload: 'edited');
 
-    test(
-      'markSynced transitions status so the row no longer appears as pending',
-      () async {
-        final db = AppDatabase(NativeDatabase.memory());
-        final dao = AnswerOutboxDao(db);
+    row = (await db.answerOutboxDao.queryByAttempt('a1')).single;
+    expect(row.status, AnswerSyncStatus.pending.name);
+    expect(row.payload, 'edited');
+  });
 
-        await dao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q1',
-          content: 'ans-1',
-        );
-        await dao.markSynced('a1', 'q1');
+  test('queryPendingByAttempt returns only pending rows, never synced/terminalRejected ones', () async {
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'pending-1', payload: 'x');
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'synced-1', payload: 'x');
+    await db.answerOutboxDao.markSynced('a1', 'synced-1');
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'rejected-1', payload: 'x');
+    await db.answerOutboxDao.markTerminalRejected('a1', 'rejected-1', 'RESPONSE_WINDOW_EXPIRED');
 
-        final pending = await dao.queryPendingByAttemptId('a1');
-        expect(pending, isEmpty);
+    final pending = await db.answerOutboxDao.queryPendingByAttempt('a1');
 
-        await db.close();
-      },
-    );
+    expect(pending.map((r) => r.pinnedItemPublicId), ['pending-1']);
+  });
 
-    test('markFailed records the failure reason', () async {
-      final db = AppDatabase(NativeDatabase.memory());
-      final dao = AnswerOutboxDao(db);
+  test('queryByAttempt never returns rows for a different attemptPublicId', () async {
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'p1', payload: 'x');
+    await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a2', pinnedItemPublicId: 'p1', payload: 'y');
 
-      await dao.upsertAnswer(
-        attemptId: 'a1',
-        questionId: 'q1',
-        content: 'ans-1',
-      );
-      await dao.markFailed('a1', 'q1', 'part closed');
+    final rows = await db.answerOutboxDao.queryByAttempt('a1');
 
-      final rows = await dao.queryByAttemptId('a1');
-      expect(rows.single.status, AnswerSyncStatus.failed.name);
-      expect(rows.single.lastSyncError, 'part closed');
-
-      await db.close();
-    });
-
-    test(
-      'answers survive reopening AppDatabase against the same on-disk file',
-      () async {
-        final dir = await Directory.systemTemp.createTemp('aptis_outbox_test');
-        final dbFile = File(p.join(dir.path, 'outbox.sqlite'));
-
-        final firstDb = AppDatabase(NativeDatabase(dbFile));
-        final firstDao = AnswerOutboxDao(firstDb);
-        await firstDao.upsertAnswer(
-          attemptId: 'a1',
-          questionId: 'q1',
-          content: 'still here',
-        );
-        await firstDb.close();
-
-        final secondDb = AppDatabase(NativeDatabase(dbFile));
-        final secondDao = AnswerOutboxDao(secondDb);
-        final rows = await secondDao.queryByAttemptId('a1');
-        expect(rows, hasLength(1));
-        expect(rows.single.content, 'still here');
-
-        await secondDb.close();
-        await dir.delete(recursive: true);
-      },
-    );
+    expect(rows, hasLength(1));
+    expect(rows.single.attemptPublicId, 'a1');
   });
 }

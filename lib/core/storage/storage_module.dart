@@ -1,14 +1,28 @@
 import 'package:get_it/get_it.dart';
 
+import '../network/api_client.dart';
+import '../network/network_canary.dart';
+import '../sync/sync_engine.dart';
+import 'app_database.dart';
 import 'dao/answer_outbox_dao.dart';
-import 'drift_database.dart';
+import 'dao/pending_media_upload_dao.dart';
 
-/// Registers storage-layer singletons. Call once at app startup, before
-/// any feature that depends on [AnswerOutboxDao] (Phase 5 sync engine,
-/// Phase 6 Bloc) is constructed.
-void registerStorageModule(GetIt getIt) {
-  getIt.registerLazySingleton<AppDatabase>(AppDatabase.new);
-  getIt.registerLazySingleton<AnswerOutboxDao>(
-    () => AnswerOutboxDao(getIt<AppDatabase>()),
+/// GetIt registration for the offline answer outbox and its background
+/// sync engine — shared infrastructure Phase 3 onward starts/stops via the
+/// exam-delivery `Bloc`'s lifecycle (phase-02 Design Constraints).
+void setupStorageModule() {
+  final getIt = GetIt.instance;
+
+  getIt.registerLazySingleton<AppDatabase>(() => AppDatabase());
+  getIt.registerLazySingleton<AnswerOutboxDao>(() => getIt<AppDatabase>().answerOutboxDao);
+  getIt.registerLazySingleton<PendingMediaUploadDao>(() => getIt<AppDatabase>().pendingMediaUploadDao);
+  getIt.registerLazySingleton<NetworkCanary>(() => NetworkCanary());
+
+  getIt.registerLazySingleton<SyncEngine>(
+    () => SyncEngine(
+      outboxDao: getIt(),
+      apiClient: getIt<ApiClient>(),
+      canary: getIt(),
+    ),
   );
 }

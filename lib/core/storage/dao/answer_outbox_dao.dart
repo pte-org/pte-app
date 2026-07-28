@@ -1,30 +1,32 @@
 import 'package:drift/drift.dart';
 
-import '../drift_database.dart';
-import '../models/answer_sync_status.dart';
+import '../answer_sync_status.dart';
+import '../app_database.dart';
 import '../tables/answer_outbox_table.dart';
 
 part 'answer_outbox_dao.g.dart';
 
 @DriftAccessor(tables: [AnswerOutboxTable])
-class AnswerOutboxDao extends DatabaseAccessor<AppDatabase>
-    with _$AnswerOutboxDaoMixin {
+class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxDaoMixin {
   AnswerOutboxDao(super.db);
 
-  /// Idempotent upsert keyed on `(attemptId, questionId)` — a repeated
-  /// write for the same question updates the existing row in place,
-  /// it never creates a duplicate.
+  /// Idempotent upsert keyed on `(attemptPublicId, pinnedItemPublicId)`.
+  /// Always resets `status` to [AnswerSyncStatus.pending] — even over a
+  /// [AnswerSyncStatus.terminalRejected] row — since a fresh local edit to
+  /// what the student believes is still an open task deserves one honest
+  /// attempt, not a silent drop because a *previous* payload for that same
+  /// key was rejected (phase-02 Design Constraints).
   Future<void> upsertAnswer({
-    required String attemptId,
-    required String questionId,
-    required String content,
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
   }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return into(answerOutboxTable).insertOnConflictUpdate(
       AnswerOutboxTableCompanion(
-        attemptId: Value(attemptId),
-        questionId: Value(questionId),
-        content: Value(content),
+        attemptPublicId: Value(attemptPublicId),
+        pinnedItemPublicId: Value(pinnedItemPublicId),
+        payload: Value(payload),
         status: Value(AnswerSyncStatus.pending.name),
         createdAt: Value(now),
         updatedAt: Value(now),
@@ -32,64 +34,66 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  Future<List<AnswerOutbox>> queryByAttemptId(String attemptId) {
-    return (select(
-      answerOutboxTable,
-    )..where((t) => t.attemptId.equals(attemptId))).get();
+  /// All rows for an attempt, any status — needed by Phase 3's resume
+  /// reconciliation.
+  Future<List<AnswerOutbox>> queryByAttempt(String attemptPublicId) {
+    return (select(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).get();
   }
 
-  Future<List<AnswerOutbox>> queryPendingByAttemptId(String attemptId) {
-    return (select(answerOutboxTable)..where(
-          (t) =>
-              t.attemptId.equals(attemptId) &
-              t.status.equals(AnswerSyncStatus.pending.name),
-        ))
+  Future<List<AnswerOutbox>> queryPendingByAttempt(String attemptPublicId) {
+    return (select(answerOutboxTable)
+          ..where(
+            (t) => t.attemptPublicId.equals(attemptPublicId) & t.status.equals(AnswerSyncStatus.pending.name),
+          ))
         .get();
   }
 
-  Future<void> markSynced(String attemptId, String questionId) {
-    return _updateStatus(attemptId, questionId, AnswerSyncStatus.synced);
+  /// A single row by its composite key, or `null` if none exists. Used by
+  /// `SyncEngine.flushOne` to target exactly the requested task without a
+  /// full per-attempt fetch.
+  Future<AnswerOutbox?> getAnswer(String attemptPublicId, String pinnedItemPublicId) {
+    return (select(answerOutboxTable)
+          ..where(
+            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
+          ))
+        .getSingleOrNull();
   }
 
-  Future<void> markFailed(String attemptId, String questionId, String reason) {
-    return (update(answerOutboxTable)..where(
-          (t) =>
-              t.attemptId.equals(attemptId) & t.questionId.equals(questionId),
-        ))
-        .write(
-          AnswerOutboxTableCompanion(
-            status: Value(AnswerSyncStatus.failed.name),
-            lastSyncError: Value(reason),
-            updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
-          ),
-        );
+  Future<void> markSynced(String attemptPublicId, String pinnedItemPublicId) =>
+      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.synced);
+
+  /// Returns a row to retry-pending after a transient failure.
+  Future<void> markPending(String attemptPublicId, String pinnedItemPublicId) =>
+      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.pending);
+
+  Future<void> markTerminalRejected(String attemptPublicId, String pinnedItemPublicId, String reason) =>
+      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.terminalRejected, lastSyncError: reason);
+
+  Future<void> deleteByAttempt(String attemptPublicId) {
+    return (delete(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).go();
   }
 
-  Future<void> deleteByAttemptId(String attemptId) {
-    return (delete(
-      answerOutboxTable,
-    )..where((t) => t.attemptId.equals(attemptId))).go();
-  }
-
-  /// Forces a WAL checkpoint. Call after a successful outbox-flush batch
-  /// (Phase 5 sync engine) — under high-frequency answer writes, SQLite's
-  /// default auto-checkpoint may not run often enough to bound WAL growth.
+  /// Forces a WAL checkpoint. Called after each flush batch — under
+  /// high-frequency answer writes, SQLite's default auto-checkpoint may not
+  /// run often enough to bound WAL growth.
   Future<void> checkpointWal() {
     return customStatement('PRAGMA wal_checkpoint(RESTART);');
   }
 
   Future<void> _updateStatus(
-    String attemptId,
-    String questionId,
-    AnswerSyncStatus status,
-  ) {
-    return (update(answerOutboxTable)..where(
-          (t) =>
-              t.attemptId.equals(attemptId) & t.questionId.equals(questionId),
-        ))
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    AnswerSyncStatus status, {
+    String? lastSyncError,
+  }) {
+    return (update(answerOutboxTable)
+          ..where(
+            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
+          ))
         .write(
           AnswerOutboxTableCompanion(
             status: Value(status.name),
+            lastSyncError: lastSyncError == null ? const Value.absent() : Value(lastSyncError),
             updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
           ),
         );

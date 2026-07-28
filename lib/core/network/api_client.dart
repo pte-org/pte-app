@@ -1,132 +1,100 @@
 import 'package:dio/dio.dart';
 
 import 'api_exceptions.dart';
-import 'models/answer_submit_response.dart';
-import 'models/exam_state.dart';
-import 'models/speaking_upload_response.dart';
-import 'models/submit_answer_request.dart';
-import 'models/timer_sync_response.dart';
 
-/// Thin wrapper over Dio for the exam-delivery endpoints. Converts
-/// [DioException] to [ApiException] subtypes so callers (Bloc, sync
-/// engine) never need to know about Dio directly.
-///
-/// Base path: `/api/v1` (set via [AppConfig.apiBaseUrl]).
+/// Thin wrapper over [Dio] used by every feature repository. Callers pass
+/// the **full** gateway-relative path (e.g. `/api/iam/auth/login`) — the
+/// underlying Dio instance's base URL intentionally excludes `/api`, so
+/// omitting it here would 404 at the gateway. Errors are mapped to
+/// [ApiException] subtypes here so every call site branches on type, never
+/// on a raw status code.
 class ApiClient {
-  ApiClient(this._dio);
+  ApiClient({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
 
-  // ---------------------------------------------------------------------------
-  // Exam attempt lifecycle
-  // ---------------------------------------------------------------------------
-
-  Future<ExamState> startAttempt(String examId) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/exam-attempts/$examId/start',
-      );
-      return ExamState.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
-    }
+  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
+    return _run(() => _dio.get<T>(path, queryParameters: queryParameters));
   }
 
-  Future<ExamState> finishAttempt(String attemptId) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/exam-attempts/$attemptId/finish',
-      );
-      return ExamState.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
-    }
+  Future<Response<T>> post<T>(String path, {Object? data}) {
+    return _run(() => _dio.post<T>(path, data: data));
   }
 
-  Future<TimerSyncResponse> syncTimer(String attemptId) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/exam-attempts/$attemptId/sync-timer',
-      );
-      return TimerSyncResponse.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
-    }
+  Future<Response<T>> put<T>(String path, {Object? data}) {
+    return _run(() => _dio.put<T>(path, data: data));
   }
 
-  // ---------------------------------------------------------------------------
-  // Answer submission
-  // ---------------------------------------------------------------------------
-
-  /// [idempotencyKey] (e.g. `'$attemptId#$questionId'`, per FR-02/DC-05) is
-  /// sent as an `Idempotency-Key` header so a retried flush of the same
-  /// answer is treated as a no-op repeat by the server, never a duplicate.
-  Future<AnswerSubmitResponse> submitAnswers(
-    String attemptId,
-    Map<String, dynamic> answers, {
-    String? idempotencyKey,
-  }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/exam-attempts/$attemptId/answers',
-        data: answers,
-        options: idempotencyKey == null
-            ? null
-            : Options(headers: {'Idempotency-Key': idempotencyKey}),
-      );
-      return AnswerSubmitResponse.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Speaking-specific endpoints
-  // ---------------------------------------------------------------------------
-
-  /// Uploads a speaking recording as multipart/form-data.
+  /// Submits one buffered answer. **Only `SyncEngine._flushOne` may call
+  /// this** — no widget or UI-facing `Bloc` submits an answer directly; the
+  /// outbox DAO's `upsertAnswer` is the only write path available to them
+  /// (phase-02 Design Constraints). Do not add a shortcut call site.
   ///
-  /// [bytes] — raw audio bytes (e.g. from `record` package).
-  /// [mimeType] — e.g. `'audio/webm'` on web, `'audio/m4a'` on mobile.
-  /// Returns the Cloudinary CDN URL of the uploaded file.
-  Future<SpeakingUploadResponse> uploadSpeakingRecording({
-    required int attemptId,
-    required int questionId,
-    required List<int> bytes,
-    required String mimeType,
-    String filename = 'recording.webm',
+  /// A 409 here is remapped from the generic [ConflictException] to
+  /// [NotCurrentTaskException]/[ResponseWindowExpiredException] by
+  /// inspecting the response body's `message` field — this endpoint-specific
+  /// remap, not a change to [_mapError] itself, is what keeps every other
+  /// 409 call site's behavior untouched (phase-07 Design Constraints).
+  Future<Response<void>> submitAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'questionId': questionId.toString(),
-        'file': MultipartFile.fromBytes(
-          bytes,
-          filename: filename,
-          contentType: DioMediaType.parse(mimeType),
-        ),
-      });
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/exam-attempts/$attemptId/speaking/upload',
-        data: formData,
+      return await post<void>(
+        '/api/exam-delivery/attempts/$attemptPublicId/answers',
+        data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
       );
-      return SpeakingUploadResponse.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
+        _ => e,
+      };
     }
   }
 
-  /// Submits a speaking answer (audioUrl) for a specific question.
-  Future<void> submitSpeakingAnswer({
-    required int attemptId,
-    required SubmitAnswerRequest request,
-  }) async {
+  Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
     try {
-      await _dio.post<Map<String, dynamic>>(
-        '/exam-attempts/$attemptId/answers',
-        data: request.toJson(),
-      );
+      return await call();
     } on DioException catch (e) {
-      throw mapDioExceptionToApiException(e);
+      throw _mapError(e);
     }
+  }
+
+  ApiException _mapError(DioException e) {
+    final statusCode = e.response?.statusCode;
+    if (statusCode == null) {
+      return NetworkException(e.message ?? 'Network error');
+    }
+    return switch (statusCode) {
+      401 || 403 => AuthException('Authentication failed ($statusCode)'),
+      400 || 422 => ValidationException('Request rejected ($statusCode)'),
+      404 => NotFoundException(_serverMessage(e) ?? 'Not found ($statusCode)'),
+      409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
+      429 => RateLimitException('Rate limited ($statusCode)', retryAfter: _retryAfter(e)),
+      _ => UnknownApiException('Unexpected response ($statusCode)'),
+    };
+  }
+
+  /// Extracts the response body's `message` field — the only place the
+  /// real `pte-api` distinguishes between the different 409 causes on this
+  /// endpoint (HTTP status is identical for all of them).
+  String? _serverMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic> && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return null;
+  }
+
+  /// Parses a numeric `Retry-After` header (seconds), the only form the
+  /// gateway's rate limiter is expected to send. `null` if absent or in the
+  /// HTTP-date form, letting the caller fall back to its own backoff.
+  Duration? _retryAfter(DioException e) {
+    final header = e.response?.headers.value('retry-after');
+    if (header == null) return null;
+    final seconds = int.tryParse(header);
+    return seconds == null ? null : Duration(seconds: seconds);
   }
 }

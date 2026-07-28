@@ -1,16 +1,19 @@
-/// Environment/flavor configuration for `aptis-app`.
-///
-/// Phase 1 placeholder: fields are stubbed with safe defaults. Phase 3
-/// (Core/Network) fills in the real API base URL, timeouts, and any
-/// per-environment overrides once the Dio client is wired.
+/// Build-time app configuration. Swap [gatewayBaseUrl] for a compile-time
+/// env value when a staging/prod gateway exists — out of scope for
+/// Milestone 1 (spec.md Assumptions).
 class AppConfig {
-  const AppConfig({
-    this.apiBaseUrl = 'https://api.aptis.example.com/api/v1',
-    this.connectTimeout = const Duration(seconds: 30),
-    this.receiveTimeout = const Duration(seconds: 60),
-  });
+  const AppConfig._();
 
-  final String apiBaseUrl;
-  final Duration connectTimeout;
-  final Duration receiveTimeout;
+  /// No `/api` suffix — every call site passes the full gateway-relative
+  /// path (e.g. `/api/iam/auth/login`), so concatenation never
+  /// double-prefixes it. See phase-01 Design Constraints.
+  static const String gatewayBaseUrl = 'http://localhost:8080';
+
+  /// Every gateway `Dio` instance must set these — an unbounded call can
+  /// otherwise strand a caller (e.g. `AuthBloc` stuck in
+  /// `AuthAuthenticating` forever) on a stalled connection (QUAL-102,
+  /// Phase 1 quality gate).
+  static const Duration connectTimeout = Duration(seconds: 10);
+  static const Duration receiveTimeout = Duration(seconds: 10);
+  static const Duration sendTimeout = Duration(seconds: 10);
 }

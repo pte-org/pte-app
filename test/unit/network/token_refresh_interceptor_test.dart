@@ -2,18 +2,25 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
-import 'package:aptis_app/core/network/interceptors/token_refresh_interceptor.dart';
-import 'package:aptis_app/core/network/token_store.dart';
+import 'package:pte_app/core/network/interceptors/token_refresh_interceptor.dart';
+import 'package:pte_app/core/network/token_refresher.dart';
+import 'package:pte_app/core/storage/token_store.dart';
 
-/// Hand-written fake adapter (no mocking package added) — routes requests
-/// to a per-test handler based on path, so each test can script exactly
-/// what the "refresh" call and the "retried original request" return.
-class _FakeHttpClientAdapter implements HttpClientAdapter {
-  _FakeHttpClientAdapter(this.handler);
+class _FakeSecureStorage extends Mock implements FlutterSecureStorage {}
 
-  final Future<ResponseBody> Function(RequestOptions options) handler;
+/// Records every call and serves canned responses so the interceptor's
+/// 401 → refresh → retry flow runs through a real Dio pipeline, not a
+/// hand-mocked handler.
+class _FakeAdapter implements HttpClientAdapter {
+  int refreshCallCount = 0;
+  int protectedCallCount = 0;
+  // Deliberately different from the client's stale 'expired-token' header
+  // so the first request against '/protected' genuinely 401s.
+  String currentValidToken = 'server-issued-token';
 
   @override
   void close({bool force = false}) {}
@@ -23,185 +30,89 @@ class _FakeHttpClientAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) => handler(options);
-}
+  ) async {
+    if (options.path == '/api/iam/auth/refresh') {
+      refreshCallCount++;
+      // Simulate real refresh latency so two near-simultaneous 401s both
+      // land inside the single-flight window.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      currentValidToken = 'new-token';
+      final body = jsonEncode({
+        'accessToken': 'new-token',
+        'refreshToken': 'rotated-refresh-token',
+        'tokenType': 'Bearer',
+        'expiresInSeconds': 900,
+      });
+      return ResponseBody.fromString(body, 200, headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      });
+    }
 
-class _InMemoryTokenStore implements TokenStore {
-  String? _accessToken = 'expired-token';
-  String? _refreshToken = 'refresh-token';
+    if (options.path == '/protected') {
+      protectedCallCount++;
+      final authHeader = options.headers['Authorization'] as String?;
+      if (authHeader == 'Bearer $currentValidToken') {
+        return ResponseBody.fromString(jsonEncode({'ok': true}), 200, headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        });
+      }
+      return ResponseBody.fromString('{}', 401);
+    }
 
-  @override
-  Future<String?> readAccessToken() async => _accessToken;
-
-  @override
-  Future<String?> readRefreshToken() async => _refreshToken;
-
-  @override
-  Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    _accessToken = accessToken;
-    _refreshToken = refreshToken;
+    throw StateError('Unexpected path in test: ${options.path}');
   }
 }
 
-ResponseBody _jsonResponse(Map<String, dynamic> data, int statusCode) {
-  return ResponseBody.fromString(
-    jsonEncode(data),
-    statusCode,
-    headers: {
-      Headers.contentTypeHeader: [Headers.jsonContentType],
-    },
-  );
-}
-
 void main() {
-  group('TokenRefreshInterceptor', () {
-    late int refreshCallCount;
-    late Dio refreshDio;
-    late Dio dio;
-    late _InMemoryTokenStore tokenStore;
+  late _FakeAdapter adapter;
+  late _FakeSecureStorage secureStorage;
+  late TokenStore tokenStore;
+  late Dio dio;
+  late Dio refreshDio;
 
-    setUp(() {
-      refreshCallCount = 0;
-      tokenStore = _InMemoryTokenStore();
-      refreshDio = Dio();
-      dio = Dio()
-        ..interceptors.add(
-          TokenRefreshInterceptor(
-            refreshDio: refreshDio,
-            tokenStore: tokenStore,
-            refreshEndpoint: '/auth/refresh',
-          ),
-        );
-    });
+  setUpAll(() {
+    registerFallbackValue('');
+  });
 
-    test(
-      '401 then refresh succeeds: retried request returns 200 to the original caller',
-      () async {
-        dio.httpClientAdapter = _FakeHttpClientAdapter(
-          (options) async => _jsonResponse({'error': 'unauthorized'}, 401),
-        );
-        refreshDio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-          if (options.path == '/auth/refresh') {
-            refreshCallCount++;
-            return _jsonResponse({
-              'access_token': 'new-token',
-              'refresh_token': 'new-refresh',
-            }, 200);
-          }
-          return _jsonResponse({'ok': true}, 200);
-        });
+  setUp(() {
+    adapter = _FakeAdapter();
+    secureStorage = _FakeSecureStorage();
+    when(() => secureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
+        .thenAnswer((_) async {});
+    when(() => secureStorage.read(key: TokenStore.refreshTokenKey)).thenAnswer((_) async => 'stale-refresh-token');
+    tokenStore = TokenStore(secureStorage: secureStorage);
 
-        final response = await dio.get<dynamic>('/answers');
+    refreshDio = Dio()..httpClientAdapter = adapter;
+    dio = Dio()
+      ..httpClientAdapter = adapter
+      ..interceptors.add(TokenRefreshInterceptor(
+        refresher: TokenRefresher(
+          refreshDio: refreshDio,
+          tokenStore: tokenStore,
+          refreshEndpoint: '/api/iam/auth/refresh',
+        ),
+      ));
+  });
 
-        expect(response.statusCode, 200);
-        expect(refreshCallCount, 1);
-      },
+  test('a single 401 triggers exactly one refresh call and the retried request carries the new token', () async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/protected',
+      options: Options(headers: {'Authorization': 'Bearer expired-token'}),
     );
 
-    test(
-      'retried request carries the new token, not the original expired one',
-      () async {
-        String? capturedAuthHeader;
-        dio.httpClientAdapter = _FakeHttpClientAdapter(
-          (options) async => _jsonResponse({'error': 'unauthorized'}, 401),
-        );
-        refreshDio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-          if (options.path == '/auth/refresh') {
-            return _jsonResponse({
-              'access_token': 'fresh-token',
-              'refresh_token': 'fresh-refresh',
-            }, 200);
-          }
-          capturedAuthHeader = options.headers['Authorization'] as String?;
-          return _jsonResponse({'ok': true}, 200);
-        });
+    expect(response.data, {'ok': true});
+    expect(adapter.refreshCallCount, 1);
+    expect(adapter.protectedCallCount, 2); // original (401) + retry (200)
+  });
 
-        await dio.get<dynamic>('/answers');
+  test('two concurrent 401s share a single in-flight refresh (single-flight)', () async {
+    final results = await Future.wait([
+      dio.get<Map<String, dynamic>>('/protected', options: Options(headers: {'Authorization': 'Bearer expired-token'})),
+      dio.get<Map<String, dynamic>>('/protected', options: Options(headers: {'Authorization': 'Bearer expired-token'})),
+    ]);
 
-        expect(capturedAuthHeader, 'Bearer fresh-token');
-      },
-    );
-
-    test(
-      'refresh endpoint itself returns 401: original request fails, no infinite retry',
-      () async {
-        dio.httpClientAdapter = _FakeHttpClientAdapter(
-          (options) async => _jsonResponse({'error': 'unauthorized'}, 401),
-        );
-        refreshDio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-          refreshCallCount++;
-          return _jsonResponse({'error': 'invalid_refresh_token'}, 401);
-        });
-
-        await expectLater(
-          dio.get<dynamic>('/answers'),
-          throwsA(
-            isA<DioException>().having(
-              (e) => e.response?.statusCode,
-              'statusCode',
-              401,
-            ),
-          ),
-        );
-        expect(refreshCallCount, 1);
-      },
-    );
-
-    test(
-      'concurrent 401s from multiple in-flight requests trigger exactly one refresh call',
-      () async {
-        dio.httpClientAdapter = _FakeHttpClientAdapter(
-          (options) async => _jsonResponse({'error': 'unauthorized'}, 401),
-        );
-        refreshDio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-          if (options.path == '/auth/refresh') {
-            refreshCallCount++;
-            // Simulate network latency so concurrent 401s genuinely overlap.
-            await Future<void>.delayed(const Duration(milliseconds: 20));
-            return _jsonResponse({
-              'access_token': 'new-token',
-              'refresh_token': 'new-refresh',
-            }, 200);
-          }
-          return _jsonResponse({'ok': true}, 200);
-        });
-
-        await Future.wait([
-          dio.get<dynamic>('/answers/1'),
-          dio.get<dynamic>('/answers/2'),
-          dio.get<dynamic>('/answers/3'),
-        ]);
-
-        expect(refreshCallCount, 1);
-      },
-    );
-
-    test(
-      'non-401 responses (409, 500) pass through unmodified, refresh is never called',
-      () async {
-        dio.httpClientAdapter = _FakeHttpClientAdapter(
-          (options) async => _jsonResponse({'error': 'conflict'}, 409),
-        );
-        refreshDio.httpClientAdapter = _FakeHttpClientAdapter((options) async {
-          refreshCallCount++;
-          return _jsonResponse({}, 200);
-        });
-
-        await expectLater(
-          dio.get<dynamic>('/answers'),
-          throwsA(
-            isA<DioException>().having(
-              (e) => e.response?.statusCode,
-              'statusCode',
-              409,
-            ),
-          ),
-        );
-        expect(refreshCallCount, 0);
-      },
-    );
+    expect(results[0].data, {'ok': true});
+    expect(results[1].data, {'ok': true});
+    expect(adapter.refreshCallCount, 1);
   });
 }

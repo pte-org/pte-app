@@ -2,47 +2,37 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 
-import '../token_store.dart';
+import '../token_refresher.dart';
 
 /// Transparently refreshes an expired access token before retrying any
 /// request that failed with 401 — including outbox-flush requests fired
-/// by the sync engine (Phase 5) after reconnecting.
+/// by the sync engine (Phase 2) after reconnecting.
 ///
-/// Both the refresh call and the retry run on [refreshDio], a Dio
-/// instance with no interceptors attached, so this can never recurse
-/// into itself. Concurrent 401s share a single in-flight refresh
-/// ([_refreshInFlight]) instead of each calling refresh independently —
-/// required because the sync engine can fire several flush requests in
-/// quick succession right after the device comes back online.
+/// The retry runs on [refresher]'s [TokenRefresher.refreshDio] — the one
+/// and only Dio instance with no interceptors attached, so this can never
+/// recurse into itself. There is deliberately no second `refreshDio` field
+/// here: owning it in exactly one place (`TokenRefresher`) is what
+/// guarantees the interceptor and the proactive scheduler can never end up
+/// retrying against a different, interceptor-laden Dio instance
+/// (QUAL-002, Phase 1 quality gate).
 class TokenRefreshInterceptor extends Interceptor {
-  TokenRefreshInterceptor({
-    required this.refreshDio,
-    required this.tokenStore,
-    required this.refreshEndpoint,
-  });
+  TokenRefreshInterceptor({required this.refresher});
 
-  final Dio refreshDio;
-  final TokenStore tokenStore;
-  final String refreshEndpoint;
-
-  Future<String>? _refreshInFlight;
+  final TokenRefresher refresher;
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     unawaited(_handleError(err, handler));
   }
 
-  Future<void> _handleError(
-    DioException err,
-    ErrorInterceptorHandler handler,
-  ) async {
+  Future<void> _handleError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode != 401) {
       handler.next(err);
       return;
     }
 
     try {
-      final newAccessToken = await _refreshAccessToken();
+      final newAccessToken = await refresher.refresh();
       final retried = await _retryWithToken(err.requestOptions, newAccessToken);
       handler.resolve(retried);
     } catch (_) {
@@ -52,35 +42,10 @@ class TokenRefreshInterceptor extends Interceptor {
     }
   }
 
-  Future<String> _refreshAccessToken() {
-    return _refreshInFlight ??= _performRefresh().whenComplete(() {
-      _refreshInFlight = null;
-    });
-  }
-
-  Future<String> _performRefresh() async {
-    final refreshToken = await tokenStore.readRefreshToken();
-    final response = await refreshDio.post<Map<String, dynamic>>(
-      refreshEndpoint,
-      data: {'refresh_token': refreshToken},
-    );
-    final data = response.data!;
-    final newAccessToken = data['access_token'] as String;
-    final newRefreshToken = data['refresh_token'] as String;
-    await tokenStore.saveTokens(
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    );
-    return newAccessToken;
-  }
-
-  Future<Response<dynamic>> _retryWithToken(
-    RequestOptions options,
-    String accessToken,
-  ) {
+  Future<Response<dynamic>> _retryWithToken(RequestOptions options, String accessToken) {
     final retryOptions = options.copyWith(
       headers: {...options.headers, 'Authorization': 'Bearer $accessToken'},
     );
-    return refreshDio.fetch<dynamic>(retryOptions);
+    return refresher.refreshDio.fetch<dynamic>(retryOptions);
   }
 }
