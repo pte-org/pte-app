@@ -5,10 +5,18 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/authoring/authoring_module.dart';
 import 'package:pte_app/features/authoring/domain/repositories/authoring_repository.dart';
+import 'package:pte_app/features/authoring/domain/usecases/create_blueprint.dart';
 import 'package:pte_app/features/authoring/domain/usecases/create_mc_reading_single.dart';
 import 'package:pte_app/features/authoring/domain/usecases/create_read_aloud.dart';
 import 'package:pte_app/features/authoring/domain/usecases/create_write_essay.dart';
 import 'package:pte_app/features/authoring/domain/usecases/load_questions.dart';
+import 'package:pte_app/features/authoring/domain/usecases/load_blueprint.dart';
+import 'package:pte_app/features/authoring/domain/usecases/load_blueprints.dart';
+import 'package:pte_app/features/authoring/domain/usecases/load_snapshot.dart';
+import 'package:pte_app/features/authoring/domain/usecases/publish_blueprint.dart';
+import 'package:pte_app/features/authoring/presentation/bloc/blueprint_builder_bloc.dart';
+import 'package:pte_app/features/authoring/presentation/bloc/blueprint_detail_bloc.dart';
+import 'package:pte_app/features/authoring/presentation/bloc/blueprint_list_bloc.dart';
 import 'package:pte_app/features/authoring/presentation/bloc/create_read_aloud_bloc.dart';
 import 'package:pte_app/features/authoring/presentation/bloc/create_question_bloc.dart';
 import 'package:pte_app/features/authoring/presentation/bloc/create_write_essay_bloc.dart';
@@ -45,6 +53,17 @@ void main() {
       identical(getIt<CreateWriteEssay>(), getIt<CreateWriteEssay>()),
       isTrue,
     );
+    expect(identical(getIt<LoadBlueprints>(), getIt<LoadBlueprints>()), isTrue);
+    expect(identical(getIt<LoadBlueprint>(), getIt<LoadBlueprint>()), isTrue);
+    expect(
+      identical(getIt<CreateBlueprint>(), getIt<CreateBlueprint>()),
+      isTrue,
+    );
+    expect(
+      identical(getIt<PublishBlueprint>(), getIt<PublishBlueprint>()),
+      isTrue,
+    );
+    expect(identical(getIt<LoadSnapshot>(), getIt<LoadSnapshot>()), isTrue);
     expect(
       identical(getIt<QuestionListBloc>(), getIt<QuestionListBloc>()),
       isFalse,
@@ -59,6 +78,18 @@ void main() {
     );
     expect(
       identical(getIt<CreateWriteEssayBloc>(), getIt<CreateWriteEssayBloc>()),
+      isFalse,
+    );
+    expect(
+      identical(getIt<BlueprintListBloc>(), getIt<BlueprintListBloc>()),
+      isFalse,
+    );
+    expect(
+      identical(getIt<BlueprintBuilderBloc>(), getIt<BlueprintBuilderBloc>()),
+      isFalse,
+    );
+    expect(
+      identical(getIt<BlueprintDetailBloc>(), getIt<BlueprintDetailBloc>()),
       isFalse,
     );
   });

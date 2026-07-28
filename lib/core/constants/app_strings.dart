@@ -48,6 +48,29 @@ class AppStrings {
   static const String maxWordCountLabel = 'Maximum word count';
   static const String wordCountInvalid =
       'Use positive word counts with minimum not greater than maximum';
+  static const String blueprintsTitle = 'Exam blueprints';
+  static const String blueprintsEmpty = 'No blueprints yet.';
+  static const String blueprintsLoadFailure = 'Blueprints could not be loaded.';
+  static const String createBlueprint = 'Create blueprint';
+  static const String blueprintNameLabel = 'Blueprint name';
+  static const String blueprintQuestionsLabel = 'Select questions in order';
+  static const String blueprintValidationFailure =
+      'Enter a name and select at least one question.';
+  static const String blueprintCreateFailure =
+      'Blueprint could not be created. Try again.';
+  static const String blueprintDetailTitle = 'Blueprint detail';
+  static const String publishBlueprint = 'Publish snapshot';
+  static const String publishConfirmationTitle = 'Publish immutable snapshot?';
+  static const String publishConfirmationBody =
+      'The snapshot is read-only. Create a new blueprint for later changes.';
+  static const String cancel = 'Cancel';
+  static const String publish = 'Publish';
+  static const String publishFailure = 'Snapshot could not be published.';
+  static const String snapshotTitle = 'Immutable snapshot';
+  static const String snapshotVersion = 'Version';
+  static const String snapshotSource = 'Source blueprint';
+  static const String edit = 'Edit';
+  static const String delete = 'Delete';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
