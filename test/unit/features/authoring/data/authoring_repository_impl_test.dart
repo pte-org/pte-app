@@ -91,4 +91,78 @@ void main() {
       });
     },
   );
+
+  test('createReadAloud sends the backend text-only payload', () async {
+    Object? capturedData;
+    when(
+      () => apiClient.post<Map<String, dynamic>>(
+        '/api/authoring/questions',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) async {
+      capturedData = invocation.namedArguments[#data];
+      final response = fixture('read-aloud-1')
+        ..['pteTaskType'] = 'READ_ALOUD'
+        ..['section'] = 'SPEAKING'
+        ..['options'] = <dynamic>[];
+      return Response(
+        requestOptions: RequestOptions(path: '/api/authoring/questions'),
+        data: response,
+      );
+    });
+
+    await repository.createReadAloud(
+      const CreateReadAloudInput(title: 'Read', promptText: 'Passage'),
+    );
+
+    expect(capturedData, {
+      'pteTaskType': 'READ_ALOUD',
+      'visibility': 'PRIVATE',
+      'title': 'Read',
+      'promptText': 'Passage',
+    });
+  });
+
+  test('createWriteEssay sends exact backend essay fields', () async {
+    Object? capturedData;
+    when(
+      () => apiClient.post<Map<String, dynamic>>(
+        '/api/authoring/questions',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) async {
+      capturedData = invocation.namedArguments[#data];
+      final response = fixture('essay-1')
+        ..['pteTaskType'] = 'WRITE_ESSAY'
+        ..['section'] = 'WRITING'
+        ..['options'] = <dynamic>[]
+        ..['referenceAnswerText'] = 'Reference'
+        ..['minWordCount'] = 200
+        ..['maxWordCount'] = 300;
+      return Response(
+        requestOptions: RequestOptions(path: '/api/authoring/questions'),
+        data: response,
+      );
+    });
+
+    await repository.createWriteEssay(
+      const CreateWriteEssayInput(
+        title: 'Essay',
+        promptText: 'Discuss',
+        referenceAnswerText: 'Reference',
+        minWordCount: 200,
+        maxWordCount: 300,
+      ),
+    );
+
+    expect(capturedData, {
+      'pteTaskType': 'WRITE_ESSAY',
+      'visibility': 'PRIVATE',
+      'title': 'Essay',
+      'promptText': 'Discuss',
+      'referenceAnswerText': 'Reference',
+      'minWordCount': 200,
+      'maxWordCount': 300,
+    });
+  });
 }

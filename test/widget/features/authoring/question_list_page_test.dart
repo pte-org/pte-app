@@ -119,6 +119,12 @@ void main() {
 
     await tester.tap(find.text(AppStrings.createQuestion));
     await tester.pumpAndSettle();
+    expect(find.text(AppStrings.mcReadingSingleLabel), findsOneWidget);
+    expect(find.text(AppStrings.readAloudLabel), findsOneWidget);
+    expect(find.text(AppStrings.writeEssayLabel), findsOneWidget);
+
+    await tester.tap(find.text(AppStrings.mcReadingSingleLabel));
+    await tester.pumpAndSettle();
     expect(
       find.byType(BlocConsumer<CreateQuestionBloc, CreateQuestionState>),
       findsOneWidget,

@@ -37,6 +37,17 @@ class AppStrings {
       'Enter a title, prompt, at least two options, and select exactly one correct answer.';
   static const String createQuestionFailure =
       'Question could not be created. Try again.';
+  static const String selectQuestionType = 'Select question type';
+  static const String mcReadingSingleLabel = 'MC Reading Single';
+  static const String readAloudLabel = 'Read Aloud';
+  static const String writeEssayLabel = 'Write Essay';
+  static const String createReadAloudTitle = 'Create Read Aloud';
+  static const String createWriteEssayTitle = 'Create Write Essay';
+  static const String referenceAnswerLabel = 'Reference answer';
+  static const String minWordCountLabel = 'Minimum word count';
+  static const String maxWordCountLabel = 'Maximum word count';
+  static const String wordCountInvalid =
+      'Use positive word counts with minimum not greater than maximum';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';

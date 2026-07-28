@@ -6,12 +6,17 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../domain/authoring_types.dart';
+import '../bloc/create_read_aloud_bloc.dart';
 import '../bloc/create_question_bloc.dart';
+import '../bloc/create_write_essay_bloc.dart';
 import '../bloc/question_list_bloc.dart';
 import '../bloc/question_list_event.dart';
 import '../bloc/question_list_state.dart';
 import '../widgets/question_card.dart';
+import '../widgets/question_type_picker.dart';
 import 'create_mc_reading_single_page.dart';
+import 'create_read_aloud_page.dart';
+import 'create_write_essay_page.dart';
 
 class QuestionListPage extends StatelessWidget {
   const QuestionListPage({super.key, this.questionListBloc});
@@ -64,18 +69,37 @@ class _QuestionListView extends StatelessWidget {
   }
 
   Future<void> _openCreatePage(BuildContext context) async {
-    final created = await Navigator.of(context).push<Question>(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider<CreateQuestionBloc>(
-          create: (_) => GetIt.instance<CreateQuestionBloc>(),
-          child: const CreateMcReadingSinglePage(),
-        ),
-      ),
+    final type = await showModalBottomSheet<PteTaskType>(
+      context: context,
+      builder: (_) => const QuestionTypePicker(),
     );
+    if (!context.mounted || type == null) {
+      return;
+    }
+    final created = await Navigator.of(
+      context,
+    ).push<Question>(MaterialPageRoute(builder: (_) => _createPage(type)));
     if (!context.mounted || created == null) {
       return;
     }
     context.read<QuestionListBloc>().add(const QuestionListRequested());
+  }
+
+  Widget _createPage(PteTaskType type) {
+    return switch (type) {
+      PteTaskType.mcReadingSingle => BlocProvider<CreateQuestionBloc>(
+        create: (_) => GetIt.instance<CreateQuestionBloc>(),
+        child: const CreateMcReadingSinglePage(),
+      ),
+      PteTaskType.readAloud => BlocProvider<CreateReadAloudBloc>(
+        create: (_) => GetIt.instance<CreateReadAloudBloc>(),
+        child: const CreateReadAloudPage(),
+      ),
+      PteTaskType.writeEssay => BlocProvider<CreateWriteEssayBloc>(
+        create: (_) => GetIt.instance<CreateWriteEssayBloc>(),
+        child: const CreateWriteEssayPage(),
+      ),
+    };
   }
 }
 

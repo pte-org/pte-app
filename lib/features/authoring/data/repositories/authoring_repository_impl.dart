@@ -46,4 +46,35 @@ class AuthoringRepositoryImpl implements AuthoringRepository {
     );
     return QuestionModel.fromJson(response.data!).toEntity();
   }
+
+  @override
+  Future<Question> createReadAloud(CreateReadAloudInput input) async {
+    return _createQuestion({
+      'pteTaskType': PteTaskType.readAloud.wireName,
+      'visibility': QuestionVisibility.private.wireName,
+      'title': input.title,
+      'promptText': input.promptText,
+    });
+  }
+
+  @override
+  Future<Question> createWriteEssay(CreateWriteEssayInput input) async {
+    return _createQuestion({
+      'pteTaskType': PteTaskType.writeEssay.wireName,
+      'visibility': QuestionVisibility.private.wireName,
+      'title': input.title,
+      'promptText': input.promptText,
+      'referenceAnswerText': input.referenceAnswerText,
+      'minWordCount': input.minWordCount,
+      'maxWordCount': input.maxWordCount,
+    });
+  }
+
+  Future<Question> _createQuestion(Map<String, dynamic> payload) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      _questionsPath,
+      data: payload,
+    );
+    return QuestionModel.fromJson(response.data!).toEntity();
+  }
 }

@@ -140,6 +140,68 @@ class CreateMcReadingSingleInput {
   }
 }
 
+class CreateReadAloudInput {
+  const CreateReadAloudInput({required this.title, required this.promptText});
+
+  final String title;
+  final String promptText;
+
+  CreateReadAloudInput normalized() {
+    final normalizedTitle = title.trim();
+    final normalizedPrompt = promptText.trim();
+    if (normalizedTitle.isEmpty || normalizedPrompt.isEmpty) {
+      throw const AuthoringValidationException(
+        'Title and prompt are required.',
+      );
+    }
+    return CreateReadAloudInput(
+      title: normalizedTitle,
+      promptText: normalizedPrompt,
+    );
+  }
+}
+
+class CreateWriteEssayInput {
+  const CreateWriteEssayInput({
+    required this.title,
+    required this.promptText,
+    required this.referenceAnswerText,
+    required this.minWordCount,
+    required this.maxWordCount,
+  });
+
+  final String title;
+  final String promptText;
+  final String referenceAnswerText;
+  final int minWordCount;
+  final int maxWordCount;
+
+  CreateWriteEssayInput normalized() {
+    final normalizedTitle = title.trim();
+    final normalizedPrompt = promptText.trim();
+    final normalizedReference = referenceAnswerText.trim();
+    if (normalizedTitle.isEmpty ||
+        normalizedPrompt.isEmpty ||
+        normalizedReference.isEmpty) {
+      throw const AuthoringValidationException(
+        'Title, prompt, and reference answer are required.',
+      );
+    }
+    if (minWordCount <= 0 || maxWordCount <= 0 || minWordCount > maxWordCount) {
+      throw const AuthoringValidationException(
+        'Word-count bounds must be positive and ordered.',
+      );
+    }
+    return CreateWriteEssayInput(
+      title: normalizedTitle,
+      promptText: normalizedPrompt,
+      referenceAnswerText: normalizedReference,
+      minWordCount: minWordCount,
+      maxWordCount: maxWordCount,
+    );
+  }
+}
+
 class AuthoringValidationException implements Exception {
   const AuthoringValidationException(this.message);
 
