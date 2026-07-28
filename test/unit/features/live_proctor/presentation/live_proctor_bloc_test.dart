@@ -129,6 +129,57 @@ void main() {
       verify(() => repository.loadViolations('session-1')).called(1);
     },
   );
+
+  blocTest<LiveProctorBloc, LiveProctorState>(
+    'uses bounded reconnect state and disconnects when disposed',
+    setUp: () {
+      when(
+        () => repository.loadViolations('session-1'),
+      ).thenAnswer((_) async => const []);
+    },
+    build: () => LiveProctorBloc(
+      repository: repository,
+      transport: transport,
+      readAccessToken: () => 'jwt',
+    ),
+    act: (bloc) async {
+      bloc.add(
+        const LiveProctorStarted(
+          sessionPublicId: 'session-1',
+          canControl: false,
+        ),
+      );
+      await bloc.stream.firstWhere(
+        (state) => state.status == LiveProctorStatus.connecting,
+      );
+      transportEvents.add(const LiveTransportDisconnected());
+    },
+    wait: const Duration(milliseconds: 20),
+    expect: () => [
+      isA<LiveProctorState>().having(
+        (state) => state.status,
+        'status',
+        LiveProctorStatus.connecting,
+      ),
+      isA<LiveProctorState>()
+          .having(
+            (state) => state.status,
+            'status',
+            LiveProctorStatus.reconnecting,
+          )
+          .having((state) => state.reconnectAttempt, 'attempt', 1),
+    ],
+    verify: (_) {
+      expect(LiveProctorBloc.reconnectDelays, const [
+        Duration(seconds: 1),
+        Duration(seconds: 2),
+        Duration(seconds: 4),
+        Duration(seconds: 8),
+        Duration(seconds: 15),
+      ]);
+      verify(transport.disconnect).called(1);
+    },
+  );
 }
 
 ViolationEvent violation(String id, {required int sequenceNo}) =>

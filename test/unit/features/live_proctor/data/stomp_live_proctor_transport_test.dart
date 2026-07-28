@@ -117,5 +117,12 @@ void main() {
     final event = await eventFuture as LiveViolationReceived;
     expect(event.violation.publicId, 'violation-1');
     expect(event.violation.type.wireName, 'TAB_SWITCH');
+    verifyNever(
+      () => client.send(
+        destination: any(named: 'destination'),
+        body: any(named: 'body'),
+        headers: any(named: 'headers'),
+      ),
+    );
   });
 }
