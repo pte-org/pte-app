@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -9,6 +10,20 @@ import '../bloc/notification_audit_bloc.dart';
 import '../bloc/notification_audit_event.dart';
 import '../bloc/notification_audit_state.dart';
 import '../formatters/audit_timestamp_formatter.dart';
+
+class NotificationAuditEntryPage extends StatelessWidget {
+  const NotificationAuditEntryPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          GetIt.instance<NotificationAuditBloc>()
+            ..add(const NotificationAuditRequested()),
+      child: const NotificationAuditPage(),
+    );
+  }
+}
 
 class NotificationAuditPage extends StatelessWidget {
   const NotificationAuditPage({super.key});

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -9,6 +10,30 @@ import '../../domain/scoring_review_types.dart';
 import '../bloc/scoring_review_bloc.dart';
 import '../bloc/scoring_review_event.dart';
 import '../bloc/scoring_review_state.dart';
+
+class SessionScoringEntryPage extends StatelessWidget {
+  const SessionScoringEntryPage({
+    required this.sessionPublicId,
+    required this.isAdmin,
+    super.key,
+  });
+
+  final String sessionPublicId;
+  final bool isAdmin;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          GetIt.instance<ScoringReviewBloc>()
+            ..add(ScoringReviewRequested(sessionPublicId)),
+      child: SessionScoringPage(
+        sessionPublicId: sessionPublicId,
+        isAdmin: isAdmin,
+      ),
+    );
+  }
+}
 
 class SessionScoringPage extends StatelessWidget {
   const SessionScoringPage({

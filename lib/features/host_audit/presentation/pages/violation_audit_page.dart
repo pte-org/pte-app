@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -9,6 +10,22 @@ import '../bloc/violation_audit_bloc.dart';
 import '../bloc/violation_audit_event.dart';
 import '../bloc/violation_audit_state.dart';
 import '../formatters/audit_timestamp_formatter.dart';
+
+class ViolationAuditEntryPage extends StatelessWidget {
+  const ViolationAuditEntryPage({required this.sessionPublicId, super.key});
+
+  final String sessionPublicId;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          GetIt.instance<ViolationAuditBloc>()
+            ..add(ViolationAuditRequested(sessionPublicId)),
+      child: ViolationAuditPage(sessionPublicId: sessionPublicId),
+    );
+  }
+}
 
 class ViolationAuditPage extends StatelessWidget {
   const ViolationAuditPage({required this.sessionPublicId, super.key});

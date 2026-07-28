@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 
 import '../../../../core/constants/app_strings.dart';
 import '../../../authoring/presentation/pages/blueprint_list_page.dart';
@@ -8,8 +7,6 @@ import '../../../authoring/presentation/pages/question_list_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../host_audit/presentation/bloc/notification_audit_bloc.dart';
-import '../../../host_audit/presentation/bloc/notification_audit_event.dart';
 import '../../../host_audit/presentation/pages/notification_audit_page.dart';
 import '../../../scheduling/presentation/pages/session_list_page.dart';
 import '../../domain/host_access_policy.dart';
@@ -66,12 +63,7 @@ class HostConsolePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => BlocProvider(
-                    create: (_) =>
-                        GetIt.instance<NotificationAuditBloc>()
-                          ..add(const NotificationAuditRequested()),
-                    child: const NotificationAuditPage(),
-                  ),
+                  builder: (_) => const NotificationAuditEntryPage(),
                 ),
               ),
               child: const Text(AppStrings.notificationAuditTitle),
