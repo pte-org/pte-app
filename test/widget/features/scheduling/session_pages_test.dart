@@ -141,6 +141,7 @@ void main() {
       expect(find.text(AppStrings.openSession), findsOneWidget);
       expect(find.text(AppStrings.closeSession), findsNothing);
       expect(find.text(AppStrings.manageParticipants), findsOneWidget);
+      expect(find.text(AppStrings.liveMonitoringTitle), findsOneWidget);
       await tester.tap(find.text('Read aloud'));
       await tester.tap(find.text(AppStrings.saveComposition));
       await tester.pumpAndSettle();

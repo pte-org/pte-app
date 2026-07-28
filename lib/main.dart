@@ -8,6 +8,7 @@ import 'features/exam_attempt/exam_attempt_module.dart';
 import 'features/host_console/host_console_module.dart';
 import 'features/host_audit/host_audit_module.dart';
 import 'features/host_users/host_users_module.dart';
+import 'features/live_proctor/live_proctor_module.dart';
 import 'features/report/report_module.dart';
 import 'features/scoring_review/scoring_review_module.dart';
 import 'features/scheduling/scheduling_module.dart';
@@ -20,6 +21,7 @@ void main() {
   setupHostConsoleModule();
   setupHostAuditModule();
   setupHostUsersModule();
+  setupLiveProctorModule();
   setupAuthoringModule();
   setupSchedulingModule();
   setupScoringReviewModule();

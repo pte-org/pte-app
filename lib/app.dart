@@ -9,6 +9,8 @@ import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
+import 'features/live_proctor/domain/live_proctor_access_policy.dart';
+import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -48,6 +50,9 @@ class AppAuthGate extends StatelessWidget {
             AuthAuthenticated(:final claims)
                 when HostAccessPolicy.canEnterHostConsole(claims) =>
               const HostConsolePage(),
+            AuthAuthenticated(:final claims)
+                when LiveProctorAccessPolicy.canControl(claims) =>
+              const ProctorWorkspacePage(),
             AuthAuthenticated() => const _StudentWorkspacePlaceholder(),
           };
         },

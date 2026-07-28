@@ -154,6 +154,20 @@ class AppStrings {
   static const String sequenceLabel = 'Sequence';
   static const String integrityHashLabel = 'Integrity hash';
   static const String detectedAtLabel = 'Detected at';
+  static const String proctorWorkspaceTitle = 'Assigned exam sessions';
+  static const String assignedSessionsEmpty = 'No sessions assigned to you.';
+  static const String liveMonitoringTitle = 'Live monitoring';
+  static const String liveReadOnlyNotice =
+      'Read-only monitoring. Proctor commands are disabled.';
+  static const String liveConnectionLabel = 'Connection';
+  static const String liveReconnect = 'Reconnect';
+  static const String liveAttemptIdLabel = 'Attempt public ID';
+  static const String liveExtraSecondsLabel = 'Extra seconds';
+  static const String liveExtendTime = 'Extend time';
+  static const String liveForceSubmit = 'Force submit';
+  static const String liveFlagViolation = 'Flag violation';
+  static const String liveViolationsTitle = 'Live violations';
+  static const String liveCommandConfirmation = 'Confirm proctor command?';
 
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';

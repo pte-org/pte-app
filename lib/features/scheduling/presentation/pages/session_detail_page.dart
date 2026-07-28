@@ -8,6 +8,7 @@ import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../host_users/domain/usecases/load_host_users.dart';
 import '../../../host_audit/presentation/pages/violation_audit_page.dart';
+import '../../../live_proctor/presentation/pages/live_proctor_page.dart';
 import '../../../scoring_review/presentation/pages/session_scoring_page.dart';
 import '../../domain/session_types.dart';
 import '../bloc/session_detail_bloc.dart';
@@ -148,6 +149,11 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
             onPressed: _manageParticipants,
             child: const Text(AppStrings.manageParticipants),
           ),
+        if (widget.isAdmin)
+          ElevatedButton(
+            onPressed: _monitorLive,
+            child: const Text(AppStrings.liveMonitoringTitle),
+          ),
         ElevatedButton(
           onPressed: _manageScoring,
           child: const Text(AppStrings.scoringReviewTitle),
@@ -200,6 +206,15 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
       builder: (_) => SessionScoringEntryPage(
         sessionPublicId: widget.data.session.publicId,
         isAdmin: widget.isAdmin,
+      ),
+    ),
+  );
+
+  Future<void> _monitorLive() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => LiveProctorEntryPage(
+        sessionPublicId: widget.data.session.publicId,
+        canControl: false,
       ),
     ),
   );

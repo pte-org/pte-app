@@ -4,6 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/app.dart';
@@ -16,14 +17,32 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:pte_app/features/auth/presentation/pages/login_page.dart';
 import 'package:pte_app/features/host_console/presentation/pages/host_console_page.dart';
+import 'package:pte_app/features/live_proctor/presentation/pages/proctor_workspace_page.dart';
+import 'package:pte_app/features/live_proctor/domain/live_proctor_types.dart';
+import 'package:pte_app/features/live_proctor/domain/repositories/live_proctor_repository.dart';
+import 'package:pte_app/features/live_proctor/presentation/bloc/assigned_sessions_bloc.dart';
 
 class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
     implements AuthBloc {}
 
+class _FakeLiveProctorRepository implements LiveProctorRepository {
+  @override
+  Future<List<AssignedProctorSession>> loadAssignedSessions() async => const [];
+
+  @override
+  Future<List<ViolationEvent>> loadViolations(String sessionPublicId) async =>
+      const [];
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(const LogoutRequested());
+    GetIt.instance.registerFactory<AssignedSessionsBloc>(
+      () => AssignedSessionsBloc(repository: _FakeLiveProctorRepository()),
+    );
   });
+
+  tearDownAll(() => GetIt.instance.unregister<AssignedSessionsBloc>());
 
   Widget buildSubject(AuthState state, {required _MockAuthBloc bloc}) {
     whenListen(bloc, const Stream<AuthState>.empty(), initialState: state);
@@ -94,6 +113,23 @@ void main() {
 
     expect(find.byType(HostConsolePage), findsNothing);
     expect(find.text(AppStrings.studentWorkspacePlaceholder), findsOneWidget);
+  });
+
+  testWidgets('PROCTOR enters the assigned-session workspace', (tester) async {
+    final bloc = _MockAuthBloc();
+    addTearDown(bloc.close);
+
+    await tester.pumpWidget(
+      buildSubject(
+        const AuthAuthenticated(
+          JwtClaims(roles: ['PROCTOR'], tenantId: 'tenant-1'),
+        ),
+        bloc: bloc,
+      ),
+    );
+
+    expect(find.byType(ProctorWorkspacePage), findsOneWidget);
+    expect(find.byType(HostConsolePage), findsNothing);
   });
 
   testWidgets('Host console logout dispatches LogoutRequested', (tester) async {
