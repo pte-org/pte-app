@@ -80,7 +80,12 @@ class LiveProctorBloc extends Bloc<LiveProctorEvent, LiveProctorState> {
       case LiveProctorSessionOpened(:final session):
         emit(state.copyWith(proctorSession: session));
       case LiveViolationReceived(:final violation):
-        emit(state.copyWith(violations: _merge([violation])));
+        emit(
+          state.copyWith(
+            violations: _merge([violation]),
+            violationPending: false,
+          ),
+        );
       case LiveCommandAccepted():
         emit(state.copyWith(commandPending: false, message: 'Command queued'));
       case LiveTransportDisconnected(:final error):
@@ -92,6 +97,7 @@ class LiveProctorBloc extends Bloc<LiveProctorEvent, LiveProctorState> {
           state.copyWith(
             status: LiveProctorStatus.failure,
             commandPending: false,
+            violationPending: false,
             message: error.toString(),
           ),
         );
@@ -120,7 +126,10 @@ class LiveProctorBloc extends Bloc<LiveProctorEvent, LiveProctorState> {
     Emitter<LiveProctorState> emit,
   ) {
     final proctorSessionId = state.proctorSession?.publicId;
-    if (!_canControl || proctorSessionId == null) return;
+    if (!_canControl || proctorSessionId == null || state.violationPending) {
+      return;
+    }
+    emit(state.copyWith(violationPending: true, message: null));
     _transport.flagViolation(
       proctorSessionPublicId: proctorSessionId,
       attemptPublicId: event.attemptPublicId,

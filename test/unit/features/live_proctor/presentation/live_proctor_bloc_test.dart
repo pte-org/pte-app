@@ -180,6 +180,55 @@ void main() {
       verify(transport.disconnect).called(1);
     },
   );
+
+  test('violation mutation stays single-flight until its live echo', () async {
+    final bloc = LiveProctorBloc(
+      repository: repository,
+      transport: transport,
+      readAccessToken: () => 'jwt',
+    );
+    addTearDown(bloc.close);
+    bloc.add(
+      const LiveProctorStarted(sessionPublicId: 'session-1', canControl: true),
+    );
+    await bloc.stream.firstWhere(
+      (state) => state.status == LiveProctorStatus.connecting,
+    );
+    transportEvents.add(
+      LiveProctorSessionOpened(
+        ProctorSession(
+          publicId: 'proctor-session-1',
+          sessionPublicId: 'session-1',
+          status: 'ACTIVE',
+          openedAt: DateTime.utc(2026, 7, 28),
+        ),
+      ),
+    );
+    await bloc.stream.firstWhere((state) => state.proctorSession != null);
+    const request = ViolationFlagRequested(
+      attemptPublicId: 'attempt-1',
+      violationType: ViolationType.tabSwitch,
+    );
+
+    bloc
+      ..add(request)
+      ..add(request);
+    await bloc.stream.firstWhere((state) => state.violationPending);
+
+    verify(
+      () => transport.flagViolation(
+        proctorSessionPublicId: 'proctor-session-1',
+        attemptPublicId: 'attempt-1',
+        violationType: ViolationType.tabSwitch,
+        detail: null,
+      ),
+    ).called(1);
+
+    transportEvents.add(
+      LiveViolationReceived(violation('violation-1', sequenceNo: 1)),
+    );
+    await bloc.stream.firstWhere((state) => !state.violationPending);
+  });
 }
 
 ViolationEvent violation(String id, {required int sequenceNo}) =>

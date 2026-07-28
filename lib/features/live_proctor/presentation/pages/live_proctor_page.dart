@@ -124,7 +124,9 @@ class _LiveProctorPageState extends State<LiveProctorPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: state.proctorSession == null ? null : _flagViolation,
+              onPressed: state.proctorSession == null || state.violationPending
+                  ? null
+                  : _flagViolation,
               child: const Text(AppStrings.liveFlagViolation),
             ),
           ],

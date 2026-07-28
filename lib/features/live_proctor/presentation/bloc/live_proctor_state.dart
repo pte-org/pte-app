@@ -16,6 +16,7 @@ class LiveProctorState {
     this.proctorSession,
     this.violations = const [],
     this.commandPending = false,
+    this.violationPending = false,
     this.message,
     this.reconnectAttempt = 0,
   });
@@ -25,6 +26,7 @@ class LiveProctorState {
   final ProctorSession? proctorSession;
   final List<ViolationEvent> violations;
   final bool commandPending;
+  final bool violationPending;
   final String? message;
   final int reconnectAttempt;
 
@@ -34,6 +36,7 @@ class LiveProctorState {
     ProctorSession? proctorSession,
     List<ViolationEvent>? violations,
     bool? commandPending,
+    bool? violationPending,
     String? message,
     int? reconnectAttempt,
   }) => LiveProctorState(
@@ -42,6 +45,7 @@ class LiveProctorState {
     proctorSession: proctorSession ?? this.proctorSession,
     violations: violations ?? this.violations,
     commandPending: commandPending ?? this.commandPending,
+    violationPending: violationPending ?? this.violationPending,
     message: message,
     reconnectAttempt: reconnectAttempt ?? this.reconnectAttempt,
   );
