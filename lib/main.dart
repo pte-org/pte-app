@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'core/storage/storage_module.dart';
+import 'features/authoring/authoring_module.dart';
 import 'features/auth/auth_module.dart';
 import 'features/exam_attempt/exam_attempt_module.dart';
 import 'features/host_console/host_console_module.dart';
@@ -13,5 +14,6 @@ void main() {
   setupExamAttemptModule();
   setupReportModule();
   setupHostConsoleModule();
+  setupAuthoringModule();
   runApp(const PteApp());
 }

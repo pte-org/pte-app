@@ -19,6 +19,25 @@ class AppStrings {
   static const String logout = 'Log out';
   static const String studentWorkspacePlaceholder = 'PTE Student';
 
+  static const String questionsTitle = 'Question bank';
+  static const String questionsEmpty = 'No accessible questions yet.';
+  static const String questionsLoadFailure = 'Questions could not be loaded.';
+  static const String retry = 'Retry';
+  static const String createQuestion = 'Create question';
+  static const String createQuestionTitle = 'Create MC Reading Single';
+  static const String questionTitleLabel = 'Question title';
+  static const String questionPromptLabel = 'Prompt';
+  static const String questionOptionLabel = 'Option';
+  static const String correctOptionLabel = 'Correct answer';
+  static const String addOption = 'Add option';
+  static const String removeOption = 'Remove option';
+  static const String createQuestionSubmit = 'Create';
+  static const String authoringFieldRequired = 'This field is required';
+  static const String authoringValidationFailure =
+      'Enter a title, prompt, at least two options, and select exactly one correct answer.';
+  static const String createQuestionFailure =
+      'Question could not be created. Try again.';
+
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
   static const String sessionEntryStartButton = 'Start';
