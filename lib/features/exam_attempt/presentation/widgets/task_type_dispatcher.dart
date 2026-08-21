@@ -7,11 +7,13 @@ import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/audio_recorder_service.dart';
 import '../../domain/task_view.dart';
+import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
 import '../pages/read_aloud_screen.dart';
 import '../pages/write_essay_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
+const String _taskTypeMcReadingMultiple = 'MC_READING_MULTIPLE';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeReadAloud = 'READ_ALOUD';
 
@@ -48,6 +50,13 @@ class TaskTypeDispatcher extends StatelessWidget {
     final key = ValueKey(task.pinnedItemPublicId);
     return switch (task.taskType) {
       _taskTypeMcReadingSingle => McReadingSingleScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeMcReadingMultiple => McReadingMultipleScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,
