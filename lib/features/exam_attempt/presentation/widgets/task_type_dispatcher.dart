@@ -7,13 +7,19 @@ import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/audio_recorder_service.dart';
 import '../../domain/task_view.dart';
+import '../pages/fill_blanks_drag_drop_screen.dart';
+import '../pages/fill_blanks_dropdown_screen.dart';
 import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
 import '../pages/read_aloud_screen.dart';
+import '../pages/re_order_paragraphs_screen.dart';
 import '../pages/write_essay_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
 const String _taskTypeMcReadingMultiple = 'MC_READING_MULTIPLE';
+const String _taskTypeReOrderParagraphs = 'RE_ORDER_PARAGRAPHS';
+const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
+const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeReadAloud = 'READ_ALOUD';
 
@@ -57,6 +63,27 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
       ),
       _taskTypeMcReadingMultiple => McReadingMultipleScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeReOrderParagraphs => ReOrderParagraphsScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeFillBlanksReading => FillBlanksDragDropScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeFillBlanksReadingWriting => FillBlanksDropdownScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,
