@@ -22,14 +22,14 @@ class ReOrderParagraphsCubit extends TaskAnswerCubit<ReOrderParagraphsState> {
   final String attemptPublicId;
   final String pinnedItemPublicId;
 
+  /// [newIndex] arrives pre-adjusted for the removed item at [oldIndex] —
+  /// this is `ReorderableListView.onReorderItem`'s contract (`onReorder` is
+  /// deprecated and required a manual off-by-one adjustment `onReorderItem`
+  /// no longer needs).
   Future<void> reorder(int oldIndex, int newIndex) async {
     final updated = List<TaskOption>.of(state.currentOrder);
-    // ReorderableListView's onReorder contract: newIndex is the target
-    // index in the list BEFORE the moved item is removed — adjust when
-    // moving downward, matching Flutter's documented convention.
-    final adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final moved = updated.removeAt(oldIndex);
-    updated.insert(adjustedNewIndex, moved);
+    updated.insert(newIndex, moved);
 
     emit(ReOrderParagraphsState(currentOrder: updated));
     await _outboxDao.upsertAnswer(
