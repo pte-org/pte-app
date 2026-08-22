@@ -8,7 +8,7 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_read
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_multiple_option_list.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_passage_layout.dart';
-import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 
@@ -41,7 +41,7 @@ class McReadingMultipleScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: Column(
             children: [
-              ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
+              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
               Expanded(
                 child: ReadingPassageLayout(
                   passage: SingleChildScrollView(child: Text(task.promptText ?? '')),

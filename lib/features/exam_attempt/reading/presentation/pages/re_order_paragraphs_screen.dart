@@ -7,7 +7,7 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/re_order_paragraphs_list.dart';
-import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 
@@ -43,7 +43,7 @@ class ReOrderParagraphsScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: Column(
             children: [
-              ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
+              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
               const Expanded(child: ReOrderParagraphsList()),
             ],
           ),

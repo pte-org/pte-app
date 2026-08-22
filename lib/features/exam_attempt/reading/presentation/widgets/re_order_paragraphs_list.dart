@@ -17,7 +17,7 @@ class ReOrderParagraphsList extends StatelessWidget {
       builder: (context, state) {
         final paragraphs = state.currentOrder;
         return ReorderableListView(
-          onReorderItem: (oldIndex, newIndex) => context.read<ReOrderParagraphsCubit>().reorder(oldIndex, newIndex),
+          onReorder: (oldIndex, newIndex) => context.read<ReOrderParagraphsCubit>().reorder(oldIndex, newIndex),
           children: [
             for (var position = 0; position < paragraphs.length; position++)
               Semantics(

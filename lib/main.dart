@@ -12,6 +12,7 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/auth/auth_module.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
@@ -73,6 +74,7 @@ class PteApp extends StatelessWidget {
       mediaDao: getIt<PendingMediaUploadDao>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
 
@@ -85,6 +87,7 @@ class PteApp extends StatelessWidget {
       mediaDao: getIt<PendingMediaUploadDao>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
 }

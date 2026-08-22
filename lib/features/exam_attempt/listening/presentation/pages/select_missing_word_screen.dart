@@ -10,6 +10,8 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/selec
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/select_missing_word_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_audio_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 
@@ -50,6 +52,8 @@ class SelectMissingWordScreen extends StatelessWidget {
               builder: (context, state) {
                 return Column(
                   children: [
+                    ExamTaskHeaderBanner(title: listeningTaskHeaderTitle(task.taskType)),
+                    const SizedBox(height: AppDimensions.spacingMedium),
                     ListeningAudioBar(hasFinishedPlaying: state.hasFinishedPlaying),
                     const SizedBox(height: AppDimensions.spacingMedium),
                     Expanded(

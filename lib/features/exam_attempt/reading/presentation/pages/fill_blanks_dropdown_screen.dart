@@ -8,7 +8,7 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_dropdown_body.dart';
-import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/reading/constants/reading_strings.dart';
@@ -52,7 +52,7 @@ class FillBlanksDropdownScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: Column(
             children: [
-              ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
+              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
               Expanded(
                 child: contentAvailable
                     ? FillBlanksDropdownBody(task: task)

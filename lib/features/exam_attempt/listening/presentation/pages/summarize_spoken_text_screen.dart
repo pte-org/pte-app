@@ -12,6 +12,8 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/summa
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/summarize_spoken_text_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_audio_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_word_count_label.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/listening/constants/listening_strings.dart';
@@ -74,6 +76,8 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
             builder: (context, state) {
               return Column(
                 children: [
+                  ExamTaskHeaderBanner(title: listeningTaskHeaderTitle(widget.task.taskType)),
+                  const SizedBox(height: AppDimensions.spacingMedium),
                   ListeningAudioBar(hasFinishedPlaying: state.hasFinishedPlaying),
                   const SizedBox(height: AppDimensions.spacingMedium),
                   const Text(ListeningStrings.summarizeSpokenTextPrompt),

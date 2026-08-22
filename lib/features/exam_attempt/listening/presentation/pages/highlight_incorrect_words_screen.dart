@@ -11,6 +11,8 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highl
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highlight_incorrect_words_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_audio_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/word_selection_list.dart';
 
@@ -53,6 +55,8 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
               builder: (context, state) {
                 return Column(
                   children: [
+                    ExamTaskHeaderBanner(title: listeningTaskHeaderTitle(task.taskType)),
+                    const SizedBox(height: AppDimensions.spacingMedium),
                     ListeningAudioBar(hasFinishedPlaying: state.hasFinishedPlaying),
                     const SizedBox(height: AppDimensions.spacingMedium),
                     Expanded(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
@@ -7,14 +8,18 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/dev_preview_back_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'package:pte_app/features/exam_attempt/listening/dev/listening_task_fixtures.dart';
 import 'package:pte_app/features/exam_attempt/listening/constants/listening_strings.dart';
 
 /// `kDebugMode`-gated developer screen: pick one of [ListeningTaskFixtures]
 /// and render it through the real [TaskTypeDispatcher] — mirrors
-/// [ReadingTaskPreviewScreen] exactly. Never reachable outside a debug
-/// build — see `main.dart`'s route registration.
+/// [ReadingTaskPreviewScreen] exactly, including providing [examAttemptBloc]
+/// as an ancestor so `ExamAppBar`'s `BlocSelector<ExamAttemptBloc, ...>`
+/// resolves instead of throwing (see that class's doc comment). Never
+/// reachable outside a debug build — see `main.dart`'s route registration.
 class ListeningTaskPreviewScreen extends StatefulWidget {
   const ListeningTaskPreviewScreen({
     super.key,
@@ -24,6 +29,7 @@ class ListeningTaskPreviewScreen extends StatefulWidget {
     required this.mediaDao,
     required this.mediaUploadCoordinator,
     required this.audioPlayerService,
+    required this.examAttemptBloc,
   });
 
   final AnswerOutboxDao outboxDao;
@@ -32,6 +38,7 @@ class ListeningTaskPreviewScreen extends StatefulWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator mediaUploadCoordinator;
   final AudioPlayerService audioPlayerService;
+  final ExamAttemptBloc examAttemptBloc;
 
   @override
   State<ListeningTaskPreviewScreen> createState() => _ListeningTaskPreviewScreenState();
@@ -44,15 +51,23 @@ class _ListeningTaskPreviewScreenState extends State<ListeningTaskPreviewScreen>
   Widget build(BuildContext context) {
     final selected = _selected;
     if (selected != null) {
-      return TaskTypeDispatcher(
-        task: selected,
-        attemptPublicId: 'dev-preview-attempt',
-        outboxDao: widget.outboxDao,
-        syncEngine: widget.syncEngine,
-        audioRecorderService: widget.audioRecorderService,
-        mediaDao: widget.mediaDao,
-        mediaUploadCoordinator: widget.mediaUploadCoordinator,
-        audioPlayerService: widget.audioPlayerService,
+      return Stack(
+        children: [
+          BlocProvider.value(
+            value: widget.examAttemptBloc,
+            child: TaskTypeDispatcher(
+              task: selected,
+              attemptPublicId: 'dev-preview-attempt',
+              outboxDao: widget.outboxDao,
+              syncEngine: widget.syncEngine,
+              audioRecorderService: widget.audioRecorderService,
+              mediaDao: widget.mediaDao,
+              mediaUploadCoordinator: widget.mediaUploadCoordinator,
+              audioPlayerService: widget.audioPlayerService,
+            ),
+          ),
+          DevPreviewBackButton(onPressed: () => setState(() => _selected = null)),
+        ],
       );
     }
     return Scaffold(

@@ -1,6 +1,6 @@
 import 'package:pte_app/features/exam_attempt/reading/constants/reading_strings.dart';
 
-/// Maps a reading `TaskView.taskType` to its [ReadingTaskHeaderBanner] title.
+/// Maps a reading `TaskView.taskType` to its `ExamTaskHeaderBanner` title.
 /// Unknown/non-reading types return an empty string — callers only invoke
 /// this from the 5 reading task screens, which always pass a known type.
 String readingTaskHeaderTitle(String taskType) {
