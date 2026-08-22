@@ -6,6 +6,8 @@ import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/features/exam_attempt/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_state.dart';
 
@@ -105,6 +107,112 @@ void main() {
         // No second emission — state.copyWith is never called since the
         // cubit must not re-emit/regress to idle here.
       ],
+    );
+  });
+
+  group('ReadAloudCubit — onTimerSnapshot auto-record', () {
+    const responseSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 20), currentOrderIndex: 1);
+    const responseExpiredSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1);
+    const prepSnapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 5), currentOrderIndex: 1);
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'idle + response phase starts recording',
+      setUp: () => when(() => recorder.start(any())).thenAnswer((_) async {}),
+      build: buildCubit,
+      act: (cubit) => cubit.onTimerSnapshot(responseSnapshot),
+      wait: const Duration(milliseconds: 1),
+      expect: () => [const ReadAloudState(recordingPhase: RecordingPhase.recording)],
+      verify: (_) => verify(() => recorder.start(any())).called(1),
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'recording + response phase + remaining expired stops recording',
+      setUp: () => when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
+      seed: () => const ReadAloudState(recordingPhase: RecordingPhase.recording),
+      build: buildCubit,
+      act: (cubit) => cubit.onTimerSnapshot(responseExpiredSnapshot),
+      wait: const Duration(milliseconds: 1),
+      expect: () => [const ReadAloudState(recordingPhase: RecordingPhase.recorded)],
+      verify: (_) => verify(() => recorder.stop()).called(1),
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'prep phase is always a no-op regardless of recording phase',
+      build: buildCubit,
+      act: (cubit) => cubit.onTimerSnapshot(prepSnapshot),
+      wait: const Duration(milliseconds: 1),
+      expect: () => <ReadAloudState>[],
+      verify: (_) {
+        verifyNever(() => recorder.start(any()));
+        verifyNever(() => recorder.stop());
+      },
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'already recorded — repeated snapshots are a no-op, never re-stops',
+      seed: () => const ReadAloudState(recordingPhase: RecordingPhase.recorded),
+      build: buildCubit,
+      act: (cubit) {
+        cubit.onTimerSnapshot(responseSnapshot);
+        cubit.onTimerSnapshot(responseExpiredSnapshot);
+      },
+      wait: const Duration(milliseconds: 1),
+      expect: () => <ReadAloudState>[],
+      verify: (_) {
+        verifyNever(() => recorder.start(any()));
+        verifyNever(() => recorder.stop());
+      },
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'resume-after-expiry: idle + response + remaining already zero on the first snapshot only starts, '
+      'never stops in the same call',
+      setUp: () => when(() => recorder.start(any())).thenAnswer((_) async {}),
+      build: buildCubit,
+      act: (cubit) => cubit.onTimerSnapshot(responseExpiredSnapshot),
+      wait: const Duration(milliseconds: 1),
+      expect: () => [const ReadAloudState(recordingPhase: RecordingPhase.recording)],
+      verify: (_) {
+        verify(() => recorder.start(any())).called(1);
+        verifyNever(() => recorder.stop());
+      },
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'recording + response phase + non-expired remaining on a repeated mid-recording tick is a no-op '
+      '(neither starts again nor stops)',
+      seed: () => const ReadAloudState(recordingPhase: RecordingPhase.recording),
+      build: buildCubit,
+      act: (cubit) {
+        cubit.onTimerSnapshot(responseSnapshot);
+        cubit.onTimerSnapshot(const TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 10), currentOrderIndex: 1));
+      },
+      wait: const Duration(milliseconds: 1),
+      expect: () => <ReadAloudState>[],
+      verify: (_) {
+        verifyNever(() => recorder.start(any()));
+        verifyNever(() => recorder.stop());
+      },
+    );
+
+    blocTest<ReadAloudCubit, ReadAloudState>(
+      'two response-phase snapshots delivered back-to-back with no await between them '
+      '(simulating the initial-forward-then-immediate-stream-event case) still only starts recording once — '
+      'guards against a synchronous re-entrant double-start before the first startRecording() await resolves',
+      setUp: () => when(() => recorder.start(any())).thenAnswer((_) async {}),
+      build: buildCubit,
+      act: (cubit) {
+        // Deliberately no `await`/`wait` between these two synchronous calls
+        // — onTimerSnapshot itself is synchronous (fires-and-forgets
+        // startRecording via unawaited), so both calls run to completion
+        // before startRecording's first `await` inside it has a chance to
+        // flip state.recordingPhase away from idle.
+        cubit.onTimerSnapshot(responseSnapshot);
+        cubit.onTimerSnapshot(responseSnapshot);
+      },
+      wait: const Duration(milliseconds: 1),
+      expect: () => [const ReadAloudState(recordingPhase: RecordingPhase.recording)],
+      verify: (_) => verify(() => recorder.start(any())).called(1),
     );
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/duration_format.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../domain/timer_phase.dart';
 import '../../domain/timer_snapshot.dart';
@@ -38,7 +39,7 @@ class ExamAppBar extends StatelessWidget {
               Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
               const Spacer(),
               Text(
-                _formatRemaining(snapshot.remaining),
+                formatMmSs(snapshot.remaining),
                 style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
@@ -81,10 +82,5 @@ class ExamAppBar extends StatelessWidget {
       TimerPhase.prep => AppStrings.examPhasePrepLabel,
       TimerPhase.response => AppStrings.examPhaseResponseLabel,
     };
-  }
-
-  String _formatRemaining(Duration remaining) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    return '${twoDigits(remaining.inMinutes)}:${twoDigits(remaining.inSeconds % 60)}';
   }
 }

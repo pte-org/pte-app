@@ -23,12 +23,13 @@ class AppStrings {
   static const String wordCountBoundsClose = ')';
   static const String unsupportedTaskTypePrefix = 'Unsupported task type: ';
 
-  static const String readAloudStartRecordingLabel = 'Start recording';
-  static const String readAloudStopRecordingLabel = 'Stop recording';
-  static const String readAloudRecordingIndicator = 'Recording…';
-  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
   static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+  static const String readAloudInstructionPrefix = 'Look at the text below. In ';
+  static const String readAloudInstructionMiddle =
+      ' seconds, you must read this text aloud as naturally and clearly as possible. You have ';
+  static const String readAloudInstructionSuffix = ' seconds to read aloud.';
+  static const String readAloudPrepHintLabel = 'Recording will start automatically when preparation time ends.';
 
   static const String forceSubmitButtonLabel = 'Submit exam';
   static const String forceSubmitDialogTitle = 'Submit exam now?';
@@ -60,7 +61,10 @@ class AppStrings {
   static const String fillBlanksContentUnavailableMessage =
       'This task isn\'t ready to display yet. Please check back later.';
 
-  static const String devReadingPreviewTitle = 'Reading task preview';
+  static const String devTaskPreviewTitle = 'Task preview';
   static const String devReadingPreviewBlankGroupsUnavailableLabel =
       'FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+  static const String devPreviewErrorPrefix = 'Dev preview error: ';
+  static const String devPreviewTaskCompleteLabel = 'Task complete (dev preview).';
+  static const String devPreviewPickAnotherLabel = 'Pick another';
 }

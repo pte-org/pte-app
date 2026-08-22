@@ -11,9 +11,9 @@ import '../pages/fill_blanks_drag_drop_screen.dart';
 import '../pages/fill_blanks_dropdown_screen.dart';
 import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
-import '../pages/read_aloud_screen.dart';
 import '../pages/re_order_paragraphs_screen.dart';
-import '../pages/write_essay_screen.dart';
+import '../pages/speaking/read_aloud_screen.dart';
+import '../pages/writing/write_essay_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
 const String _taskTypeMcReadingMultiple = 'MC_READING_MULTIPLE';
