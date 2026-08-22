@@ -4,21 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/task_view.dart';
-import '../cubit/mc_reading_single_cubit.dart';
+import '../cubit/mc_reading_multiple_cubit.dart';
 import '../widgets/exam_scaffold.dart';
-import '../widgets/mc_option_list.dart';
+import '../widgets/mc_multiple_option_list.dart';
 import '../widgets/reading_passage_layout.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
 import '../widgets/task_advance_button.dart';
 
-/// Renders inside Phase 4's shared shell as the shell's injected content
-/// region — builds no top/bottom chrome of its own (phase-05 Design
-/// Constraints). [ReadingTaskHeaderBanner]/[ReadingPassageLayout] are an
-/// addition inside the body, not a replacement for [ExamScaffold]'s own
-/// `ExamAppBar` (reading-task-types Phase 2 Design Constraints).
-class McReadingSingleScreen extends StatelessWidget {
-  const McReadingSingleScreen({
+/// Renders inside the shared exam shell — builds no top/bottom chrome of
+/// its own (mirrors `McReadingSingleScreen`, reading-task-types Phase 3).
+class McReadingMultipleScreen extends StatelessWidget {
+  const McReadingMultipleScreen({
     super.key,
     required this.task,
     required this.attemptPublicId,
@@ -34,7 +31,7 @@ class McReadingSingleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => McReadingSingleCubit(
+      create: (_) => McReadingMultipleCubit(
         outboxDao: outboxDao,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
@@ -48,13 +45,13 @@ class McReadingSingleScreen extends StatelessWidget {
               Expanded(
                 child: ReadingPassageLayout(
                   passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
-                  interactive: McOptionList(options: task.options ?? const []),
+                  interactive: McMultipleOptionList(options: task.options ?? const []),
                 ),
               ),
             ],
           ),
           bottomAction: TaskAdvanceButton(
-            cubit: innerContext.read<McReadingSingleCubit>(),
+            cubit: innerContext.read<McReadingMultipleCubit>(),
             pinnedItemPublicId: task.pinnedItemPublicId,
             syncEngine: syncEngine,
           ),

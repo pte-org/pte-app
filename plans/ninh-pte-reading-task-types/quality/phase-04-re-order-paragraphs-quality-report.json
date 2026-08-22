@@ -1,0 +1,33 @@
+{
+  "mode": "gate",
+  "target": "phase-04-re-order-paragraphs",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-08-21T14:15:00Z",
+  "reviewed_files": [
+    "lib/features/exam_attempt/presentation/cubit/re_order_paragraphs_state.dart",
+    "lib/features/exam_attempt/presentation/cubit/re_order_paragraphs_cubit.dart",
+    "lib/features/exam_attempt/presentation/widgets/re_order_paragraphs_list.dart",
+    "lib/features/exam_attempt/presentation/pages/re_order_paragraphs_screen.dart",
+    "lib/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart",
+    "test/unit/features/exam_attempt/re_order_paragraphs_cubit_test.dart",
+    "test/widget/features/exam_attempt/re_order_paragraphs_list_test.dart"
+  ],
+  "summary": { "blocker": 0, "high": 0, "medium": 0, "low": 0, "noted": 1 },
+  "findings": [
+    {
+      "id": "QUAL-401",
+      "severity": "NOTED",
+      "rule": "TEST_COVERAGE_GAP_DISCLOSED",
+      "status": "RESOLVED",
+      "introduced_by_current_change": true,
+      "applicable": true,
+      "confidence": "high",
+      "location": "test/widget/features/exam_attempt/re_order_paragraphs_list_test.dart",
+      "evidence": "A genuine drag-gesture widget test for ReorderableListView was attempted and found unreliable in this test environment, matching a documented limitation this codebase's own history already noted for an equivalent (now-deleted) feature. The widget test covers rendering/Semantics instead; the identity-vs-position payload correctness that actually matters is covered by direct reorder() cubit tests, which exercise the same production code path onReorderItem would call.",
+      "why_it_matters": "Not a defect — the coverage gap is disclosed transparently in the phase file rather than silently omitted, and the higher-risk logic (payload shape) has real coverage via the cubit tests.",
+      "required_action": "None — accept as documented; a future Flutter SDK/testing-library improvement to ReorderableListView drag simulation could close this fully, not required for this plan.",
+      "owner": "cook"
+    }
+  ],
+  "report_path": "plans/ninh-pte-reading-task-types/quality/phase-04-re-order-paragraphs-quality-report.json"
+}

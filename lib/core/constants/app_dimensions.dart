@@ -8,4 +8,15 @@ class AppDimensions {
   static const double examBottomBarHeight = 64.0;
   static const double advanceButtonSpinnerSize = 16.0;
   static const double advanceButtonSpinnerStrokeWidth = 2.0;
+
+  static const double readingHeaderBannerRadius = 12.0;
+  static const double readingHeaderBannerPaddingVertical = 12.0;
+  static const double readingHeaderBannerPaddingHorizontal = 16.0;
+  static const double readingHeaderStarIconSize = 20.0;
+  static const double readingHeaderTitleFontSize = 16.0;
+  static const double readingPassageLayoutBreakpoint = 720.0;
+  static const double fillBlanksGapMinWidth = 72.0;
+  static const double fillBlanksGapPadding = 6.0;
+  static const double dragChipPadding = 8.0;
+  static const double dragChipSpacing = 8.0;
 }

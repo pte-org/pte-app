@@ -4,21 +4,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/task_view.dart';
-import '../cubit/mc_reading_single_cubit.dart';
+import '../cubit/re_order_paragraphs_cubit.dart';
 import '../widgets/exam_scaffold.dart';
-import '../widgets/mc_option_list.dart';
-import '../widgets/reading_passage_layout.dart';
+import '../widgets/re_order_paragraphs_list.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
 import '../widgets/task_advance_button.dart';
 
-/// Renders inside Phase 4's shared shell as the shell's injected content
-/// region — builds no top/bottom chrome of its own (phase-05 Design
-/// Constraints). [ReadingTaskHeaderBanner]/[ReadingPassageLayout] are an
-/// addition inside the body, not a replacement for [ExamScaffold]'s own
-/// `ExamAppBar` (reading-task-types Phase 2 Design Constraints).
-class McReadingSingleScreen extends StatelessWidget {
-  const McReadingSingleScreen({
+/// Renders inside the shared exam shell — single scrollable column, no
+/// `ReadingPassageLayout` split (there's no separate options pane distinct
+/// from the reorderable list itself; reading-task-types Phase 4 Design
+/// Constraints).
+class ReOrderParagraphsScreen extends StatelessWidget {
+  const ReOrderParagraphsScreen({
     super.key,
     required this.task,
     required this.attemptPublicId,
@@ -34,10 +32,11 @@ class McReadingSingleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => McReadingSingleCubit(
+      create: (_) => ReOrderParagraphsCubit(
         outboxDao: outboxDao,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
+        initialOrder: task.options ?? const [],
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -45,16 +44,11 @@ class McReadingSingleScreen extends StatelessWidget {
           body: Column(
             children: [
               ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
-              Expanded(
-                child: ReadingPassageLayout(
-                  passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
-                  interactive: McOptionList(options: task.options ?? const []),
-                ),
-              ),
+              const Expanded(child: ReOrderParagraphsList()),
             ],
           ),
           bottomAction: TaskAdvanceButton(
-            cubit: innerContext.read<McReadingSingleCubit>(),
+            cubit: innerContext.read<ReOrderParagraphsCubit>(),
             pinnedItemPublicId: task.pinnedItemPublicId,
             syncEngine: syncEngine,
           ),
