@@ -5,6 +5,12 @@ class AppStrings {
 
   static const String appTitle = 'PTE Student';
 
+  static const String loginTitle = 'Log in';
+  static const String loginEmailFieldLabel = 'Email';
+  static const String loginPasswordFieldLabel = 'Password';
+  static const String loginButtonLabel = 'Log in';
+  static const String logoutButtonLabel = 'Log out';
+
   static const String sessionEntryTitle = 'Enter session ID';
   static const String sessionEntryFieldLabel = 'Session ID';
   static const String sessionEntryStartButton = 'Start';
