@@ -3,16 +3,17 @@ import '../domain/task_view.dart';
 /// Hand-built [TaskView] samples for the Speaking/Writing dev preview —
 /// same purpose as `ReadingTaskFixtures`, kept in a separate file since
 /// these tasks are neither reading task types nor sourced from a real
-/// backend response. `prepSeconds`/`responseSeconds` are shortened well
-/// below the real PTE timings so the auto-record transition is quick to
-/// observe in the dev preview — never used outside `kDebugMode` tooling.
+/// backend response. Real PTE Read Aloud tasks vary their prep/response
+/// window per question (fetched from the backend); this fixture mocks
+/// ~30s prep / ~40s response — the current best-known typical values,
+/// never used outside `kDebugMode` tooling.
 class SpeakingWritingTaskFixtures {
   const SpeakingWritingTaskFixtures._();
 
   static TaskView get readAloud {
     final now = DateTime(2026, 1, 1, 9);
-    const prepSeconds = 8;
-    const responseSeconds = 15;
+    const prepSeconds = 30;
+    const responseSeconds = 40;
     return TaskView(
       pinnedItemPublicId: 'fixture-READ_ALOUD',
       orderIndex: 0,

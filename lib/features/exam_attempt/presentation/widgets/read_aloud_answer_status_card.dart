@@ -1,0 +1,54 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/constants/app_strings.dart';
+
+/// Purely presentational "Recorded Answer" status card — takes an already
+/// resolved [statusLabel] and [progress] as props, no BLoC/context reads of
+/// its own, so it's trivially testable in isolation and reusable.
+class ReadAloudAnswerStatusCard extends StatelessWidget {
+  const ReadAloudAnswerStatusCard({super.key, required this.statusLabel, required this.progress});
+
+  final String statusLabel;
+
+  /// `0.0`–`1.0`, clamped by the caller — how much of the current
+  /// prep/response window has elapsed.
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
+      decoration: BoxDecoration(
+        color: AppColors.fillBlanksGapFilledBackground,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text(
+              AppStrings.readAloudAnswerCardTitle,
+              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: AppDimensions.spacingMedium),
+          Text(AppStrings.readAloudCurrentStatusLabel, style: const TextStyle(color: AppColors.textPrimary)),
+          Text(statusLabel, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: AppDimensions.spacingMedium),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimensions.readAloudProgressBarRadius),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: AppDimensions.readAloudProgressBarHeight,
+              backgroundColor: AppColors.onPrimary,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

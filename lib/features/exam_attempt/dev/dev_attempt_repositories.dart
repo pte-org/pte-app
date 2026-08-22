@@ -11,6 +11,7 @@ import '../domain/repositories/exam_attempt_repository.dart';
 import '../domain/repositories/session_entry_repository.dart';
 import '../domain/repositories/timer_repository.dart';
 import '../domain/task_view.dart';
+import '../domain/timer_phase.dart';
 import '../domain/timer_state_response.dart';
 
 /// Resolves any input to a fixed dev session ID — there is no real session
@@ -22,20 +23,61 @@ class DevSessionEntryRepository implements SessionEntryRepository {
   Future<String> resolveSessionPublicId(String rawInput) async => 'dev-session';
 }
 
-/// Serves exactly one caller-set [nextTask] on `startOrResumeAttempt`, then
+/// Shared anchor between [DevExamAttemptRepository] and [DevTimerRepository]
+/// so a poll can answer with the *real* current phase, computed from actual
+/// elapsed wall-clock time since the fixture was selected.
+///
+/// `TimerService.seedFromTask` only derives `phase` once, at the very first
+/// seed — every later transition (including prep → response) is adopted
+/// only from a successful `reconcileFromServer` call (`TimerService`'s own
+/// doc comment: "phase is self-derived only on the very first seed...every
+/// later reconciliation adopts the server's own phase field directly").
+/// A dev timer repository that never answers successfully would leave the
+/// countdown display ticking correctly (that's driven by a local
+/// `Stopwatch`, independent of polling) while the phase itself stays stuck
+/// at `prep` forever — recording would never auto-start. This class exists
+/// so [DevTimerRepository] can give a real, correctly-transitioning answer
+/// instead.
+class DevAttemptClock {
+  DevAttemptClock(this.task) : startedAt = DateTime.now();
+
+  TaskView task;
+  DateTime startedAt;
+
+  void restart(TaskView newTask) {
+    task = newTask;
+    startedAt = DateTime.now();
+  }
+
+  TimerStateResponse currentTimerState(String attemptPublicId) {
+    final now = DateTime.now();
+    final prepDeadline = startedAt.add(Duration(seconds: task.prepSeconds));
+    final responseDeadline = prepDeadline.add(Duration(seconds: task.responseSeconds));
+    return TimerStateResponse(
+      attemptPublicId: attemptPublicId,
+      phase: now.isBefore(prepDeadline) ? TimerPhase.prep : TimerPhase.response,
+      currentOrderIndex: task.orderIndex,
+      prepDeadline: prepDeadline,
+      responseDeadline: responseDeadline,
+      serverNow: now,
+    );
+  }
+}
+
+/// Serves [DevAttemptClock.task] on `startOrResumeAttempt` (restarting the
+/// clock so its elapsed-time math starts fresh for this selection), then
 /// completes the attempt on the following `fetchNextTask` — mirrors the
 /// preview screen's own UX (pick one fixture, see it rendered, tap "Next"
 /// to finish and go back to picking another).
 class DevExamAttemptRepository implements ExamAttemptRepository {
-  DevExamAttemptRepository({required this.nextTask});
+  DevExamAttemptRepository({required this.clock});
 
-  /// Set by the preview screen immediately before dispatching
-  /// `SessionResolutionRequested` for a freshly-tapped fixture.
-  TaskView nextTask;
+  final DevAttemptClock clock;
 
   @override
   Future<AttemptTaskResponse> startOrResumeAttempt(String sessionPublicId) async {
-    return AttemptTaskResponse(attemptPublicId: 'dev-attempt', attemptStatus: 'IN_PROGRESS', completed: false, task: nextTask);
+    clock.restart(clock.task);
+    return AttemptTaskResponse(attemptPublicId: 'dev-attempt', attemptStatus: 'IN_PROGRESS', completed: false, task: clock.task);
   }
 
   @override
@@ -47,17 +89,15 @@ class DevExamAttemptRepository implements ExamAttemptRepository {
   Future<void> forceSubmit(String attemptPublicId) async {}
 }
 
-/// Always fails — `TimerService._poll` already catches and silently retries
-/// any `fetchTimerState` error, so the dev preview's countdown still works
-/// correctly end-to-end from `TimerService`'s own local `Stopwatch` tick
-/// loop (seeded once from the fixture's own `prepDeadline`/
-/// `responseDeadline`), without needing a working fake reconciliation
-/// response.
+/// Answers every poll with [DevAttemptClock.currentTimerState] — a real,
+/// correctly-transitioning response computed from actual elapsed time, not
+/// a canned/failing stub. See [DevAttemptClock]'s doc for why a
+/// never-succeeding fake would silently break the whole preview.
 class DevTimerRepository implements TimerRepository {
-  const DevTimerRepository();
+  const DevTimerRepository(this.clock);
+
+  final DevAttemptClock clock;
 
   @override
-  Future<TimerStateResponse> fetchTimerState(String attemptPublicId) {
-    throw UnimplementedError('Dev preview has no backend — TimerService retries silently, this is expected.');
-  }
+  Future<TimerStateResponse> fetchTimerState(String attemptPublicId) async => clock.currentTimerState(attemptPublicId);
 }

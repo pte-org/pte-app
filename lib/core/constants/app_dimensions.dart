@@ -20,10 +20,8 @@ class AppDimensions {
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
 
-  static const double readAloudRecordDotSize = 12.0;
-  static const double readAloudIndicatorGap = 12.0;
-  static const double readAloudWaveformBarWidth = 4.0;
-  static const double readAloudWaveformBarSpacing = 4.0;
-  static const double readAloudWaveformBarMinHeight = 8.0;
-  static const double readAloudWaveformBarMaxHeight = 28.0;
+  static const double readAloudProgressBarHeight = 8.0;
+  static const double readAloudProgressBarRadius = 4.0;
+
+  static const double examBrandFontSize = 11.0;
 }

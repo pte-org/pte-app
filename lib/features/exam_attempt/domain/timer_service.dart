@@ -27,17 +27,34 @@ class TimerService {
   TimerService({
     required TimerRepository timerRepository,
     Stopwatch? stopwatch,
+    Stopwatch? examStopwatch,
     TimerScheduler? scheduler,
     Logger? logger,
   }) : _timerRepository = timerRepository,
        _stopwatch = stopwatch ?? Stopwatch(),
+       _examStopwatch = examStopwatch ?? Stopwatch(),
        _scheduler = scheduler ?? Timer.new,
        _logger = logger ?? Logger();
+
+  /// **Mock** total exam duration — no API response this app consumes
+  /// exposes `ExamAttempt.startedAt` or a real total-exam-duration field
+  /// yet, so [TimerSnapshot.examRemaining] is computed against this
+  /// hardcoded constant instead of a server-provided deadline. Replace
+  /// this (and [_examStopwatch]'s first-seed anchor below) once the
+  /// backend exposes real data.
+  static const Duration mockExamTotalDuration = Duration(minutes: 135);
 
   final TimerRepository _timerRepository;
   final Stopwatch _stopwatch;
   final TimerScheduler _scheduler;
   final Logger _logger;
+
+  /// Started once, on the very first [seedFromTask] call this instance
+  /// ever handles — never reset by later task transitions (unlike
+  /// [_stopwatch], which reseeds per task) — so [TimerSnapshot.examRemaining]
+  /// keeps counting down across the whole attempt.
+  final Stopwatch _examStopwatch;
+  bool _examStopwatchStarted = false;
 
   final StreamController<TimerSnapshot> _ticksController = StreamController<TimerSnapshot>.broadcast();
   final StreamController<void> _taskAdvancedController = StreamController<void>.broadcast();
@@ -72,6 +89,7 @@ class TimerService {
       phase: _phase,
       remaining: _nonNegative(_targetRemaining - _stopwatch.elapsed),
       currentOrderIndex: _currentOrderIndex,
+      examRemaining: _nonNegative(mockExamTotalDuration - _examStopwatch.elapsed),
     );
   }
 
@@ -83,6 +101,10 @@ class TimerService {
   /// deadlines at fetch time seeds a zero/expired snapshot immediately
   /// rather than a negative countdown.
   void seedFromTask(TaskView task) {
+    if (!_examStopwatchStarted) {
+      _examStopwatchStarted = true;
+      _examStopwatch.start();
+    }
     final DateTime deadline;
     if (task.serverNow.isBefore(task.prepDeadline)) {
       _phase = TimerPhase.prep;

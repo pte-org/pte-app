@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_dimensions.dart';
 import '../../../../../core/constants/app_strings.dart';
 import '../../../../../core/storage/dao/pending_media_upload_dao.dart';
@@ -18,16 +19,19 @@ import '../../bloc/exam_attempt_state.dart';
 import '../../cubit/read_aloud_cubit.dart';
 import '../../cubit/read_aloud_state.dart';
 import '../../widgets/exam_scaffold.dart';
-import '../../widgets/read_aloud_advance_button.dart';
-import '../../widgets/read_aloud_passage_panel.dart';
-import '../../widgets/read_aloud_recording_indicator.dart';
+import '../../widgets/read_aloud_answer_status_card.dart';
+import '../../widgets/read_aloud_auto_advance.dart';
+import '../../widgets/read_aloud_instruction_text.dart';
 
 /// Renders inside Phase 4's shared shell as the shell's injected content
 /// region — builds no top/bottom chrome of its own (phase-05/06 Design
 /// Constraints). The [ReadAloudCubit] is created in [initState] and closed
 /// in [dispose]. Recording is fully automatic — driven by bridging
 /// `ExamAttemptBloc`'s [TimerSnapshot] into the cubit — there is no manual
-/// start/stop control and no Skip button.
+/// start/stop control, no Skip button, and (via [ReadAloudAutoAdvance]) no
+/// manual "Next" tap either: once the response window ends and the
+/// recording finishes uploading, the attempt advances to the next task on
+/// its own, matching real PTE speaking-task behavior.
 class ReadAloudScreen extends StatefulWidget {
   const ReadAloudScreen({
     super.key,
@@ -102,7 +106,9 @@ class _ReadAloudScreenState extends State<ReadAloudScreen> {
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _ReadAloudBody(task: widget.task),
-        bottomAction: ReadAloudAdvanceButton(
+        // Renders nothing — advancing is fully automatic now, driven by
+        // ReadAloudAutoAdvance's own BlocListener once the upload is ready.
+        bottomAction: ReadAloudAutoAdvance(
           pinnedItemPublicId: widget.task.pinnedItemPublicId,
           syncEngine: widget.syncEngine,
         ),
@@ -126,12 +132,17 @@ class _ReadAloudBody extends StatelessWidget {
           return BlocBuilder<ReadAloudCubit, ReadAloudState>(
             builder: (context, state) {
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ReadAloudPassagePanel(promptText: task.promptText ?? '', responseSeconds: task.responseSeconds),
-                  ),
+                  ReadAloudInstructionText(responseSeconds: task.responseSeconds),
                   const SizedBox(height: AppDimensions.spacingMedium),
-                  _StatusArea(task: task, recordingState: state, snapshot: snapshot),
+                  _StatusCard(task: task, recordingState: state, snapshot: snapshot),
+                  const SizedBox(height: AppDimensions.spacingMedium),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Text(task.promptText ?? '', style: const TextStyle(color: AppColors.textPrimary)),
+                    ),
+                  ),
                 ],
               );
             },
@@ -143,10 +154,12 @@ class _ReadAloudBody extends StatelessWidget {
 }
 
 /// Recorded phase always wins (upload status), regardless of the live timer
-/// phase; otherwise response phase shows the recording indicator and prep
-/// phase shows the auto-record hint.
-class _StatusArea extends StatelessWidget {
-  const _StatusArea({required this.task, required this.recordingState, required this.snapshot});
+/// phase; otherwise response phase shows a live "Recording…" countdown and
+/// prep phase shows a live "Beginning in…" countdown — both driven by the
+/// same [ReadAloudAnswerStatusCard] shell with a phase-appropriate
+/// `statusLabel`/`progress`.
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({required this.task, required this.recordingState, required this.snapshot});
 
   final TaskView task;
   final ReadAloudState recordingState;
@@ -155,17 +168,37 @@ class _StatusArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
-      return Text(_uploadStatusLabel());
+      return ReadAloudAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
     }
     if (snapshot?.phase == TimerPhase.response) {
-      final total = Duration(seconds: task.responseSeconds);
-      return ReadAloudRecordingIndicator(
-        isRecording: recordingState.recordingPhase == RecordingPhase.recording,
-        elapsed: total - snapshot!.remaining,
-        total: total,
+      return ReadAloudAnswerStatusCard(
+        statusLabel: _countdownLabel(
+          prefix: AppStrings.readAloudRecordingStatusPrefix,
+          suffix: AppStrings.readAloudRecordingStatusSuffix,
+          remaining: snapshot!.remaining,
+        ),
+        progress: _elapsedFraction(totalSeconds: task.responseSeconds, remaining: snapshot!.remaining),
       );
     }
-    return Text(AppStrings.readAloudPrepHintLabel);
+    final remaining = snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
+    return ReadAloudAnswerStatusCard(
+      statusLabel: _countdownLabel(
+        prefix: AppStrings.readAloudBeginningInPrefix,
+        suffix: AppStrings.readAloudBeginningInSuffix,
+        remaining: remaining,
+      ),
+      progress: _elapsedFraction(totalSeconds: task.prepSeconds, remaining: remaining),
+    );
+  }
+
+  String _countdownLabel({required String prefix, required String suffix, required Duration remaining}) {
+    return '$prefix${remaining.inSeconds}$suffix';
+  }
+
+  double _elapsedFraction({required int totalSeconds, required Duration remaining}) {
+    if (totalSeconds <= 0) return 1.0;
+    final elapsedSeconds = totalSeconds - remaining.inSeconds;
+    return (elapsedSeconds / totalSeconds).clamp(0.0, 1.0);
   }
 
   String _uploadStatusLabel() {

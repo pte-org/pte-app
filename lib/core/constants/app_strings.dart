@@ -9,9 +9,11 @@ class AppStrings {
   static const String sessionEntryFieldLabel = 'Session ID';
   static const String sessionEntryStartButton = 'Start';
 
-  static const String examPhasePrepLabel = 'Preparation';
-  static const String examPhaseResponseLabel = 'Response';
   static const String examTaskCounterOf = ' / ';
+  static const String examBrandLine1 = 'PTE UNI';
+  static const String examBrandLine2 = 'Test of English Academic';
+  static const String examBrandLine3 = 'TESTING ACCOUNT';
+  static const String examTimeRemainingLabel = 'Time Remaining ';
 
   static const String taskAdvanceButtonLabel = 'Next';
   static const String writeEssayTextFieldLabel = 'Your response';
@@ -29,14 +31,12 @@ class AppStrings {
   static const String readAloudInstructionMiddle =
       ' seconds, you must read this text aloud as naturally and clearly as possible. You have ';
   static const String readAloudInstructionSuffix = ' seconds to read aloud.';
-  static const String readAloudPrepHintLabel = 'Recording will start automatically when preparation time ends.';
-
-  static const String forceSubmitButtonLabel = 'Submit exam';
-  static const String forceSubmitDialogTitle = 'Submit exam now?';
-  static const String forceSubmitDialogMessage =
-      'This ends your attempt immediately, including any tasks not yet answered. This cannot be undone.';
-  static const String forceSubmitDialogConfirm = 'Submit';
-  static const String forceSubmitDialogCancel = 'Cancel';
+  static const String readAloudAnswerCardTitle = 'Recorded Answer';
+  static const String readAloudCurrentStatusLabel = 'Current Status:';
+  static const String readAloudBeginningInPrefix = 'Beginning in ';
+  static const String readAloudBeginningInSuffix = ' seconds';
+  static const String readAloudRecordingStatusPrefix = 'Recording… ';
+  static const String readAloudRecordingStatusSuffix = ' seconds left';
 
   static const String reportScreenTitle = 'Your report';
   static const String reportNotPublishedTitle = 'Waiting for your report';

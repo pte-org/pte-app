@@ -52,6 +52,7 @@ class ReadingTaskPreviewScreen extends StatefulWidget {
 class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
   static List<TaskView> get _fixtures => [...ReadingTaskFixtures.all, ...SpeakingWritingTaskFixtures.all];
 
+  late DevAttemptClock _clock;
   late DevExamAttemptRepository _repository;
   late TimerService _timerService;
   late ExamAttemptBloc _bloc;
@@ -63,8 +64,9 @@ class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
   }
 
   void _createBloc() {
-    _repository = DevExamAttemptRepository(nextTask: _fixtures.first);
-    _timerService = TimerService(timerRepository: const DevTimerRepository());
+    _clock = DevAttemptClock(_fixtures.first);
+    _repository = DevExamAttemptRepository(clock: _clock);
+    _timerService = TimerService(timerRepository: DevTimerRepository(_clock));
     _bloc = ExamAttemptBloc(
       repository: _repository,
       sessionEntryRepository: const DevSessionEntryRepository(),
@@ -75,7 +77,7 @@ class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
   }
 
   void _selectTask(TaskView task) {
-    _repository.nextTask = task;
+    _clock.restart(task);
     _bloc.add(const SessionResolutionRequested(rawInput: 'dev'));
   }
 

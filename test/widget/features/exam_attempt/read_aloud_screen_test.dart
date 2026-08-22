@@ -116,26 +116,24 @@ void main() {
     expect(find.textContaining('The quick brown fox jumps over the lazy dog.'), findsOneWidget);
   });
 
-  testWidgets('prep phase shows the auto-record hint, not the recording indicator, and never starts recording', (
-    tester,
-  ) async {
+  testWidgets('prep phase shows a live "Beginning in…" countdown card, and never starts recording', (tester) async {
     const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 10), currentOrderIndex: 1);
     stubBlocState(AttemptInProgress('attempt-1', _readAloudTask(), snapshot));
 
     await tester.pumpWidget(buildSubject());
 
-    expect(find.text('Recording will start automatically when preparation time ends.'), findsOneWidget);
+    expect(find.text('Beginning in 10 seconds'), findsOneWidget);
     verifyNever(() => recorder.start(any()));
   });
 
-  testWidgets('a new response-phase snapshot on the bloc stream auto-starts recording and shows the indicator', (
+  testWidgets('a new response-phase snapshot on the bloc stream auto-starts recording and shows the "Recording…" card', (
     tester,
   ) async {
     const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
     stubBlocState(AttemptInProgress('attempt-1', _readAloudTask(), prep));
 
     await tester.pumpWidget(buildSubject());
-    expect(find.text('Recording will start automatically when preparation time ends.'), findsOneWidget);
+    expect(find.text('Beginning in 1 seconds'), findsOneWidget);
 
     const response = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 40), currentOrderIndex: 1);
     stateController.add(AttemptInProgress('attempt-1', _readAloudTask(), response));
@@ -143,19 +141,12 @@ void main() {
     await tester.pump();
 
     verify(() => recorder.start(any())).called(1);
-    expect(find.text('00:00 / 00:40'), findsOneWidget);
-
-    // The indicator's AnimationControllers are now repeating — tear the
-    // screen out of the tree before the test ends so they're disposed
-    // rather than left leaking (mirrors write_essay_screen_test.dart's own
-    // controller-lifecycle teardown convention). Never call pumpAndSettle
-    // while a repeating animation is still mounted — it would hang.
-    await tester.pumpWidget(const SizedBox.shrink());
+    expect(find.text('Recording… 40 seconds left'), findsOneWidget);
   });
 
   testWidgets(
     'full prep -> response -> recorded transition: once the response countdown reaches zero the recorder '
-    'stops and the upload-status label replaces the recording indicator',
+    'stops and the upload-status card replaces the "Recording…" card',
     (tester) async {
       when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
       when(() => mediaDao.upsertRecorded(
@@ -184,17 +175,13 @@ void main() {
 
       verify(() => recorder.stop()).called(1);
       // Recorded phase always wins over the live timer phase — the
-      // recording indicator (and its repeating animation) must be gone,
-      // replaced by the upload-status label (uploadStatus stays null in
-      // this test since watchRow's stream is empty, so it falls back to
-      // the "still uploading" label per _StatusArea._uploadStatusLabel).
-      // Two matches is expected here, not one: the body's own status label
-      // AND ReadAloudAdvanceButton's disabled label both read
-      // AppStrings.readAloudStillUploadingLabel while uploadStatus != ready.
-      expect(find.text('Still uploading…'), findsNWidgets(2));
-      expect(find.textContaining('/ 00:40'), findsNothing);
-
-      await tester.pumpWidget(const SizedBox.shrink());
+      // "Recording…" card must be gone, replaced by the upload-status card
+      // (uploadStatus stays null in this test since watchRow's stream is
+      // empty, so it falls back to the "still uploading" label). Only the
+      // status card renders this text now — ReadAloudAutoAdvance renders
+      // nothing, unlike the old tappable button it replaced.
+      expect(find.text('Still uploading…'), findsOneWidget);
+      expect(find.textContaining('seconds left'), findsNothing);
     },
   );
 
