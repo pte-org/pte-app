@@ -10,7 +10,30 @@ class TaskOption {
   final String orderIndex;
 
   factory TaskOption.fromJson(Map<String, dynamic> json) {
-    return TaskOption(text: json['text'] as String, orderIndex: json['orderIndex'] as String);
+    return TaskOption(
+      text: json['text'] as String,
+      // Safely handles both String and legacy int until BE rollout is complete.
+      orderIndex: json['orderIndex'].toString(),
+    );
+  }
+}
+
+/// One independently-choosable blank within a `FILL_BLANKS_READING_WRITING`
+/// task — its [options] are distinct from every other blank's, unlike the
+/// shared word bank [TaskView.options] carries for `FILL_BLANKS_READING`.
+class BlankGroup {
+  const BlankGroup({required this.blankIndex, required this.options});
+
+  final int blankIndex;
+  final List<TaskOption> options;
+
+  factory BlankGroup.fromJson(Map<String, dynamic> json) {
+    return BlankGroup(
+      blankIndex: json['blankIndex'] as int,
+      options: (json['options'] as List<dynamic>)
+          .map((option) => TaskOption.fromJson(option as Map<String, dynamic>))
+          .toList(),
+    );
   }
 }
 
@@ -18,6 +41,18 @@ class TaskOption {
 /// `fetchNextTask` (phase-03 Steps). This phase only carries every field
 /// through untouched — Phase 4/5/6 are what consume `prepDeadline`/
 /// `responseDeadline`/`options` etc.
+///
+/// [options] is reused across several reading task types beyond its
+/// original MC-choice purpose: for `MC_READING_MULTIPLE` it's the checkbox
+/// choices, for `FILL_BLANKS_READING` it's the shared drag-and-drop word
+/// bank, and for `RE_ORDER_PARAGRAPHS` it's the shuffled paragraph list
+/// (`TaskOption.text` = a paragraph's full text, `TaskOption.orderIndex` =
+/// its stable correct-position identity — **never** its current on-screen
+/// position, which is exactly what the student is rearranging). [options]
+/// and [blankGroups] are mutually exclusive per task — only
+/// `FILL_BLANKS_READING_WRITING` ever populates [blankGroups], where every
+/// blank needs its own distinct option list that a flat [options] list
+/// can't express.
 class TaskView {
   const TaskView({
     required this.pinnedItemPublicId,
@@ -32,6 +67,7 @@ class TaskView {
     this.minWordCount,
     this.maxWordCount,
     this.options,
+    this.blankGroups,
     required this.prepSeconds,
     required this.responseSeconds,
     required this.prepDeadline,
@@ -51,6 +87,7 @@ class TaskView {
   final int? minWordCount;
   final int? maxWordCount;
   final List<TaskOption>? options;
+  final List<BlankGroup>? blankGroups;
   final int prepSeconds;
   final int responseSeconds;
   final DateTime prepDeadline;
@@ -72,6 +109,9 @@ class TaskView {
       maxWordCount: json['maxWordCount'] as int?,
       options: (json['options'] as List<dynamic>?)
           ?.map((option) => TaskOption.fromJson(option as Map<String, dynamic>))
+          .toList(),
+      blankGroups: (json['blankGroups'] as List<dynamic>?)
+          ?.map((group) => BlankGroup.fromJson(group as Map<String, dynamic>))
           .toList(),
       prepSeconds: json['prepSeconds'] as int,
       responseSeconds: json['responseSeconds'] as int,

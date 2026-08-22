@@ -1,0 +1,27 @@
+{
+  "target": "phase-02-frontend-shared-model-banner",
+  "verdict": "APPROVED",
+  "policy_version": "1.0.0",
+  "report_path": "plans/ninh-pte-reading-task-types/quality/phase-02-frontend-shared-model-banner-quality-report.json",
+  "reviewed_files": [
+    "lib/core/constants/app_colors.dart",
+    "lib/core/constants/app_dimensions.dart",
+    "lib/core/constants/app_strings.dart",
+    "lib/features/exam_attempt/dev/reading_task_fixtures.dart",
+    "lib/features/exam_attempt/dev/reading_task_preview_screen.dart",
+    "lib/features/exam_attempt/domain/blank_prompt_parser.dart",
+    "lib/features/exam_attempt/domain/task_view.dart",
+    "lib/features/exam_attempt/presentation/pages/mc_reading_single_screen.dart",
+    "lib/features/exam_attempt/presentation/widgets/reading_passage_layout.dart",
+    "lib/features/exam_attempt/presentation/widgets/reading_task_header_banner.dart",
+    "lib/features/exam_attempt/presentation/widgets/reading_task_header_labels.dart",
+    "lib/main.dart",
+    "test/unit/features/exam_attempt/blank_prompt_parser_test.dart",
+    "test/unit/features/exam_attempt/task_view_test.dart",
+    "test/widget/features/exam_attempt/mc_reading_single_screen_test.dart",
+    "test/widget/features/exam_attempt/reading_task_header_banner_test.dart"
+  ],
+  "source_fingerprint": "sha256:243fbea966d2e3a1741a553e53b467076ec2d634bbf5d095ea3c1a29777887ac",
+  "reviewed_at": "2026-08-21T13:45:00Z",
+  "open_blocking_findings": 0
+}

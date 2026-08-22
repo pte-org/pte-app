@@ -1,0 +1,36 @@
+{
+  "mode": "gate",
+  "target": "phase-06-fill-blanks-dropdown",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-08-21T14:55:00Z",
+  "reviewed_files": [
+    "lib/features/exam_attempt/domain/positional_payload.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_drag_drop_cubit.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_dropdown_state.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_dropdown_cubit.dart",
+    "lib/features/exam_attempt/presentation/widgets/fill_blanks_dropdown_body.dart",
+    "lib/features/exam_attempt/presentation/pages/fill_blanks_dropdown_screen.dart",
+    "lib/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart",
+    "test/unit/features/exam_attempt/fill_blanks_dropdown_cubit_test.dart",
+    "test/widget/features/exam_attempt/fill_blanks_dropdown_body_test.dart",
+    "test/widget/features/exam_attempt/fill_blanks_dropdown_screen_test.dart"
+  ],
+  "summary": { "blocker": 0, "high": 0, "medium": 0, "low": 0, "noted": 1 },
+  "findings": [
+    {
+      "id": "QUAL-601",
+      "severity": "NOTED",
+      "rule": "UX_NO_DEAD_END_STATE",
+      "status": "RESOLVED",
+      "introduced_by_current_change": true,
+      "applicable": true,
+      "confidence": "high",
+      "location": "lib/features/exam_attempt/presentation/pages/fill_blanks_dropdown_screen.dart",
+      "evidence": "The phase's original design (per the phase file's Step 4) only described rendering StatusBanner in place of the interactive body when blankGroups is unavailable, without addressing whether TaskAdvanceButton remains reachable. An initial implementation draft rendered a bare ExamScaffold with no bottomAction in the fallback branch, which would leave a student permanently stuck on the task. Fixed during implementation: a FillBlanksDropdownCubit (blankGroupCount: 0 in the fallback case) and its TaskAdvanceButton are now always constructed; only the body content is conditional. Covered by a dedicated widget test asserting the advance button's presence in the fallback state.",
+      "why_it_matters": "Exam software must never leave a student unable to progress through the exam, regardless of backend content-readiness state — this is exactly the class of bug this codebase's existing 'never a server-trusted gate on advancing' principle (WRITE_ESSAY word-count guidance, MC_READING_MULTIPLE scoring) already exists to prevent elsewhere.",
+      "required_action": "None — already fixed and tested.",
+      "owner": "cook"
+    }
+  ],
+  "report_path": "plans/ninh-pte-reading-task-types/quality/phase-06-fill-blanks-dropdown-quality-report.json"
+}

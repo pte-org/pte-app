@@ -1,0 +1,18 @@
+{
+  "target": "phase-04-re-order-paragraphs",
+  "verdict": "APPROVED",
+  "policy_version": "1.0.0",
+  "report_path": "plans/ninh-pte-reading-task-types/quality/phase-04-re-order-paragraphs-quality-report.json",
+  "reviewed_files": [
+    "lib/features/exam_attempt/presentation/cubit/re_order_paragraphs_cubit.dart",
+    "lib/features/exam_attempt/presentation/cubit/re_order_paragraphs_state.dart",
+    "lib/features/exam_attempt/presentation/pages/re_order_paragraphs_screen.dart",
+    "lib/features/exam_attempt/presentation/widgets/re_order_paragraphs_list.dart",
+    "lib/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart",
+    "test/unit/features/exam_attempt/re_order_paragraphs_cubit_test.dart",
+    "test/widget/features/exam_attempt/re_order_paragraphs_list_test.dart"
+  ],
+  "source_fingerprint": "sha256:183d66e72574eb5fb9c51ed21b91bba89fd850b535a7604bbc9e45accf1ccd3d",
+  "reviewed_at": "2026-08-21T14:15:00Z",
+  "open_blocking_findings": 0
+}

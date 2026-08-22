@@ -1,0 +1,21 @@
+{
+  "target": "phase-06-fill-blanks-dropdown",
+  "verdict": "APPROVED",
+  "policy_version": "1.0.0",
+  "report_path": "plans/ninh-pte-reading-task-types/quality/phase-06-fill-blanks-dropdown-quality-report.json",
+  "reviewed_files": [
+    "lib/features/exam_attempt/domain/positional_payload.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_drag_drop_cubit.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_dropdown_cubit.dart",
+    "lib/features/exam_attempt/presentation/cubit/fill_blanks_dropdown_state.dart",
+    "lib/features/exam_attempt/presentation/pages/fill_blanks_dropdown_screen.dart",
+    "lib/features/exam_attempt/presentation/widgets/fill_blanks_dropdown_body.dart",
+    "lib/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart",
+    "test/unit/features/exam_attempt/fill_blanks_dropdown_cubit_test.dart",
+    "test/widget/features/exam_attempt/fill_blanks_dropdown_body_test.dart",
+    "test/widget/features/exam_attempt/fill_blanks_dropdown_screen_test.dart"
+  ],
+  "source_fingerprint": "sha256:3e7f418baa4ea2a48e8954474d678424f40e2534b4a7a5f2071202cf5119747d",
+  "reviewed_at": "2026-08-21T14:55:00Z",
+  "open_blocking_findings": 0
+}

@@ -15,7 +15,9 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/presentation/cubit/mc_reading_multiple_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/mc_reading_single_cubit.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/mc_multiple_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/mc_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 
@@ -38,6 +40,23 @@ TaskView _mcTask({required String pinnedItemPublicId}) {
     totalTasks: 5,
     section: 'READING',
     taskType: 'MC_READING_SINGLE',
+    title: 'Task title',
+    options: const [TaskOption(text: 'Option A', orderIndex: '1'), TaskOption(text: 'Option B', orderIndex: '2')],
+    prepSeconds: 30,
+    responseSeconds: 60,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
+    responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
+TaskView _mcMultipleTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'READING',
+    taskType: 'MC_READING_MULTIPLE',
     title: 'Task title',
     options: const [TaskOption(text: 'Option A', orderIndex: '1'), TaskOption(text: 'Option B', orderIndex: '2')],
     prepSeconds: 30,
@@ -150,6 +169,32 @@ void main() {
       await tester.pumpWidget(buildSubject(task));
 
       expect(find.text('Unsupported task type: UNKNOWN_TASK_TYPE'), findsOneWidget);
+    });
+  });
+
+  group('TaskTypeDispatcher — MC_READING_MULTIPLE routing', () {
+    testWidgets('routes to McMultipleOptionList / McReadingMultipleCubit, not the single-select path', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')));
+
+      expect(find.byType(McMultipleOptionList), findsOneWidget);
+      expect(find.byType(McOptionList), findsNothing);
+      final cubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
+      expect(cubit.pinnedItemPublicId, 'item-1');
+    });
+
+    testWidgets('ValueKey(pinnedItemPublicId) forces a fresh cubit for a new MC_READING_MULTIPLE task', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')));
+      final firstCubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
+
+      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-2')));
+      final secondCubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
+
+      expect(identical(firstCubit, secondCubit), isFalse);
+      expect(secondCubit.pinnedItemPublicId, 'item-2');
     });
   });
 }

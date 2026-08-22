@@ -3,22 +3,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
+import '../../domain/blank_prompt_parser.dart';
 import '../../domain/task_view.dart';
-import '../cubit/mc_reading_single_cubit.dart';
+import '../cubit/fill_blanks_drag_drop_cubit.dart';
 import '../widgets/exam_scaffold.dart';
-import '../widgets/mc_option_list.dart';
-import '../widgets/reading_passage_layout.dart';
+import '../widgets/fill_blanks_drag_drop_body.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
 import '../widgets/task_advance_button.dart';
 
-/// Renders inside Phase 4's shared shell as the shell's injected content
-/// region — builds no top/bottom chrome of its own (phase-05 Design
-/// Constraints). [ReadingTaskHeaderBanner]/[ReadingPassageLayout] are an
-/// addition inside the body, not a replacement for [ExamScaffold]'s own
-/// `ExamAppBar` (reading-task-types Phase 2 Design Constraints).
-class McReadingSingleScreen extends StatelessWidget {
-  const McReadingSingleScreen({
+/// Renders inside the shared exam shell — single scrollable column, no
+/// `ReadingPassageLayout` split (reading-task-types Phase 5 Design
+/// Constraints).
+class FillBlanksDragDropScreen extends StatelessWidget {
+  const FillBlanksDragDropScreen({
     super.key,
     required this.task,
     required this.attemptPublicId,
@@ -33,11 +31,13 @@ class McReadingSingleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gapCount = parseBlankPrompt(task.promptText ?? '').whereType<PromptGapSegment>().length;
     return BlocProvider(
-      create: (_) => McReadingSingleCubit(
+      create: (_) => FillBlanksDragDropCubit(
         outboxDao: outboxDao,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
+        gapCount: gapCount,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -45,16 +45,11 @@ class McReadingSingleScreen extends StatelessWidget {
           body: Column(
             children: [
               ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
-              Expanded(
-                child: ReadingPassageLayout(
-                  passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
-                  interactive: McOptionList(options: task.options ?? const []),
-                ),
-              ),
+              Expanded(child: FillBlanksDragDropBody(task: task)),
             ],
           ),
           bottomAction: TaskAdvanceButton(
-            cubit: innerContext.read<McReadingSingleCubit>(),
+            cubit: innerContext.read<FillBlanksDragDropCubit>(),
             pinnedItemPublicId: task.pinnedItemPublicId,
             syncEngine: syncEngine,
           ),
