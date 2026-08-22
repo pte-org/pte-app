@@ -5,8 +5,8 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/fill_blanks_dropdown_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/fill_blanks_dropdown_body.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_dropdown_body.dart';
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 

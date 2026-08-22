@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 
-import '../token_refresher.dart';
+import 'package:pte_app/core/network/token_refresher.dart';
 
 /// Transparently refreshes an expired access token before retrying any
 /// request that failed with 401 — including outbox-flush requests fired

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
 
 /// Icon + title + message layout for a full-body steady-state or error
 /// screen (e.g. "waiting for publish," "something went wrong"). Shared so

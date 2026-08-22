@@ -6,9 +6,11 @@
 
 New features go in: `lib/features/{name}/{data,domain,presentation}/`
 
-Shared widgets: `lib/core/widgets/` — extract here if a widget is used in 2+ features.
+**Large multi-skill features** (e.g. `exam_attempt`, which spans Reading/Listening/Speaking/Writing) split into sub-modules: `lib/features/{name}/{submodule}/{data,domain,presentation}/` — one submodule per skill/capability. Code used by 2+ submodules stays at `lib/features/{name}/{data,domain,presentation}/` (the feature root), e.g. `TaskTypeDispatcher`, `TaskView`, `TaskAnswerCubit`, `ExamScaffold`.
 
-Constants: `lib/core/constants/app_strings.dart`, `app_colors.dart`, `app_dimensions.dart`
+Shared widgets: `lib/core/widgets/` — extract here if a widget is used in 2+ top-level features.
+
+Constants: per-feature `constants/*_strings.dart` (e.g. `ReadingStrings`, `ListeningStrings`, `SpeakingWritingStrings`, `ExamAttemptStrings` for the shared exam-shell strings, `ReportStrings`) — **not** one global file. `lib/core/constants/app_strings.dart` (`AppStrings`) holds only truly app-wide strings (currently just `appTitle`). `app_colors.dart`/`app_dimensions.dart` stay global in `lib/core/constants/` (colors/spacing are cross-cutting, not per-feature).
 
 ## Critical Rules (enforce on every file you write)
 

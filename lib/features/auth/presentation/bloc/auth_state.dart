@@ -1,5 +1,5 @@
-import '../../../../core/network/api_exceptions.dart';
-import '../../domain/jwt_claims.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 
 /// Separate immutable classes per `docs/CODING_STANDARDS_APP.md` — no
 /// `isLoading`/`isError` boolean-flag shape. `LogoutRequested` must be

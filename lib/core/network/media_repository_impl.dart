@@ -1,6 +1,6 @@
-import 'api_client.dart';
-import 'media_presign_response.dart';
-import 'media_repository.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/media_presign_response.dart';
+import 'package:pte_app/core/network/media_repository.dart';
 
 class MediaRepositoryImpl implements MediaRepository {
   MediaRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;

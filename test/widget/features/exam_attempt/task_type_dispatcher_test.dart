@@ -8,17 +8,18 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
-import 'package:pte_app/features/exam_attempt/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/mc_reading_multiple_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/mc_reading_single_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/mc_multiple_option_list.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/mc_option_list.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_multiple_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_multiple_option_list.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
@@ -32,6 +33,8 @@ class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
 
 class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+
+class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
   return TaskView(
@@ -74,6 +77,7 @@ void main() {
   late _MockAudioRecorderService audioRecorderService;
   late _MockPendingMediaUploadDao mediaDao;
   late _MockMediaUploadCoordinator mediaUploadCoordinator;
+  late _MockAudioPlayerService audioPlayerService;
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
@@ -82,6 +86,7 @@ void main() {
     audioRecorderService = _MockAudioRecorderService();
     mediaDao = _MockPendingMediaUploadDao();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
+    audioPlayerService = _MockAudioPlayerService();
     when(
       () => outboxDao.upsertAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
@@ -109,6 +114,7 @@ void main() {
             audioRecorderService: audioRecorderService,
             mediaDao: mediaDao,
             mediaUploadCoordinator: mediaUploadCoordinator,
+            audioPlayerService: audioPlayerService,
           ),
         ),
       ),

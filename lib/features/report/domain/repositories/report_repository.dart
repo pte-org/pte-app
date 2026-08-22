@@ -1,4 +1,4 @@
-import '../report_response.dart';
+import 'package:pte_app/features/report/domain/report_response.dart';
 
 /// Read-only — no dependency on Phase 2's outbox/sync machinery; reporting
 /// is a pure fetch-and-render concern (phase-08 Design Constraints).

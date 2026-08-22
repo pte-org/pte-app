@@ -18,4 +18,7 @@ class AppColors {
   static const Color fillBlanksGapFilledBackground = Color(0xFFE3F2FD);
   static const Color dragChipBackground = Color(0xFFECEFF1);
   static const Color dragTargetHoverBackground = Color(0xFFBBDEFB);
+
+  static const Color wordSelectedBackground = Color(0xFFFFCDD2);
+  static const Color wordUnselectedBackground = Color(0x00000000);
 }

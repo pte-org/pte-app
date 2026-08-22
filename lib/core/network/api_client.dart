@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'api_exceptions.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
 /// the **full** gateway-relative path (e.g. `/api/iam/auth/login`) — the

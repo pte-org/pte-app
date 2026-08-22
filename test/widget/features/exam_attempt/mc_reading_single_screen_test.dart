@@ -11,8 +11,8 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/pages/mc_reading_single_screen.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/reading_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_reading_single_screen.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_banner.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 

@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 
-import '../app_database.dart';
-import '../pending_media_upload_status.dart';
-import '../tables/pending_media_upload_table.dart';
+import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/storage/pending_media_upload_status.dart';
+import 'package:pte_app/core/storage/tables/pending_media_upload_table.dart';
 
 part 'pending_media_upload_dao.g.dart';
 

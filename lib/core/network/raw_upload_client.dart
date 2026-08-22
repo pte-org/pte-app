@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
-import '../config/app_config.dart';
+import 'package:pte_app/core/config/app_config.dart';
 
 /// Thin, deliberately uninterceptored `PUT` client for presigned MinIO
 /// uploads. The presigned URL itself is the credential (900s TTL) —

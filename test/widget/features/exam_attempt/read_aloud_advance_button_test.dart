@@ -9,9 +9,9 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/read_aloud_advance_button.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/read_aloud_advance_button.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 

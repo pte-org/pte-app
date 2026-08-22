@@ -1,6 +1,6 @@
-import '../../../../core/network/api_client.dart';
-import '../../domain/repositories/timer_repository.dart';
-import '../../domain/timer_state_response.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_state_response.dart';
 
 class TimerRepositoryImpl implements TimerRepository {
   TimerRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
