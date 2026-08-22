@@ -35,14 +35,14 @@ class ReadAloudAnswerStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
-          Text(AppStrings.readAloudCurrentStatusLabel, style: const TextStyle(color: AppColors.textPrimary)),
+          Text(AppStrings.recordingCurrentStatusLabel, style: const TextStyle(color: AppColors.textPrimary)),
           Text(statusLabel, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
           const SizedBox(height: AppDimensions.spacingMedium),
           ClipRRect(
-            borderRadius: BorderRadius.circular(AppDimensions.readAloudProgressBarRadius),
+            borderRadius: BorderRadius.circular(AppDimensions.recordingProgressBarRadius),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: AppDimensions.readAloudProgressBarHeight,
+              minHeight: AppDimensions.recordingProgressBarHeight,
               backgroundColor: AppColors.onPrimary,
               color: AppColors.primary,
             ),

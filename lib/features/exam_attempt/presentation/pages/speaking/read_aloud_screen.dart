@@ -18,18 +18,18 @@ import '../../bloc/exam_attempt_bloc.dart';
 import '../../bloc/exam_attempt_state.dart';
 import '../../cubit/read_aloud_cubit.dart';
 import '../../cubit/read_aloud_state.dart';
+import '../../widgets/auto_advance_on_upload_ready.dart';
 import '../../widgets/exam_scaffold.dart';
+import '../../widgets/instruction_text.dart';
 import '../../widgets/read_aloud_answer_status_card.dart';
-import '../../widgets/read_aloud_auto_advance.dart';
-import '../../widgets/read_aloud_instruction_text.dart';
 
 /// Renders inside Phase 4's shared shell as the shell's injected content
 /// region — builds no top/bottom chrome of its own (phase-05/06 Design
 /// Constraints). The [ReadAloudCubit] is created in [initState] and closed
 /// in [dispose]. Recording is fully automatic — driven by bridging
 /// `ExamAttemptBloc`'s [TimerSnapshot] into the cubit — there is no manual
-/// start/stop control, no Skip button, and (via [ReadAloudAutoAdvance]) no
-/// manual "Next" tap either: once the response window ends and the
+/// start/stop control, no Skip button, and (via [AutoAdvanceOnUploadReady])
+/// no manual "Next" tap either: once the response window ends and the
 /// recording finishes uploading, the attempt advances to the next task on
 /// its own, matching real PTE speaking-task behavior.
 class ReadAloudScreen extends StatefulWidget {
@@ -107,8 +107,9 @@ class _ReadAloudScreenState extends State<ReadAloudScreen> {
         totalTasks: widget.task.totalTasks,
         body: _ReadAloudBody(task: widget.task),
         // Renders nothing — advancing is fully automatic now, driven by
-        // ReadAloudAutoAdvance's own BlocListener once the upload is ready.
-        bottomAction: ReadAloudAutoAdvance(
+        // AutoAdvanceOnUploadReady's own BlocListener once the upload is
+        // ready.
+        bottomAction: AutoAdvanceOnUploadReady<ReadAloudCubit, ReadAloudState>(
           pinnedItemPublicId: widget.task.pinnedItemPublicId,
           syncEngine: widget.syncEngine,
         ),
@@ -134,7 +135,7 @@ class _ReadAloudBody extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ReadAloudInstructionText(responseSeconds: task.responseSeconds),
+                  InstructionText(text: _instructionText(task.responseSeconds)),
                   const SizedBox(height: AppDimensions.spacingMedium),
                   _StatusCard(task: task, recordingState: state, snapshot: snapshot),
                   const SizedBox(height: AppDimensions.spacingMedium),
@@ -151,10 +152,16 @@ class _ReadAloudBody extends StatelessWidget {
       ),
     );
   }
+
+  String _instructionText(int responseSeconds) {
+    return '${AppStrings.readAloudInstructionPrefix}$responseSeconds'
+        '${AppStrings.readAloudInstructionMiddle}$responseSeconds'
+        '${AppStrings.readAloudInstructionSuffix}';
+  }
 }
 
 /// Recorded phase always wins (upload status), regardless of the live timer
-/// phase; otherwise response phase shows a live "Recording…" countdown and
+/// phase; otherwise response phase shows a live "Recording" countdown and
 /// prep phase shows a live "Beginning in…" countdown — both driven by the
 /// same [ReadAloudAnswerStatusCard] shell with a phase-appropriate
 /// `statusLabel`/`progress`.
@@ -173,8 +180,8 @@ class _StatusCard extends StatelessWidget {
     if (snapshot?.phase == TimerPhase.response) {
       return ReadAloudAnswerStatusCard(
         statusLabel: _countdownLabel(
-          prefix: AppStrings.readAloudRecordingStatusPrefix,
-          suffix: AppStrings.readAloudRecordingStatusSuffix,
+          prefix: AppStrings.recordingInProgressPrefix,
+          suffix: AppStrings.recordingInProgressSuffix,
           remaining: snapshot!.remaining,
         ),
         progress: _elapsedFraction(totalSeconds: task.responseSeconds, remaining: snapshot!.remaining),
@@ -183,8 +190,8 @@ class _StatusCard extends StatelessWidget {
     final remaining = snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
     return ReadAloudAnswerStatusCard(
       statusLabel: _countdownLabel(
-        prefix: AppStrings.readAloudBeginningInPrefix,
-        suffix: AppStrings.readAloudBeginningInSuffix,
+        prefix: AppStrings.recordingBeginningInPrefix,
+        suffix: AppStrings.recordingBeginningInSuffix,
         remaining: remaining,
       ),
       progress: _elapsedFraction(totalSeconds: task.prepSeconds, remaining: remaining),
@@ -203,9 +210,9 @@ class _StatusCard extends StatelessWidget {
 
   String _uploadStatusLabel() {
     final status = recordingState.uploadStatus;
-    if (status == null) return AppStrings.readAloudStillUploadingLabel;
+    if (status == null) return AppStrings.recordingStillUploadingLabel;
     return status == PendingMediaUploadStatus.ready
-        ? AppStrings.readAloudUploadReadyLabel
-        : AppStrings.readAloudStillUploadingLabel;
+        ? AppStrings.recordingUploadReadyLabel
+        : AppStrings.recordingStillUploadingLabel;
   }
 }

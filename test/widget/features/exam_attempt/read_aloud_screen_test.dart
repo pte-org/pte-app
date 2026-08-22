@@ -126,7 +126,7 @@ void main() {
     verifyNever(() => recorder.start(any()));
   });
 
-  testWidgets('a new response-phase snapshot on the bloc stream auto-starts recording and shows the "Recording…" card', (
+  testWidgets('a new response-phase snapshot on the bloc stream auto-starts recording and shows the "Recording" card', (
     tester,
   ) async {
     const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
@@ -141,12 +141,12 @@ void main() {
     await tester.pump();
 
     verify(() => recorder.start(any())).called(1);
-    expect(find.text('Recording… 40 seconds left'), findsOneWidget);
+    expect(find.text('Recording 40 seconds left'), findsOneWidget);
   });
 
   testWidgets(
     'full prep -> response -> recorded transition: once the response countdown reaches zero the recorder '
-    'stops and the upload-status card replaces the "Recording…" card',
+    'stops and the upload-status card replaces the "Recording" card',
     (tester) async {
       when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
       when(() => mediaDao.upsertRecorded(
@@ -175,10 +175,10 @@ void main() {
 
       verify(() => recorder.stop()).called(1);
       // Recorded phase always wins over the live timer phase — the
-      // "Recording…" card must be gone, replaced by the upload-status card
+      // "Recording" card must be gone, replaced by the upload-status card
       // (uploadStatus stays null in this test since watchRow's stream is
       // empty, so it falls back to the "still uploading" label). Only the
-      // status card renders this text now — ReadAloudAutoAdvance renders
+      // status card renders this text now — AutoAdvanceOnUploadReady renders
       // nothing, unlike the old tappable button it replaced.
       expect(find.text('Still uploading…'), findsOneWidget);
       expect(find.textContaining('seconds left'), findsNothing);

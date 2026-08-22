@@ -4,10 +4,8 @@ import '../../../../core/storage/pending_media_upload_status.dart';
 import 'recording_phase.dart';
 import 'upload_tracking_state.dart';
 
-export 'recording_phase.dart';
-
-class ReadAloudState extends Equatable implements UploadTrackingState {
-  const ReadAloudState({this.recordingPhase = RecordingPhase.idle, this.uploadStatus});
+class RepeatSentenceState extends Equatable implements UploadTrackingState {
+  const RepeatSentenceState({this.recordingPhase = RecordingPhase.idle, this.uploadStatus});
 
   final RecordingPhase recordingPhase;
 
@@ -16,8 +14,8 @@ class ReadAloudState extends Equatable implements UploadTrackingState {
   @override
   final PendingMediaUploadStatus? uploadStatus;
 
-  ReadAloudState copyWith({RecordingPhase? recordingPhase, PendingMediaUploadStatus? uploadStatus}) {
-    return ReadAloudState(
+  RepeatSentenceState copyWith({RecordingPhase? recordingPhase, PendingMediaUploadStatus? uploadStatus}) {
+    return RepeatSentenceState(
       recordingPhase: recordingPhase ?? this.recordingPhase,
       uploadStatus: uploadStatus ?? this.uploadStatus,
     );

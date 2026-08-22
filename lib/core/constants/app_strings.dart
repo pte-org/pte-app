@@ -25,18 +25,29 @@ class AppStrings {
   static const String wordCountBoundsClose = ')';
   static const String unsupportedTaskTypePrefix = 'Unsupported task type: ';
 
-  static const String readAloudStillUploadingLabel = 'Still uploading…';
-  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
   static const String readAloudInstructionPrefix = 'Look at the text below. In ';
   static const String readAloudInstructionMiddle =
       ' seconds, you must read this text aloud as naturally and clearly as possible. You have ';
   static const String readAloudInstructionSuffix = ' seconds to read aloud.';
   static const String readAloudAnswerCardTitle = 'Recorded Answer';
-  static const String readAloudCurrentStatusLabel = 'Current Status:';
-  static const String readAloudBeginningInPrefix = 'Beginning in ';
-  static const String readAloudBeginningInSuffix = ' seconds';
-  static const String readAloudRecordingStatusPrefix = 'Recording… ';
-  static const String readAloudRecordingStatusSuffix = ' seconds left';
+
+  // Shared by every auto-record speaking task's status card (Read Aloud,
+  // Repeat Sentence) — not Read-Aloud-specific despite historically living
+  // alongside those strings.
+  static const String recordingCurrentStatusLabel = 'Current Status:';
+  static const String recordingBeginningInPrefix = 'Beginning in ';
+  static const String recordingBeginningInSuffix = ' seconds';
+  static const String recordingInProgressPrefix = 'Recording ';
+  static const String recordingInProgressSuffix = ' seconds left';
+  static const String recordingStillUploadingLabel = 'Still uploading…';
+  static const String recordingUploadReadyLabel = 'Uploaded — ready to continue.';
+
+  static const String repeatSentenceInstructionText =
+      'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the sentence '
+      'only once.';
+  static const String audioListeningVolumeLabel = 'Volume';
+  static const String audioListeningPlayingPrefix = 'Playing ';
+  static const String audioListeningPlayingSuffix = ' seconds left';
 
   static const String reportScreenTitle = 'Your report';
   static const String reportNotPublishedTitle = 'Waiting for your report';

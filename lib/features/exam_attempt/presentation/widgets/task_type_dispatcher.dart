@@ -13,6 +13,7 @@ import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
 import '../pages/re_order_paragraphs_screen.dart';
 import '../pages/speaking/read_aloud_screen.dart';
+import '../pages/speaking/repeat_sentence_screen.dart';
 import '../pages/writing/write_essay_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
@@ -22,6 +23,7 @@ const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
 const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeReadAloud = 'READ_ALOUD';
+const String _taskTypeRepeatSentence = 'REPEAT_SENTENCE';
 
 /// Switches on `TaskView.taskType` to select the right task screen.
 class TaskTypeDispatcher extends StatelessWidget {
@@ -98,6 +100,15 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
       ),
       _taskTypeReadAloud => ReadAloudScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeRepeatSentence => RepeatSentenceScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,

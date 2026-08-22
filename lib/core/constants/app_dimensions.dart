@@ -20,8 +20,11 @@ class AppDimensions {
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
 
-  static const double readAloudProgressBarHeight = 8.0;
-  static const double readAloudProgressBarRadius = 4.0;
+  static const double recordingProgressBarHeight = 8.0;
+  static const double recordingProgressBarRadius = 4.0;
 
   static const double examBrandFontSize = 11.0;
+
+  static const double audioListeningMeterHeight = 2.0;
+  static const double audioListeningDotSize = 12.0;
 }

@@ -13,8 +13,12 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_eve
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/read_aloud_auto_advance.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/auto_advance_on_upload_ready.dart';
 
+// Exercised via one concrete binding, AutoAdvanceOnUploadReady<ReadAloudCubit,
+// ReadAloudState> — the generic widget has no logic that varies by type
+// parameter (RepeatSentenceScreen's own screen-level test exercises the
+// RepeatSentenceCubit/RepeatSentenceState binding separately).
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
@@ -48,7 +52,10 @@ void main() {
         child: BlocProvider<ReadAloudCubit>.value(
           value: readAloudCubit,
           child: Scaffold(
-            body: ReadAloudAutoAdvance(pinnedItemPublicId: 'item-1', syncEngine: syncEngine),
+            body: AutoAdvanceOnUploadReady<ReadAloudCubit, ReadAloudState>(
+              pinnedItemPublicId: 'item-1',
+              syncEngine: syncEngine,
+            ),
           ),
         ),
       ),
@@ -60,7 +67,7 @@ void main() {
     whenListen(readAloudCubit, cubitStateController.stream, initialState: initial);
   }
 
-  group('ReadAloudAutoAdvance — advances on its own once ready, no tap required', () {
+  group('AutoAdvanceOnUploadReady — advances on its own once ready, no tap required', () {
     testWidgets('renders nothing while not yet ready, and never advances', (tester) async {
       stubCubitState(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.uploading));
 

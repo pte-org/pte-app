@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
+import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
@@ -32,6 +34,32 @@ class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
 
 class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+
+/// `RepeatSentenceScreen`/`ReadAloudScreen` construct their own cubit
+/// internally using the real `resolveReadAloudFilePath`, which calls
+/// `path_provider` — no platform channel handler is registered in the
+/// widget-test environment by default, so `getTemporaryDirectory()` throws
+/// `MissingPluginException` unless this fake is installed.
+class _FakePathProviderPlatform extends PathProviderPlatform {
+  @override
+  Future<String?> getTemporaryPath() async => '/tmp';
+}
+
+TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'REPEAT_SENTENCE',
+    title: 'Task title',
+    prepSeconds: 12,
+    responseSeconds: 15,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
+    responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
   return TaskView(
@@ -68,6 +96,10 @@ TaskView _mcMultipleTask({required String pinnedItemPublicId}) {
 }
 
 void main() {
+  setUpAll(() {
+    PathProviderPlatform.instance = _FakePathProviderPlatform();
+  });
+
   late _MockExamAttemptBloc bloc;
   late _MockAnswerOutboxDao outboxDao;
   late _MockSyncEngine syncEngine;
@@ -195,6 +227,32 @@ void main() {
 
       expect(identical(firstCubit, secondCubit), isFalse);
       expect(secondCubit.pinnedItemPublicId, 'item-2');
+    });
+  });
+
+  group('TaskTypeDispatcher — REPEAT_SENTENCE routing', () {
+    testWidgets('routes to RepeatSentenceScreen, not the unsupported-task-type placeholder', (tester) async {
+      // RepeatSentenceScreen constructs a RepeatSentenceCubit internally,
+      // which subscribes to PendingMediaUploadDao.watchRow immediately in
+      // its constructor — needs a stub even though this test never asserts
+      // on upload status.
+      when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+      // A different pinnedItemPublicId than the default stubbed bloc
+      // state's task ('item-1') so the timer-bridge identity guard never
+      // matches — this test only checks routing/rendering, not auto-record
+      // behavior, so no recorder stub is set up here.
+      await tester.pumpWidget(buildSubject(_repeatSentenceTask(pinnedItemPublicId: 'item-99')));
+
+      expect(find.textContaining('Unsupported task type'), findsNothing);
+      // The fixed instruction text is RepeatSentenceScreen-specific and
+      // renders regardless of timer phase.
+      expect(
+        find.text(
+          'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
+          'sentence only once.',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }
