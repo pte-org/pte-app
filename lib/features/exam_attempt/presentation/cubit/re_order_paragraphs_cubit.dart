@@ -22,10 +22,11 @@ class ReOrderParagraphsCubit extends TaskAnswerCubit<ReOrderParagraphsState> {
   final String attemptPublicId;
   final String pinnedItemPublicId;
 
-  /// [newIndex] arrives pre-adjusted for the removed item at [oldIndex] —
-  /// this is `ReorderableListView.onReorderItem`'s contract (`onReorder` is
-  /// deprecated and required a manual off-by-one adjustment `onReorderItem`
-  /// no longer needs).
+  /// [newIndex] must already be adjusted for the removed item at
+  /// [oldIndex] (i.e. the item's actual final resting index) — the caller
+  /// (`ReOrderParagraphsList`'s `ReorderableListView.onReorder` handler) is
+  /// responsible for that adjustment, since `onReorder` itself reports
+  /// `newIndex` as the pre-removal insertion point.
   Future<void> reorder(int oldIndex, int newIndex) async {
     final updated = List<TaskOption>.of(state.currentOrder);
     final moved = updated.removeAt(oldIndex);
