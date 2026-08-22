@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import 'core/constants/app_strings.dart';
@@ -12,6 +13,7 @@ import 'features/auth/auth_module.dart';
 import 'features/exam_attempt/domain/audio_recorder_service.dart';
 import 'features/exam_attempt/dev/reading_task_preview_screen.dart';
 import 'features/exam_attempt/exam_attempt_module.dart';
+import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'features/report/report_module.dart';
 
 void main() {
@@ -46,12 +48,18 @@ class PteApp extends StatelessWidget {
 
   static Widget _buildReadingTaskPreviewScreen() {
     final getIt = GetIt.instance;
-    return ReadingTaskPreviewScreen(
-      outboxDao: getIt<AnswerOutboxDao>(),
-      syncEngine: getIt<SyncEngine>(),
-      audioRecorderService: getIt<AudioRecorderService>(),
-      mediaDao: getIt<PendingMediaUploadDao>(),
-      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+    // ExamScaffold's ExamAppBar/ExamBottomBar read ExamAttemptBloc via
+    // BlocSelector, so the preview needs one in scope even though this
+    // screen never dispatches attempt-lifecycle events against it.
+    return BlocProvider.value(
+      value: getIt<ExamAttemptBloc>(),
+      child: ReadingTaskPreviewScreen(
+        outboxDao: getIt<AnswerOutboxDao>(),
+        syncEngine: getIt<SyncEngine>(),
+        audioRecorderService: getIt<AudioRecorderService>(),
+        mediaDao: getIt<PendingMediaUploadDao>(),
+        mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      ),
     );
   }
 }
