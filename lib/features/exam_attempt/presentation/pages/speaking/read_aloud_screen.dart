@@ -194,7 +194,10 @@ class _StatusCard extends StatelessWidget {
         suffix: AppStrings.recordingBeginningInSuffix,
         remaining: remaining,
       ),
-      progress: _elapsedFraction(totalSeconds: task.prepSeconds, remaining: remaining),
+      // The progress bar only tracks the active "Recording…" sub-stage —
+      // it stays empty during "Beginning in…" prep (matches
+      // RepeatSentenceScreen's identical rule).
+      progress: 0.0,
     );
   }
 
