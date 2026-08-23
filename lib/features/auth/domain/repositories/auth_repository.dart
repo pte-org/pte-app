@@ -1,4 +1,4 @@
-import '../jwt_claims.dart';
+import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 
 /// Abstract interface — `AuthBloc` depends on this, never on
 /// `AuthRepositoryImpl` directly (Dependency Inversion,

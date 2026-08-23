@@ -12,8 +12,8 @@ class AppColors {
   static const Color examBottomBarPrep = Color(0xFFFFA000);
   static const Color examBottomBarResponse = Color(0xFF424242);
 
-  static const Color readingHeaderGradientStart = Color(0xFF1E88E5);
-  static const Color readingHeaderGradientEnd = Color(0xFF1565C0);
+  static const Color examHeaderGradientStart = Color(0xFF1E88E5);
+  static const Color examHeaderGradientEnd = Color(0xFF1565C0);
   static const Color fillBlanksGapEmptyBorder = Color(0xFF9E9E9E);
   static const Color fillBlanksGapFilledBackground = Color(0xFFE3F2FD);
   static const Color dragChipBackground = Color(0xFFECEFF1);
@@ -24,4 +24,8 @@ class AppColors {
   static const Color passagePanelBackground = Color(0xFFF5F5F5);
   static const Color editorToolbarBackground = Color(0xFFEEEEEE);
   static const Color countdownTextColor = Color(0xFF212121);
+
+  // Listening task surfaces — word-selection highlight states.
+  static const Color wordSelectedBackground = Color(0xFFFFCDD2);
+  static const Color wordUnselectedBackground = Color(0x00000000);
 }

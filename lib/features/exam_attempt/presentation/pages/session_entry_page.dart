@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/primary_button.dart';
-import '../bloc/exam_attempt_bloc.dart';
-import '../bloc/exam_attempt_event.dart';
-import '../bloc/exam_attempt_state.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
 /// Placeholder manual session-ID entry screen — the only thing that
 /// changes when Member 3's session-discovery decision lands is which
@@ -32,7 +32,7 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.sessionEntryTitle)),
+      appBar: AppBar(title: const Text(ExamAttemptStrings.sessionEntryTitle)),
       body: BlocConsumer<ExamAttemptBloc, ExamAttemptState>(
         listener: (context, state) {
           if (state is AttemptError) {
@@ -47,11 +47,11 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
               children: [
                 TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(labelText: AppStrings.sessionEntryFieldLabel),
+                  decoration: const InputDecoration(labelText: ExamAttemptStrings.sessionEntryFieldLabel),
                 ),
                 const SizedBox(height: AppDimensions.spacingMedium),
                 PrimaryButton(
-                  label: AppStrings.sessionEntryStartButton,
+                  label: ExamAttemptStrings.sessionEntryStartButton,
                   isLoading: state is AttemptStarting,
                   onPressed: () => context
                       .read<ExamAttemptBloc>()

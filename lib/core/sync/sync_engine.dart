@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:logger/logger.dart';
 
-import '../network/api_client.dart';
-import '../network/api_exceptions.dart';
-import '../network/network_canary.dart';
-import '../storage/answer_sync_status.dart';
-import '../storage/app_database.dart';
-import '../storage/dao/answer_outbox_dao.dart';
-import 'rate_limit_backoff.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/network/network_canary.dart';
+import 'package:pte_app/core/storage/answer_sync_status.dart';
+import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/sync/rate_limit_backoff.dart';
 
 /// Matches [Timer.periodic]'s signature so a fake factory can be injected
 /// for deterministic tests (no real wall-clock waits).

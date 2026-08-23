@@ -1,7 +1,7 @@
-import '../../../../core/network/api_client.dart';
-import '../../../../core/storage/token_store.dart';
-import '../../domain/jwt_claims.dart';
-import '../../domain/repositories/auth_repository.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/storage/token_store.dart';
+import 'package:pte_app/features/auth/domain/jwt_claims.dart';
+import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required ApiClient apiClient, required TokenStore tokenStore})

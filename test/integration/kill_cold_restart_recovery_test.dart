@@ -16,7 +16,7 @@ import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/mc_reading_single_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_cubit.dart';
 
 class _MockApiClient extends Mock implements ApiClient {}
 

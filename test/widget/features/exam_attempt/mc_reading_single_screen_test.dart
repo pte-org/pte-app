@@ -11,8 +11,8 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/pages/mc_reading_single_screen.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/reading_task_header_banner.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_reading_single_screen.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 
@@ -80,7 +80,7 @@ void main() {
   testWidgets('renders the banner with the MC_READING_SINGLE label', (tester) async {
     await tester.pumpWidget(buildSubject());
 
-    expect(find.byType(ReadingTaskHeaderBanner), findsOneWidget);
+    expect(find.byType(ExamTaskHeaderBanner), findsOneWidget);
     expect(find.text('Reading: Multiple Choice, Single Answer'), findsOneWidget);
   });
 

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/confirm_dialog.dart';
-import '../../domain/timer_phase.dart';
-import '../../domain/timer_snapshot.dart';
-import '../bloc/exam_attempt_bloc.dart';
-import '../bloc/exam_attempt_event.dart';
-import '../bloc/exam_attempt_state.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/widgets/confirm_dialog.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
 /// Phase indicator + `orderIndex`/`totalTasks` + countdown display. Reads
 /// only the [TimerSnapshot] slice of [ExamAttemptState] via [BlocSelector]
@@ -43,13 +43,13 @@ class ExamAppBar extends StatelessWidget {
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
               Text(
-                '${snapshot.currentOrderIndex}${AppStrings.examTaskCounterOf}$totalTasks',
+                '${snapshot.currentOrderIndex}${ExamAttemptStrings.examTaskCounterOf}$totalTasks',
                 style: const TextStyle(color: AppColors.onPrimary),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
               IconButton(
                 icon: const Icon(Icons.send, color: AppColors.onPrimary),
-                tooltip: AppStrings.forceSubmitButtonLabel,
+                tooltip: ExamAttemptStrings.forceSubmitButtonLabel,
                 onPressed: () => _confirmAndForceSubmit(context),
               ),
             ],
@@ -66,10 +66,10 @@ class ExamAppBar extends StatelessWidget {
     final bloc = context.read<ExamAttemptBloc>();
     final confirmed = await showConfirmDialog(
       context,
-      title: AppStrings.forceSubmitDialogTitle,
-      message: AppStrings.forceSubmitDialogMessage,
-      confirmLabel: AppStrings.forceSubmitDialogConfirm,
-      cancelLabel: AppStrings.forceSubmitDialogCancel,
+      title: ExamAttemptStrings.forceSubmitDialogTitle,
+      message: ExamAttemptStrings.forceSubmitDialogMessage,
+      confirmLabel: ExamAttemptStrings.forceSubmitDialogConfirm,
+      cancelLabel: ExamAttemptStrings.forceSubmitDialogCancel,
     );
     if (confirmed) {
       bloc.add(const ForceSubmitRequested());
@@ -78,8 +78,8 @@ class ExamAppBar extends StatelessWidget {
 
   String _phaseLabel(TimerPhase phase) {
     return switch (phase) {
-      TimerPhase.prep => AppStrings.examPhasePrepLabel,
-      TimerPhase.response => AppStrings.examPhaseResponseLabel,
+      TimerPhase.prep => ExamAttemptStrings.examPhasePrepLabel,
+      TimerPhase.response => ExamAttemptStrings.examPhaseResponseLabel,
     };
   }
 

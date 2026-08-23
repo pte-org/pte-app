@@ -4,16 +4,16 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:logger/logger.dart';
 
-import '../network/api_exceptions.dart';
-import '../network/media_repository.dart';
-import '../network/network_canary.dart';
-import '../network/raw_upload_client.dart';
-import '../storage/app_database.dart';
-import '../storage/dao/answer_outbox_dao.dart';
-import '../storage/dao/pending_media_upload_dao.dart';
-import '../storage/pending_media_upload_status.dart';
-import 'rate_limit_backoff.dart';
-import 'sync_engine.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/network/media_repository.dart';
+import 'package:pte_app/core/network/network_canary.dart';
+import 'package:pte_app/core/network/raw_upload_client.dart';
+import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/storage/pending_media_upload_status.dart';
+import 'package:pte_app/core/sync/rate_limit_backoff.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
 
 /// Drives every `PendingMediaUploadTable` row through presign → upload →
 /// complete, then hands the resolved `mediaPublicId` to Phase 2's answer

@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pte_app/features/exam_attempt/presentation/cubit/write_essay_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/write_essay_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/word_count_label.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/write_essay_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/write_essay_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/word_count_label.dart';
 
 class _MockWriteEssayCubit extends MockCubit<WriteEssayState> implements WriteEssayCubit {}
 

@@ -1,24 +1,26 @@
 import 'package:get_it/get_it.dart';
 
-import '../../core/network/api_client.dart';
-import '../../core/network/media_repository.dart';
-import '../../core/network/media_repository_impl.dart';
-import '../../core/network/network_canary.dart';
-import '../../core/network/raw_upload_client.dart';
-import '../../core/storage/dao/answer_outbox_dao.dart';
-import '../../core/storage/dao/pending_media_upload_dao.dart';
-import '../../core/sync/media_upload_coordinator.dart';
-import '../../core/sync/sync_engine.dart';
-import 'data/audio_recorder_service_impl.dart';
-import 'data/repositories/exam_attempt_repository_impl.dart';
-import 'data/repositories/manual_session_entry_repository.dart';
-import 'data/repositories/timer_repository_impl.dart';
-import 'domain/audio_recorder_service.dart';
-import 'domain/repositories/exam_attempt_repository.dart';
-import 'domain/repositories/session_entry_repository.dart';
-import 'domain/repositories/timer_repository.dart';
-import 'domain/timer_service.dart';
-import 'presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/media_repository.dart';
+import 'package:pte_app/core/network/media_repository_impl.dart';
+import 'package:pte_app/core/network/network_canary.dart';
+import 'package:pte_app/core/network/raw_upload_client.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/sync/media_upload_coordinator.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/listening/data/audio_player_service_impl.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
+import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
+import 'package:pte_app/features/exam_attempt/data/repositories/manual_session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/data/repositories/timer_repository_impl.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 
 /// GetIt registration for attempt lifecycle + the placeholder session-entry
 /// seam. `SessionEntryRepository`'s concrete registration below is the
@@ -42,6 +44,11 @@ void setupExamAttemptModule() {
   );
 
   getIt.registerLazySingleton<AudioRecorderService>(() => AudioRecorderServiceImpl());
+
+  // Not a singleton: each listening screen's cubit needs its own player
+  // instance (one `close()` per task, not shared across tasks) — phase-01
+  // Design Constraints. registerFactory gives a fresh instance per get().
+  getIt.registerFactory<AudioPlayerService>(() => AudioPlayerServiceImpl());
 
   getIt.registerLazySingleton<MediaRepository>(
     () => MediaRepositoryImpl(apiClient: getIt<ApiClient>()),

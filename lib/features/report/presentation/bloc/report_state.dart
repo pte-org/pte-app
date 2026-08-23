@@ -1,4 +1,4 @@
-import '../../domain/report_response.dart';
+import 'package:pte_app/features/report/domain/report_response.dart';
 
 /// Four separate immutable classes, no boolean-flag shape (phase-08 Design
 /// Constraints).

@@ -5,8 +5,8 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/re_order_paragraphs_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/re_order_paragraphs_list.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/re_order_paragraphs_list.dart';
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 

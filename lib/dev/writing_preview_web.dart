@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../features/exam_attempt/dev/writing_task_fixtures.dart';
-import '../../features/exam_attempt/domain/task_view.dart';
-import '../../features/exam_attempt/presentation/widgets/summarize_written_text_body.dart';
-import '../../features/exam_attempt/presentation/widgets/write_essay_v2_body.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/summarize_written_text_body.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/write_essay_v2_body.dart';
 
 /// Chrome-only dev entry for the writing tasks. Mounts the pure UI bodies
 /// ([SummarizeWrittenTextBody] / [WriteEssayV2Body]) directly so the build

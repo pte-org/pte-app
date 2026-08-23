@@ -1,10 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/network/api_exceptions.dart';
-import '../../../../core/network/proactive_refresh_scheduler.dart';
-import '../../domain/repositories/auth_repository.dart';
-import 'auth_event.dart';
-import 'auth_state.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
+import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:pte_app/features/auth/presentation/bloc/auth_event.dart';
+import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
 
 /// No `BuildContext` here — expired-session/logout side effects (e.g.
 /// navigating to a login screen) are driven by the UI listening to this

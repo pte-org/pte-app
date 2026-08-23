@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'exam_app_bar.dart';
-import 'exam_bottom_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_app_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_bottom_bar.dart';
 
 /// Composes [ExamAppBar] + task-type-specific content (injected by Phase
 /// 5/6) + [ExamBottomBar]. No internal `Timer.periodic` of its own — the
