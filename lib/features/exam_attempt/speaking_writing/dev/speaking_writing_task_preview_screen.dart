@@ -11,25 +11,23 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/dev_preview_back_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
-import 'package:pte_app/features/exam_attempt/reading/dev/reading_task_fixtures.dart';
-import 'package:pte_app/features/exam_attempt/reading/constants/reading_strings.dart';
+import 'package:pte_app/features/exam_attempt/reading/dev/speaking_writing_task_fixtures.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
 
-/// `kDebugMode`-gated developer screen: pick one of [ReadingTaskFixtures]
-/// and render it through the real [TaskTypeDispatcher], so a reading-task
-/// screen can be visually verified without depending on backend/authoring
-/// content being ready. Never reachable outside a debug build — see
+/// `kDebugMode`-gated developer screen: pick one of [SpeakingWritingTaskFixtures]
+/// and render it through the real [TaskTypeDispatcher] — mirrors
+/// `ReadingTaskPreviewScreen`/`ListeningTaskPreviewScreen` exactly, including
+/// providing [examAttemptBloc] as an ancestor so `ExamAppBar`'s
+/// `BlocSelector<ExamAttemptBloc, ...>` resolves instead of throwing (see
+/// that class's doc comment). Never reachable outside a debug build — see
 /// `main.dart`'s route registration.
 ///
-/// [examAttemptBloc] is provided as an ancestor because every screen
-/// `TaskTypeDispatcher` renders is wrapped in `ExamScaffold` → `ExamAppBar`,
-/// which reads `BlocSelector<ExamAttemptBloc, ...>` for the timer display —
-/// without this, selecting any fixture throws
-/// "Could not find the correct `Provider<ExamAttemptBloc>`" instead of
-/// rendering. The bloc's default `AttemptIdle` state makes `ExamAppBar`
-/// render nothing (no crash, just no timer bar), which is correct for a
-/// preview with no real timer running.
-class ReadingTaskPreviewScreen extends StatefulWidget {
-  const ReadingTaskPreviewScreen({
+/// [SpeakingWritingTaskFixtures] previously lived inside
+/// `ReadingTaskPreviewScreen`'s picker list (spread in alongside
+/// `ReadingTaskFixtures`) — broken out into its own FAB/route/screen so
+/// Speaking/Writing tasks are reachable independently of Reading ones.
+class SpeakingWritingTaskPreviewScreen extends StatefulWidget {
+  const SpeakingWritingTaskPreviewScreen({
     super.key,
     required this.outboxDao,
     required this.syncEngine,
@@ -49,11 +47,12 @@ class ReadingTaskPreviewScreen extends StatefulWidget {
   final ExamAttemptBloc examAttemptBloc;
 
   @override
-  State<ReadingTaskPreviewScreen> createState() =>
-      _ReadingTaskPreviewScreenState();
+  State<SpeakingWritingTaskPreviewScreen> createState() =>
+      _SpeakingWritingTaskPreviewScreenState();
 }
 
-class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
+class _SpeakingWritingTaskPreviewScreenState
+    extends State<SpeakingWritingTaskPreviewScreen> {
   TaskView? _selected;
 
   @override
@@ -82,23 +81,18 @@ class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text(ReadingStrings.devReadingPreviewTitle)),
+      appBar: AppBar(
+        title: const Text(
+          SpeakingWritingStrings.devSpeakingWritingPreviewTitle,
+        ),
+      ),
       body: ListView(
         children: [
-          for (final task in ReadingTaskFixtures.all)
+          for (final task in SpeakingWritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
               onTap: () => setState(() => _selected = task),
             ),
-          ListTile(
-            title: const Text(
-              ReadingStrings.devReadingPreviewBlankGroupsUnavailableLabel,
-            ),
-            onTap: () => setState(
-              () => _selected =
-                  ReadingTaskFixtures.fillBlanksReadingWritingUnavailable,
-            ),
-          ),
         ],
       ),
     );

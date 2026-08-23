@@ -3,6 +3,9 @@
 class SpeakingWritingStrings {
   const SpeakingWritingStrings._();
 
+  static const String devSpeakingWritingPreviewTitle =
+      'Speaking/Writing task preview';
+
   static const String writeEssayTextFieldLabel = 'Your response';
 
   static const String readAloudInstructionPrefix =
