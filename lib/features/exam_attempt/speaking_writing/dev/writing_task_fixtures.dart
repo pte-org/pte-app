@@ -3,6 +3,8 @@
 /// questions load" TODO convention used by `core_test` and `reading`.
 library;
 
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+
 const String kSummarizeWrittenTextInstruction =
     'Read the passage below and summarize it in one sentence (5 to 75 words).';
 
@@ -38,3 +40,61 @@ Discuss both views and give your own opinion.
 const String kWriteEssayMinWords = '200';
 const String kWriteEssayMaxWords = '300';
 const int kWriteEssayDurationSeconds = 1200; // 20 minutes.
+
+/// Hand-built [TaskView] samples for the two writing dev-preview screens
+/// (Summarize Written Text + Write Essay v2). Mirrors the shape of
+/// `SpeakingWritingTaskFixtures` so the existing picker can render them
+/// through the real `TaskTypeDispatcher`.
+class WritingTaskFixtures {
+  const WritingTaskFixtures._();
+
+  static TaskView get summarizeWrittenText {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 0;
+    const responseSeconds = kSummarizeWrittenTextDurationSeconds;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-SUMMARIZE_WRITTEN_TEXT',
+      orderIndex: 0,
+      totalTasks: 2,
+      section: 'WRITING',
+      taskType: 'SUMMARIZE_WRITTEN_TEXT',
+      title: 'Sample SUMMARIZE_WRITTEN_TEXT',
+      promptText: kSummarizeWrittenTextPassage,
+      minWordCount: int.parse(kSummarizeWrittenTextMinWords),
+      maxWordCount: int.parse(kSummarizeWrittenTextMaxWords),
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
+  static TaskView get writeEssayV2 {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 0;
+    const responseSeconds = kWriteEssayDurationSeconds;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-WRITE_ESSAY_V2',
+      orderIndex: 1,
+      totalTasks: 2,
+      section: 'WRITING',
+      taskType: 'WRITE_ESSAY_V2',
+      title: 'Sample WRITE_ESSAY_V2',
+      promptText: kWriteEssayPrompt,
+      minWordCount: int.parse(kWriteEssayMinWords),
+      maxWordCount: int.parse(kWriteEssayMaxWords),
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
+  static List<TaskView> get all => [summarizeWrittenText, writeEssayV2];
+}

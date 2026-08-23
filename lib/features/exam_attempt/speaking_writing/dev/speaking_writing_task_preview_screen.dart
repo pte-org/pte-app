@@ -13,6 +13,7 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/dev_preview_b
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/speaking_writing_task_fixtures.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
 
 /// `kDebugMode`-gated developer screen: pick one of [SpeakingWritingTaskFixtures]
 /// and render it through the real [TaskTypeDispatcher] — mirrors
@@ -89,6 +90,11 @@ class _SpeakingWritingTaskPreviewScreenState
       body: ListView(
         children: [
           for (final task in SpeakingWritingTaskFixtures.all)
+            ListTile(
+              title: Text(task.taskType),
+              onTap: () => setState(() => _selected = task),
+            ),
+          for (final task in WritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
               onTap: () => setState(() => _selected = task),

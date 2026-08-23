@@ -31,10 +31,12 @@ class PteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appTitle,
-      home: BlocProvider<AuthBloc>.value(
-        value: GetIt.instance<AuthBloc>(),
-        child: const AppAuthGate(),
-      ),
+      home: kIsDevSkipAuth
+          ? const _DevStandaloneMenu()
+          : BlocProvider<AuthBloc>.value(
+              value: GetIt.instance<AuthBloc>(),
+              child: const AppAuthGate(),
+            ),
       routes: kDebugMode
           ? {
               '/dev/reading-preview': (_) => _buildReadingTaskPreviewScreen(),
@@ -42,10 +44,23 @@ class PteApp extends StatelessWidget {
                   _buildListeningTaskPreviewScreen(),
               '/dev/speaking-writing-preview': (_) =>
                   _buildSpeakingWritingTaskPreviewScreen(),
+              if (kIsDevSkipAuth) ..._devStandaloneRoutes,
             }
           : const {},
     );
   }
+
+  // Dev-only entry points so each preview screen can be opened without
+  // logging in. Never compiled into release builds.
+  static const bool kIsDevSkipAuth = bool.fromEnvironment('DEV_SKIP_AUTH');
+
+  static final Map<String, WidgetBuilder> _devStandaloneRoutes = {
+    '/dev/standalone': (_) => const _DevStandaloneMenu(),
+    '/dev/standalone/reading': (_) => _buildReadingTaskPreviewScreen(),
+    '/dev/standalone/listening': (_) => _buildListeningTaskPreviewScreen(),
+    '/dev/standalone/speaking-writing': (_) =>
+        _buildSpeakingWritingTaskPreviewScreen(),
+  };
 
   static Widget _buildReadingTaskPreviewScreen() {
     final getIt = GetIt.instance;
@@ -165,6 +180,54 @@ class _DevFabColumn extends StatelessWidget {
           child: const Icon(Icons.mic),
         ),
       ],
+    );
+  }
+}
+
+/// Debug-only landing screen opened at startup when the app is compiled with
+/// `--dart-define=DEV_SKIP_AUTH=true`. Lists three buttons that jump straight
+/// into the Reading/Listening/Speaking-Writing preview screens, each with
+/// their own hand-picked fixtures, with no login flow and no backend
+/// dependency. Never reachable in release builds (route only registered when
+/// `kIsDevSkipAuth` is true).
+class _DevStandaloneMenu extends StatelessWidget {
+  const _DevStandaloneMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dev standalone preview')),
+      body: ListView(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.menu_book),
+            title: const Text('Reading preview'),
+            subtitle: const Text(
+              'Render every reading task type from local fixtures',
+            ),
+            onTap: () =>
+                Navigator.of(context).pushNamed('/dev/standalone/reading'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.headphones),
+            title: const Text('Listening preview'),
+            subtitle: const Text(
+              'Render every listening task type from local fixtures',
+            ),
+            onTap: () =>
+                Navigator.of(context).pushNamed('/dev/standalone/listening'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.mic),
+            title: const Text('Speaking & Writing preview'),
+            subtitle: const Text(
+              'Render every speaking/writing task type from local fixtures',
+            ),
+            onTap: () => Navigator.of(context)
+                .pushNamed('/dev/standalone/speaking-writing'),
+          ),
+        ],
+      ),
     );
   }
 }
