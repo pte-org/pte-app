@@ -16,21 +16,22 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window (same shape as
-/// `RepeatSentenceScreen`'s split): `_preListenSeconds` (3s) is unchanged
-/// from Repeat Sentence, `_preRecordSeconds` is 10s (not 3s). Audio-playing
-/// duration is whatever remains: `prepSeconds - _preListenSeconds -
-/// _preRecordSeconds` (57s when `prepSeconds = 70`).
+/// Mock-only sub-stage split within the shared `prep` window — same shape as
+/// `RepeatSentenceScreen`'s split (`_preListenSeconds = 3`,
+/// `_preRecordSeconds = 3`), just a shorter audio stage: `prepSeconds - 3 -
+/// 3` (8s when `prepSeconds = 14`).
 const int _preListenSeconds = 3;
-const int _preRecordSeconds = 10;
+const int _preRecordSeconds = 3;
 
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
 /// same fully-automatic advance, same [AudioPromptRecordBody]-shared 2-card
-/// layout) — only the sub-stage constants and instruction text differ.
-class RetellLectureScreen extends StatefulWidget {
-  const RetellLectureScreen({
+/// layout) — only the sub-stage timing and instruction text differ, and
+/// unlike Retell Lecture's, this screen's instruction text is a fixed
+/// string (no interpolated variables), same style as Repeat Sentence's.
+class AnswerShortQuestionScreen extends StatefulWidget {
+  const AnswerShortQuestionScreen({
     super.key,
     required this.task,
     required this.attemptPublicId,
@@ -48,11 +49,12 @@ class RetellLectureScreen extends StatefulWidget {
   final SyncEngine syncEngine;
 
   @override
-  State<RetellLectureScreen> createState() => _RetellLectureScreenState();
+  State<AnswerShortQuestionScreen> createState() =>
+      _AnswerShortQuestionScreenState();
 }
 
-class _RetellLectureScreenState extends State<RetellLectureScreen>
-    with AutoRecordTimerBridgeMixin<RetellLectureScreen> {
+class _AnswerShortQuestionScreenState extends State<AnswerShortQuestionScreen>
+    with AutoRecordTimerBridgeMixin<AnswerShortQuestionScreen> {
   late final AutoRecordCubit _cubit;
 
   @override
@@ -81,7 +83,7 @@ class _RetellLectureScreenState extends State<RetellLectureScreen>
       value: _cubit,
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
-        body: _RetellLectureBody(task: widget.task),
+        body: _AnswerShortQuestionBody(task: widget.task),
         // Renders nothing — advancing is fully automatic, driven by
         // AutoAdvanceOnUploadReady's own BlocListener once the upload is
         // ready.
@@ -95,8 +97,8 @@ class _RetellLectureScreenState extends State<RetellLectureScreen>
   }
 }
 
-class _RetellLectureBody extends StatelessWidget {
-  const _RetellLectureBody({required this.task});
+class _AnswerShortQuestionBody extends StatelessWidget {
+  const _AnswerShortQuestionBody({required this.task});
 
   final TaskView task;
 
@@ -106,16 +108,8 @@ class _RetellLectureBody extends StatelessWidget {
       task: task,
       preListenSeconds: _preListenSeconds,
       preRecordSeconds: _preRecordSeconds,
-      instructionText: _instructionText(task.responseSeconds),
+      instructionText:
+          SpeakingWritingStrings.answerShortQuestionInstructionText,
     );
-  }
-
-  // Interpolates the local `_preRecordSeconds` sub-stage constant (10), not
-  // `task.prepSeconds` (70, the combined audio+prep total) — the mockup's
-  // "in 10 seconds" refers to the pre-record "chuẩn bị" window alone.
-  String _instructionText(int responseSeconds) {
-    return '${SpeakingWritingStrings.retellLectureInstructionPrefix}$_preRecordSeconds'
-        '${SpeakingWritingStrings.retellLectureInstructionMiddle}$responseSeconds'
-        '${SpeakingWritingStrings.retellLectureInstructionSuffix}';
   }
 }

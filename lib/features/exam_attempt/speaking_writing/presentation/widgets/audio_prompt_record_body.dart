@@ -1,0 +1,239 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/storage/pending_media_upload_status.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/instruction_text.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recorded_answer_status_card.dart';
+
+/// Shared body for every Speaking-task screen whose `prep` phase covers a
+/// pre-listen countdown → mocked audio playback → pre-record countdown,
+/// followed by an actual recording `response` phase — currently
+/// `RepeatSentenceScreen`, `RetellLectureScreen`, and `AnswerShortQuestionScreen`.
+/// Extracted once this shape hit this project's 3-occurrence DRY threshold
+/// (same rule that previously unified `AutoRecordCubit`/
+/// `AutoRecordTimerBridgeMixin` for Read Aloud/Describe Image). A pure move
+/// of what was 3x-duplicated `_elapsedPrepSeconds`/`_ListeningCard`/
+/// `_RecordCard` — zero behavior change, only [preListenSeconds]/
+/// [preRecordSeconds] moved from module-level constants to constructor
+/// params so 3 screens with different sub-stage splits can share one copy.
+///
+/// [instructionText] is a fully pre-built string — screens differ in
+/// whether it's a fixed constant (Repeat Sentence, Answer Short Question) or
+/// interpolated from [preRecordSeconds]/`task.responseSeconds` (Retell
+/// Lecture); this widget has no opinion on that, it just renders whatever
+/// string it's given. Callers are responsible for keeping any interpolated
+/// value consistent with the [preRecordSeconds] passed here.
+class AudioPromptRecordBody extends StatelessWidget {
+  const AudioPromptRecordBody({
+    super.key,
+    required this.task,
+    required this.preListenSeconds,
+    required this.preRecordSeconds,
+    required this.instructionText,
+  });
+
+  final TaskView task;
+  final int preListenSeconds;
+  final int preRecordSeconds;
+  final String instructionText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
+      child: BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
+        selector: (state) =>
+            state is AttemptInProgress ? state.timerSnapshot : null,
+        builder: (context, snapshot) {
+          return BlocBuilder<AutoRecordCubit, AutoRecordState>(
+            builder: (context, state) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InstructionText(text: instructionText),
+                  const SizedBox(height: AppDimensions.spacingMedium),
+                  _ListeningCard(
+                    task: task,
+                    snapshot: snapshot,
+                    preListenSeconds: preListenSeconds,
+                    preRecordSeconds: preRecordSeconds,
+                  ),
+                  const SizedBox(height: AppDimensions.spacingMedium),
+                  _RecordCard(
+                    task: task,
+                    recordingState: state,
+                    snapshot: snapshot,
+                    preRecordSeconds: preRecordSeconds,
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// How much of the shared `prep` window has elapsed, clamped to
+/// `[0, task.prepSeconds]` — once `response` begins (or the task is
+/// recorded), prep is by definition fully elapsed, which is exactly what
+/// [_ListeningCard] needs to render its final ("audio finished") state
+/// without any extra phase branching.
+int _elapsedPrepSeconds(TaskView task, TimerSnapshot? snapshot) {
+  if (snapshot == null) return 0;
+  if (snapshot.phase == TimerPhase.response) return task.prepSeconds;
+  return (task.prepSeconds - snapshot.remaining.inSeconds).clamp(
+    0,
+    task.prepSeconds,
+  );
+}
+
+/// Top card — its own independent "Beginning in" (pre-listen prep) →
+/// "Playing" (mocked audio) sequence, driven purely by how much of the
+/// shared prep window has elapsed. The progress bar only fills during the
+/// active "Playing" sub-stage, staying empty through "Beginning in". Never
+/// shows a recording-related label — that's [_RecordCard]'s concern.
+class _ListeningCard extends StatelessWidget {
+  const _ListeningCard({
+    required this.task,
+    required this.snapshot,
+    required this.preListenSeconds,
+    required this.preRecordSeconds,
+  });
+
+  final TaskView task;
+  final TimerSnapshot? snapshot;
+  final int preListenSeconds;
+  final int preRecordSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    final elapsed = _elapsedPrepSeconds(task, snapshot);
+    if (elapsed < preListenSeconds) {
+      final remaining = preListenSeconds - elapsed;
+      return AudioListeningStatusCard(
+        statusLabel:
+            '${SpeakingWritingStrings.recordingBeginningInPrefix}$remaining'
+            '${SpeakingWritingStrings.recordingBeginningInSuffix}',
+        // The progress bar only tracks the *active* (Playing/Recording)
+        // sub-stage — it stays empty during "Beginning in" prep, per the
+        // user's confirmed decision.
+        progress: 0.0,
+      );
+    }
+    final audioSeconds =
+        (task.prepSeconds - preListenSeconds - preRecordSeconds).clamp(
+          0,
+          task.prepSeconds,
+        );
+    final audioElapsed = (elapsed - preListenSeconds).clamp(0, audioSeconds);
+    final audioRemaining = audioSeconds - audioElapsed;
+    return AudioListeningStatusCard(
+      statusLabel:
+          '${SpeakingWritingStrings.audioListeningPlayingPrefix}$audioRemaining'
+          '${SpeakingWritingStrings.audioListeningPlayingSuffix}',
+      progress: audioSeconds <= 0 ? 1.0 : audioElapsed / audioSeconds,
+    );
+  }
+}
+
+/// Bottom card ("Recorded Answer", reusing [RecordedAnswerStatusCard]) —
+/// blank while [_ListeningCard] is still active, then its own independent
+/// "Beginning in" (pre-record prep) → "Recording" → upload-status
+/// sequence once the listening sequence finishes. Recorded phase always
+/// wins over the live timer phase, regardless of sub-stage.
+class _RecordCard extends StatelessWidget {
+  const _RecordCard({
+    required this.task,
+    required this.recordingState,
+    required this.snapshot,
+    required this.preRecordSeconds,
+  });
+
+  final TaskView task;
+  final AutoRecordState recordingState;
+  final TimerSnapshot? snapshot;
+  final int preRecordSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    if (recordingState.recordingPhase == RecordingPhase.recorded) {
+      return RecordedAnswerStatusCard(
+        statusLabel: _uploadStatusLabel(),
+        progress: 1.0,
+      );
+    }
+    if (snapshot?.phase == TimerPhase.response) {
+      return RecordedAnswerStatusCard(
+        statusLabel: _countdownLabel(
+          prefix: SpeakingWritingStrings.recordingInProgressPrefix,
+          suffix: SpeakingWritingStrings.recordingInProgressSuffix,
+          remaining: snapshot!.remaining.inSeconds,
+        ),
+        progress: _elapsedFraction(
+          totalSeconds: task.responseSeconds,
+          remainingSeconds: snapshot!.remaining.inSeconds,
+        ),
+      );
+    }
+
+    final elapsed = _elapsedPrepSeconds(task, snapshot);
+    final preRecordStart = (task.prepSeconds - preRecordSeconds).clamp(
+      0,
+      task.prepSeconds,
+    );
+    if (elapsed < preRecordStart) {
+      // Still in the listening sequence — nothing to show here yet.
+      return const RecordedAnswerStatusCard(statusLabel: '', progress: 0.0);
+    }
+    final remaining = task.prepSeconds - elapsed;
+    return RecordedAnswerStatusCard(
+      statusLabel: _countdownLabel(
+        prefix: SpeakingWritingStrings.recordingBeginningInPrefix,
+        suffix: SpeakingWritingStrings.recordingBeginningInSuffix,
+        remaining: remaining,
+      ),
+      // Empty during "Beginning in" prep, same rule as the Listening
+      // card — only the actual Recording sub-stage above fills this bar.
+      progress: 0.0,
+    );
+  }
+
+  String _countdownLabel({
+    required String prefix,
+    required String suffix,
+    required int remaining,
+  }) {
+    return '$prefix$remaining$suffix';
+  }
+
+  double _elapsedFraction({
+    required int totalSeconds,
+    required int remainingSeconds,
+  }) {
+    if (totalSeconds <= 0) return 1.0;
+    final elapsedSeconds = totalSeconds - remainingSeconds;
+    return (elapsedSeconds / totalSeconds).clamp(0.0, 1.0);
+  }
+
+  String _uploadStatusLabel() {
+    final status = recordingState.uploadStatus;
+    if (status == null) {
+      return SpeakingWritingStrings.recordingStillUploadingLabel;
+    }
+    return status == PendingMediaUploadStatus.ready
+        ? SpeakingWritingStrings.recordingUploadReadyLabel
+        : SpeakingWritingStrings.recordingStillUploadingLabel;
+  }
+}

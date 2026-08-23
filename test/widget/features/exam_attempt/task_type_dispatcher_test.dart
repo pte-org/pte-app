@@ -98,6 +98,22 @@ TaskView _retellLectureTask({required String pinnedItemPublicId}) {
   );
 }
 
+TaskView _answerShortQuestionTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'ANSWER_SHORT_QUESTION',
+    title: 'Task title',
+    prepSeconds: 14,
+    responseSeconds: 10,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 14),
+    responseDeadline: DateTime(2026, 1, 1, 0, 0, 24),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
@@ -422,6 +438,37 @@ void main() {
             'You will hear a lecture. After listening to the lecture, in 10 seconds, please speak into the '
             'microphone and retell what you just heard from the lecture in your own words. You will have 40 '
             'seconds to give your response.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('TaskTypeDispatcher — ANSWER_SHORT_QUESTION routing', () {
+    testWidgets(
+      'routes to AnswerShortQuestionScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // AnswerShortQuestionScreen constructs an AutoRecordCubit internally,
+        // which subscribes to PendingMediaUploadDao.watchRow immediately in
+        // its constructor — needs a stub even though this test never asserts
+        // on upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(_answerShortQuestionTask(pinnedItemPublicId: 'item-99')),
+        );
+
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'You will hear a question. Please give a simple and short answer. Often just once or a few words '
+            'is enough.',
           ),
           findsOneWidget,
         );

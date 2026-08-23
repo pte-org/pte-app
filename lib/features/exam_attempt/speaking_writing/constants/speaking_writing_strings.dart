@@ -40,6 +40,9 @@ class SpeakingWritingStrings {
   static const String repeatSentenceInstructionText =
       'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the sentence '
       'only once.';
+  static const String answerShortQuestionInstructionText =
+      'You will hear a question. Please give a simple and short answer. Often just once or a few words is '
+      'enough.';
   static const String audioListeningVolumeLabel = 'Volume';
   static const String audioListeningPlayingPrefix = 'Playing ';
   static const String audioListeningPlayingSuffix = ' seconds left';

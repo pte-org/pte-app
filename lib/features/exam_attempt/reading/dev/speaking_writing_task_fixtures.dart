@@ -154,10 +154,46 @@ class SpeakingWritingTaskFixtures {
     );
   }
 
+  /// `prepSeconds: 14` is the sum of 3 mocked sub-stages: 3s pre-listen prep
+  /// + 8s mocked audio playback + 3s pre-record "chuẩn bị" prep (`3 + 8 + 3
+  /// = 14`) — same 3-stage shape as [repeatSentence]'s split (identical
+  /// `_preListenSeconds`/`_preRecordSeconds` = 3/3), just a shorter audio
+  /// stage. `responseSeconds: 10` is the recording window.
+  ///
+  /// Unlike [retellLecture]'s fixture, `14` (prep→response) and `24`
+  /// (`prepSeconds + responseSeconds`, response→recorded) do **not** land on
+  /// the dev-preview `ExamAttemptBloc`'s 10-second poll boundary — these are
+  /// the user's literal, non-negotiable mock values (3s/8s/3s/10s), kept as
+  /// given rather than rounded to a boundary. This means a small
+  /// dev-preview-ONLY UI lag is expected at both transitions (see
+  /// [describeImage]'s doc comment for the identical tradeoff and why it's
+  /// never a production concern).
+  static TaskView get answerShortQuestion {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 14;
+    const responseSeconds = 10;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-ANSWER_SHORT_QUESTION',
+      orderIndex: 0,
+      totalTasks: 5,
+      section: 'SPEAKING',
+      taskType: 'ANSWER_SHORT_QUESTION',
+      title: 'Sample ANSWER_SHORT_QUESTION',
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
   static List<TaskView> get all => [
     readAloud,
     repeatSentence,
     describeImage,
     retellLecture,
+    answerShortQuestion,
   ];
 }

@@ -18,6 +18,7 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_read
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_reading_single_screen.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/re_order_paragraphs_screen.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/select_missing_word_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/answer_short_question_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/describe_image_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/read_aloud_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/repeat_sentence_screen.dart';
@@ -37,6 +38,7 @@ const String _taskTypeReadAloud = 'READ_ALOUD';
 const String _taskTypeRepeatSentence = 'REPEAT_SENTENCE';
 const String _taskTypeDescribeImage = 'DESCRIBE_IMAGE';
 const String _taskTypeRetellLecture = 'RE_TELL_LECTURE';
+const String _taskTypeAnswerShortQuestion = 'ANSWER_SHORT_QUESTION';
 
 // Listening — string constants verified against
 // `pte-api/services/authoring/.../PteTaskType.java` (phase-01 Design
@@ -158,6 +160,15 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
       ),
       _taskTypeRetellLecture => RetellLectureScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeAnswerShortQuestion => AnswerShortQuestionScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,
