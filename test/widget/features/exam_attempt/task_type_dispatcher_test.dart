@@ -24,7 +24,8 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_mu
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
@@ -32,9 +33,11 @@ class _MockSyncEngine extends Mock implements SyncEngine {}
 
 class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 
-class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
+class _MockPendingMediaUploadDao extends Mock
+    implements PendingMediaUploadDao {}
 
-class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+class _MockMediaUploadCoordinator extends Mock
+    implements MediaUploadCoordinator {}
 
 /// `RepeatSentenceScreen`/`ReadAloudScreen` construct their own cubit
 /// internally using the real `resolveRecordingFilePath`, which calls
@@ -79,6 +82,22 @@ TaskView _describeImageTask({required String pinnedItemPublicId}) {
   );
 }
 
+TaskView _retellLectureTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'RE_TELL_LECTURE',
+    title: 'Task title',
+    prepSeconds: 70,
+    responseSeconds: 40,
+    prepDeadline: DateTime(2026, 1, 1, 0, 1, 10),
+    responseDeadline: DateTime(2026, 1, 1, 0, 1, 50),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
@@ -89,7 +108,10 @@ TaskView _mcTask({required String pinnedItemPublicId}) {
     section: 'READING',
     taskType: 'MC_READING_SINGLE',
     title: 'Task title',
-    options: const [TaskOption(text: 'Option A', orderIndex: '1'), TaskOption(text: 'Option B', orderIndex: '2')],
+    options: const [
+      TaskOption(text: 'Option A', orderIndex: '1'),
+      TaskOption(text: 'Option B', orderIndex: '2'),
+    ],
     prepSeconds: 30,
     responseSeconds: 60,
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
@@ -106,7 +128,10 @@ TaskView _mcMultipleTask({required String pinnedItemPublicId}) {
     section: 'READING',
     taskType: 'MC_READING_MULTIPLE',
     title: 'Task title',
-    options: const [TaskOption(text: 'Option A', orderIndex: '1'), TaskOption(text: 'Option B', orderIndex: '2')],
+    options: const [
+      TaskOption(text: 'Option A', orderIndex: '1'),
+      TaskOption(text: 'Option B', orderIndex: '2'),
+    ],
     prepSeconds: 30,
     responseSeconds: 60,
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
@@ -145,9 +170,23 @@ void main() {
     ).thenAnswer((_) async {});
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
 
-    const snapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 30), currentOrderIndex: 1);
-    when(() => bloc.state).thenReturn(AttemptInProgress('attempt-1', _mcTask(pinnedItemPublicId: 'item-1'), snapshot));
-    whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: bloc.state);
+    const snapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 30),
+      currentOrderIndex: 1,
+    );
+    when(() => bloc.state).thenReturn(
+      AttemptInProgress(
+        'attempt-1',
+        _mcTask(pinnedItemPublicId: 'item-1'),
+        snapshot,
+      ),
+    );
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: bloc.state,
+    );
   });
 
   Widget buildSubject(TaskView task) {
@@ -170,136 +209,223 @@ void main() {
     );
   }
 
-  group('TaskTypeDispatcher — ValueKey(pinnedItemPublicId) forces a fresh Element/cubit per task', () {
+  group(
+    'TaskTypeDispatcher — ValueKey(pinnedItemPublicId) forces a fresh Element/cubit per task',
+    () {
+      testWidgets(
+        'two consecutive MC_READING_SINGLE tasks with different pinnedItemPublicId produce distinct cubit instances',
+        (tester) async {
+          await tester.pumpWidget(
+            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
+          );
+          final firstCubit = tester
+              .element(find.byType(McOptionList))
+              .read<McReadingSingleCubit>();
+          expect(firstCubit.pinnedItemPublicId, 'item-1');
+
+          await tester.pumpWidget(
+            buildSubject(_mcTask(pinnedItemPublicId: 'item-2')),
+          );
+          final secondCubit = tester
+              .element(find.byType(McOptionList))
+              .read<McReadingSingleCubit>();
+
+          expect(
+            identical(firstCubit, secondCubit),
+            isFalse,
+            reason:
+                'ValueKey(pinnedItemPublicId) must force Flutter to tear down and recreate the Element (and '
+                'therefore the cubit) rather than reusing stale state across same-type consecutive tasks',
+          );
+          expect(secondCubit.pinnedItemPublicId, 'item-2');
+        },
+      );
+
+      testWidgets(
+        're-pumping with the same pinnedItemPublicId reuses the same cubit instance (sanity check)',
+        (tester) async {
+          await tester.pumpWidget(
+            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
+          );
+          final firstCubit = tester
+              .element(find.byType(McOptionList))
+              .read<McReadingSingleCubit>();
+
+          await tester.pumpWidget(
+            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
+          );
+          final secondCubit = tester
+              .element(find.byType(McOptionList))
+              .read<McReadingSingleCubit>();
+
+          expect(identical(firstCubit, secondCubit), isTrue);
+        },
+      );
+
+      testWidgets(
+        'an unsupported taskType renders the placeholder text, not a blank screen',
+        (tester) async {
+          // Not READ_ALOUD — Phase 6 wired that taskType to a real screen, so
+          // this needs a genuinely unsupported type to still exercise the
+          // placeholder path.
+          final task = TaskView(
+            pinnedItemPublicId: 'item-3',
+            orderIndex: 1,
+            totalTasks: 5,
+            section: 'SPEAKING',
+            taskType: 'UNKNOWN_TASK_TYPE',
+            title: 'Unsupported',
+            prepSeconds: 30,
+            responseSeconds: 60,
+            prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
+            responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
+            serverNow: DateTime(2026, 1, 1),
+          );
+
+          await tester.pumpWidget(buildSubject(task));
+
+          expect(
+            find.text('Unsupported task type: UNKNOWN_TASK_TYPE'),
+            findsOneWidget,
+          );
+        },
+      );
+    },
+  );
+
+  group('TaskTypeDispatcher — MC_READING_MULTIPLE routing', () {
     testWidgets(
-      'two consecutive MC_READING_SINGLE tasks with different pinnedItemPublicId produce distinct cubit instances',
+      'routes to McMultipleOptionList / McReadingMultipleCubit, not the single-select path',
       (tester) async {
-        await tester.pumpWidget(buildSubject(_mcTask(pinnedItemPublicId: 'item-1')));
-        final firstCubit = tester.element(find.byType(McOptionList)).read<McReadingSingleCubit>();
-        expect(firstCubit.pinnedItemPublicId, 'item-1');
-
-        await tester.pumpWidget(buildSubject(_mcTask(pinnedItemPublicId: 'item-2')));
-        final secondCubit = tester.element(find.byType(McOptionList)).read<McReadingSingleCubit>();
-
-        expect(
-          identical(firstCubit, secondCubit),
-          isFalse,
-          reason: 'ValueKey(pinnedItemPublicId) must force Flutter to tear down and recreate the Element (and '
-              'therefore the cubit) rather than reusing stale state across same-type consecutive tasks',
+        await tester.pumpWidget(
+          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')),
         );
-        expect(secondCubit.pinnedItemPublicId, 'item-2');
+
+        expect(find.byType(McMultipleOptionList), findsOneWidget);
+        expect(find.byType(McOptionList), findsNothing);
+        final cubit = tester
+            .element(find.byType(McMultipleOptionList))
+            .read<McReadingMultipleCubit>();
+        expect(cubit.pinnedItemPublicId, 'item-1');
       },
     );
 
-    testWidgets('re-pumping with the same pinnedItemPublicId reuses the same cubit instance (sanity check)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject(_mcTask(pinnedItemPublicId: 'item-1')));
-      final firstCubit = tester.element(find.byType(McOptionList)).read<McReadingSingleCubit>();
+    testWidgets(
+      'ValueKey(pinnedItemPublicId) forces a fresh cubit for a new MC_READING_MULTIPLE task',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')),
+        );
+        final firstCubit = tester
+            .element(find.byType(McMultipleOptionList))
+            .read<McReadingMultipleCubit>();
 
-      await tester.pumpWidget(buildSubject(_mcTask(pinnedItemPublicId: 'item-1')));
-      final secondCubit = tester.element(find.byType(McOptionList)).read<McReadingSingleCubit>();
+        await tester.pumpWidget(
+          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-2')),
+        );
+        final secondCubit = tester
+            .element(find.byType(McMultipleOptionList))
+            .read<McReadingMultipleCubit>();
 
-      expect(identical(firstCubit, secondCubit), isTrue);
-    });
-
-    testWidgets('an unsupported taskType renders the placeholder text, not a blank screen', (tester) async {
-      // Not READ_ALOUD — Phase 6 wired that taskType to a real screen, so
-      // this needs a genuinely unsupported type to still exercise the
-      // placeholder path.
-      final task = TaskView(
-        pinnedItemPublicId: 'item-3',
-        orderIndex: 1,
-        totalTasks: 5,
-        section: 'SPEAKING',
-        taskType: 'UNKNOWN_TASK_TYPE',
-        title: 'Unsupported',
-        prepSeconds: 30,
-        responseSeconds: 60,
-        prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-        responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
-        serverNow: DateTime(2026, 1, 1),
-      );
-
-      await tester.pumpWidget(buildSubject(task));
-
-      expect(find.text('Unsupported task type: UNKNOWN_TASK_TYPE'), findsOneWidget);
-    });
-  });
-
-  group('TaskTypeDispatcher — MC_READING_MULTIPLE routing', () {
-    testWidgets('routes to McMultipleOptionList / McReadingMultipleCubit, not the single-select path', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')));
-
-      expect(find.byType(McMultipleOptionList), findsOneWidget);
-      expect(find.byType(McOptionList), findsNothing);
-      final cubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
-      expect(cubit.pinnedItemPublicId, 'item-1');
-    });
-
-    testWidgets('ValueKey(pinnedItemPublicId) forces a fresh cubit for a new MC_READING_MULTIPLE task', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')));
-      final firstCubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
-
-      await tester.pumpWidget(buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-2')));
-      final secondCubit = tester.element(find.byType(McMultipleOptionList)).read<McReadingMultipleCubit>();
-
-      expect(identical(firstCubit, secondCubit), isFalse);
-      expect(secondCubit.pinnedItemPublicId, 'item-2');
-    });
+        expect(identical(firstCubit, secondCubit), isFalse);
+        expect(secondCubit.pinnedItemPublicId, 'item-2');
+      },
+    );
   });
 
   group('TaskTypeDispatcher — REPEAT_SENTENCE routing', () {
-    testWidgets('routes to RepeatSentenceScreen, not the unsupported-task-type placeholder', (tester) async {
-      // RepeatSentenceScreen constructs an AutoRecordCubit internally,
-      // which subscribes to PendingMediaUploadDao.watchRow immediately in
-      // its constructor — needs a stub even though this test never asserts
-      // on upload status.
-      when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
-      // A different pinnedItemPublicId than the default stubbed bloc
-      // state's task ('item-1') so the timer-bridge identity guard never
-      // matches — this test only checks routing/rendering, not auto-record
-      // behavior, so no recorder stub is set up here.
-      await tester.pumpWidget(buildSubject(_repeatSentenceTask(pinnedItemPublicId: 'item-99')));
+    testWidgets(
+      'routes to RepeatSentenceScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // RepeatSentenceScreen constructs an AutoRecordCubit internally,
+        // which subscribes to PendingMediaUploadDao.watchRow immediately in
+        // its constructor — needs a stub even though this test never asserts
+        // on upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(_repeatSentenceTask(pinnedItemPublicId: 'item-99')),
+        );
 
-      expect(find.textContaining('Unsupported task type'), findsNothing);
-      // The fixed instruction text is RepeatSentenceScreen-specific and
-      // renders regardless of timer phase.
-      expect(
-        find.text(
-          'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
-          'sentence only once.',
-        ),
-        findsOneWidget,
-      );
-    });
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        // The fixed instruction text is RepeatSentenceScreen-specific and
+        // renders regardless of timer phase.
+        expect(
+          find.text(
+            'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
+            'sentence only once.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('TaskTypeDispatcher — DESCRIBE_IMAGE routing', () {
-    testWidgets('routes to DescribeImageScreen, not the unsupported-task-type placeholder', (tester) async {
-      // DescribeImageScreen constructs an AutoRecordCubit internally, which
-      // subscribes to PendingMediaUploadDao.watchRow immediately in its
-      // constructor — needs a stub even though this test never asserts on
-      // upload status.
-      when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
-      // A different pinnedItemPublicId than the default stubbed bloc
-      // state's task ('item-1') so the timer-bridge identity guard never
-      // matches — this test only checks routing/rendering, not auto-record
-      // behavior, so no recorder stub is set up here.
-      await tester.pumpWidget(buildSubject(_describeImageTask(pinnedItemPublicId: 'item-99')));
+    testWidgets(
+      'routes to DescribeImageScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // DescribeImageScreen constructs an AutoRecordCubit internally, which
+        // subscribes to PendingMediaUploadDao.watchRow immediately in its
+        // constructor — needs a stub even though this test never asserts on
+        // upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(_describeImageTask(pinnedItemPublicId: 'item-99')),
+        );
 
-      expect(find.textContaining('Unsupported task type'), findsNothing);
-      expect(
-        find.text(
-          'Look at the image below. In 25 seconds, please speak into the microphone and describe in detail '
-          'what the image is showing. You will have 40 seconds to give your response.',
-        ),
-        findsOneWidget,
-      );
-    });
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'Look at the image below. In 25 seconds, please speak into the microphone and describe in detail '
+            'what the image is showing. You will have 40 seconds to give your response.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('TaskTypeDispatcher — RE_TELL_LECTURE routing', () {
+    testWidgets(
+      'routes to RetellLectureScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // RetellLectureScreen constructs an AutoRecordCubit internally, which
+        // subscribes to PendingMediaUploadDao.watchRow immediately in its
+        // constructor — needs a stub even though this test never asserts on
+        // upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(_retellLectureTask(pinnedItemPublicId: 'item-99')),
+        );
+
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'You will hear a lecture. After listening to the lecture, in 10 seconds, please speak into the '
+            'microphone and retell what you just heard from the lecture in your own words. You will have 40 '
+            'seconds to give your response.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

@@ -28,7 +28,9 @@ class SpeakingWritingTaskFixtures {
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
       prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(const Duration(seconds: prepSeconds + responseSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
       serverNow: now,
     );
   }
@@ -63,7 +65,9 @@ class SpeakingWritingTaskFixtures {
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
       prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(const Duration(seconds: prepSeconds + responseSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
       serverNow: now,
     );
   }
@@ -102,14 +106,58 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'DESCRIBE_IMAGE',
       title: 'Sample DESCRIBE_IMAGE',
-      imagePromptRef: 'https://picsum.photos/seed/describe-image-fixture/800/600',
+      imagePromptRef:
+          'https://picsum.photos/seed/describe-image-fixture/800/600',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
       prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(const Duration(seconds: prepSeconds + responseSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
       serverNow: now,
     );
   }
 
-  static List<TaskView> get all => [readAloud, repeatSentence, describeImage];
+  /// `prepSeconds: 70` is a sum of 3 mocked sub-stages: 3s pre-listen prep
+  /// + 57s mocked lecture-audio playback + 10s pre-record "chuẩn bị" prep
+  /// (`3 + 57 + 10 = 70`) — same 3-stage shape as [repeatSentence]'s split,
+  /// just with a longer audio stage and a longer pre-record stage. The 57s
+  /// audio duration is a deliberate rounding-down from the originally-
+  /// discussed ~60s, kept to land `prepSeconds` on `70`.
+  ///
+  /// Both `70` (prep→response) and `110` (`prepSeconds + responseSeconds`,
+  /// response→recorded) land exactly on the dev-preview `ExamAttemptBloc`'s
+  /// 10-second poll boundary — same alignment goal as [readAloud]'s
+  /// `prepSeconds: 30` and [repeatSentence]'s `prepSeconds: 10`, avoiding
+  /// the "Beginning in 0 seconds" stuck-UI dev-preview-only lag (see
+  /// [repeatSentence]'s doc comment), unlike [describeImage]'s fixture,
+  /// which deliberately keeps its literal, non-boundary-aligned `25`/`40`
+  /// values and accepts the resulting lag.
+  static TaskView get retellLecture {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 70;
+    const responseSeconds = 40;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-RE_TELL_LECTURE',
+      orderIndex: 0,
+      totalTasks: 5,
+      section: 'SPEAKING',
+      taskType: 'RE_TELL_LECTURE',
+      title: 'Sample RE_TELL_LECTURE',
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
+  static List<TaskView> get all => [
+    readAloud,
+    repeatSentence,
+    describeImage,
+    retellLecture,
+  ];
 }

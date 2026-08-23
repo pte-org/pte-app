@@ -9,7 +9,7 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 
 /// Shared timer-bridge boilerplate for every auto-record speaking screen
-/// (Read Aloud, Repeat Sentence, Describe Image) — bridges `ExamAttemptBloc`'s
+/// (Read Aloud, Repeat Sentence, Describe Image, Retell Lecture) — bridges `ExamAttemptBloc`'s
 /// clock into an [AutoRecordCubit], the single authoritative source (see
 /// `AutoRecordCubit.onTimerSnapshot`'s doc), never a second timer.
 ///
@@ -24,9 +24,13 @@ mixin AutoRecordTimerBridgeMixin<T extends StatefulWidget> on State<T> {
   /// Seeds from the bloc's current state immediately (covers resuming
   /// mid-task — don't wait for the next ~1s tick), then keeps forwarding
   /// for the screen's lifetime.
-  void startAutoRecordBridge({required TaskView task, required AutoRecordCubit cubit}) {
+  void startAutoRecordBridge({
+    required TaskView task,
+    required AutoRecordCubit cubit,
+  }) {
     final bloc = context.read<ExamAttemptBloc>();
-    void forward(ExamAttemptState state) => _forwardIfCurrentTask(state, task: task, cubit: cubit);
+    void forward(ExamAttemptState state) =>
+        _forwardIfCurrentTask(state, task: task, cubit: cubit);
     forward(bloc.state);
     _timerBridgeSubscription = bloc.stream.listen(forward);
   }
@@ -41,7 +45,11 @@ mixin AutoRecordTimerBridgeMixin<T extends StatefulWidget> on State<T> {
   /// teardown runs — reachable via proctor-forced/rejected-submission
   /// advances, which bypass the recorded/upload gate that makes the normal
   /// advance path safe (plan-reviewer CRITICAL finding).
-  void _forwardIfCurrentTask(ExamAttemptState state, {required TaskView task, required AutoRecordCubit cubit}) {
+  void _forwardIfCurrentTask(
+    ExamAttemptState state, {
+    required TaskView task,
+    required AutoRecordCubit cubit,
+  }) {
     if (state is! AttemptInProgress) return;
     if (state.task.pinnedItemPublicId != task.pinnedItemPublicId) return;
     cubit.onTimerSnapshot(state.timerSnapshot);
