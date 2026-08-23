@@ -1,4 +1,4 @@
-import '../task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 /// Attempt lifecycle only (start/resume/advance/force-submit) — depends on
 /// nothing beyond what an implementation needs to reach `ApiClient`. Never

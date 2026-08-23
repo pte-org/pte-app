@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:logger/logger.dart';
 
-import 'repositories/timer_repository.dart';
-import 'task_view.dart';
-import 'timer_phase.dart';
-import 'timer_snapshot.dart';
-import 'timer_state_response.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_state_response.dart';
 
 /// Schedules a one-shot callback. Production uses [Timer.new]; tests inject
 /// a fake that captures the [Duration] and lets the test manually invoke

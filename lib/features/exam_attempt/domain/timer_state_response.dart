@@ -1,4 +1,4 @@
-import 'timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 
 /// `GET /api/exam-delivery/attempts/{id}/timer` response shape. Carries the
 /// same deadline/`serverNow` fields as `TaskView` so `TimerService` computes

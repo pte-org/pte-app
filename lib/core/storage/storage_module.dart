@@ -1,11 +1,11 @@
 import 'package:get_it/get_it.dart';
 
-import '../network/api_client.dart';
-import '../network/network_canary.dart';
-import '../sync/sync_engine.dart';
-import 'app_database.dart';
-import 'dao/answer_outbox_dao.dart';
-import 'dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/network_canary.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 
 /// GetIt registration for the offline answer outbox and its background
 /// sync engine — shared infrastructure Phase 3 onward starts/stops via the

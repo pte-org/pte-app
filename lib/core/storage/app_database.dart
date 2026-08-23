@@ -5,10 +5,10 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'dao/answer_outbox_dao.dart';
-import 'dao/pending_media_upload_dao.dart';
-import 'tables/answer_outbox_table.dart';
-import 'tables/pending_media_upload_table.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/storage/tables/answer_outbox_table.dart';
+import 'package:pte_app/core/storage/tables/pending_media_upload_table.dart';
 
 part 'app_database.g.dart';
 

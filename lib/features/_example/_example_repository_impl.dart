@@ -1,6 +1,6 @@
 import 'package:logger/logger.dart';
 
-import '_example_repository.dart';
+import 'package:pte_app/features/_example/_example_repository.dart';
 
 /// Depends on [Logger] via constructor injection (resolved through GetIt in
 /// [setupExampleModule]), never constructed with `new` inside a BLoC — the

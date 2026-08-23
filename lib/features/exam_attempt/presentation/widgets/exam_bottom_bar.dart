@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
-import '../../domain/timer_phase.dart';
-import '../bloc/exam_attempt_bloc.dart';
-import '../bloc/exam_attempt_state.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 
 /// Container + phase-driven visual switch only. The contract has no
 /// "previous task" or flag concept, so unlike the old reference scaffold
