@@ -29,7 +29,7 @@ class AppStrings {
   static const String readAloudInstructionMiddle =
       ' seconds, you must read this text aloud as naturally and clearly as possible. You have ';
   static const String readAloudInstructionSuffix = ' seconds to read aloud.';
-  static const String readAloudAnswerCardTitle = 'Recorded Answer';
+  static const String recordedAnswerCardTitle = 'Recorded Answer';
 
   // Shared by every auto-record speaking task's status card (Read Aloud,
   // Repeat Sentence) — not Read-Aloud-specific despite historically living

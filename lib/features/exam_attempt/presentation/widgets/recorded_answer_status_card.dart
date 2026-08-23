@@ -6,9 +6,11 @@ import '../../../../core/constants/app_strings.dart';
 
 /// Purely presentational "Recorded Answer" status card — takes an already
 /// resolved [statusLabel] and [progress] as props, no BLoC/context reads of
-/// its own, so it's trivially testable in isolation and reusable.
-class ReadAloudAnswerStatusCard extends StatelessWidget {
-  const ReadAloudAnswerStatusCard({super.key, required this.statusLabel, required this.progress});
+/// its own, so it's trivially testable in isolation and reusable. Shared by
+/// every auto-record speaking task's screen (Read Aloud, Repeat Sentence) —
+/// not Read-Aloud-specific despite having originally lived under that name.
+class RecordedAnswerStatusCard extends StatelessWidget {
+  const RecordedAnswerStatusCard({super.key, required this.statusLabel, required this.progress});
 
   final String statusLabel;
 
@@ -30,7 +32,7 @@ class ReadAloudAnswerStatusCard extends StatelessWidget {
         children: [
           Center(
             child: Text(
-              AppStrings.readAloudAnswerCardTitle,
+              AppStrings.recordedAnswerCardTitle,
               style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
             ),
           ),

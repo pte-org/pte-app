@@ -22,7 +22,7 @@ import '../../widgets/audio_listening_status_card.dart';
 import '../../widgets/auto_advance_on_upload_ready.dart';
 import '../../widgets/exam_scaffold.dart';
 import '../../widgets/instruction_text.dart';
-import '../../widgets/read_aloud_answer_status_card.dart';
+import '../../widgets/recorded_answer_status_card.dart';
 
 /// Mock-only sub-stage split within the shared `prep` window — real PTE
 /// varies these per question; this app has no per-stage data from the
@@ -43,7 +43,7 @@ const int _preRecordSeconds = 3;
 /// pre-listen prep ([_preListenSeconds]) → mocked audio playback → pre-
 /// record prep ([_preRecordSeconds]) → then `response` is the actual
 /// recording. Both [AudioListeningStatusCard] (top) and
-/// [ReadAloudAnswerStatusCard] (bottom, "Recorded Answer") are visible the
+/// [RecordedAnswerStatusCard] (bottom, "Recorded Answer") are visible the
 /// whole time — each runs its own independent "Beginning in" →
 /// active-countdown sequence, not swapped in and out of view.
 class RepeatSentenceScreen extends StatefulWidget {
@@ -211,7 +211,7 @@ class _ListeningCard extends StatelessWidget {
   }
 }
 
-/// Bottom card ("Recorded Answer", reusing [ReadAloudAnswerStatusCard]) —
+/// Bottom card ("Recorded Answer", reusing [RecordedAnswerStatusCard]) —
 /// blank while [_ListeningCard] is still active, then its own independent
 /// "Beginning in" (pre-record prep) → "Recording" → upload-status
 /// sequence once the listening sequence finishes. Recorded phase always
@@ -226,10 +226,10 @@ class _RecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
-      return ReadAloudAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
+      return RecordedAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
     }
     if (snapshot?.phase == TimerPhase.response) {
-      return ReadAloudAnswerStatusCard(
+      return RecordedAnswerStatusCard(
         statusLabel: _countdownLabel(
           prefix: AppStrings.recordingInProgressPrefix,
           suffix: AppStrings.recordingInProgressSuffix,
@@ -243,10 +243,10 @@ class _RecordCard extends StatelessWidget {
     final preRecordStart = (task.prepSeconds - _preRecordSeconds).clamp(0, task.prepSeconds);
     if (elapsed < preRecordStart) {
       // Still in the listening sequence — nothing to show here yet.
-      return const ReadAloudAnswerStatusCard(statusLabel: '', progress: 0.0);
+      return const RecordedAnswerStatusCard(statusLabel: '', progress: 0.0);
     }
     final remaining = task.prepSeconds - elapsed;
-    return ReadAloudAnswerStatusCard(
+    return RecordedAnswerStatusCard(
       statusLabel: _countdownLabel(
         prefix: AppStrings.recordingBeginningInPrefix,
         suffix: AppStrings.recordingBeginningInSuffix,

@@ -21,7 +21,7 @@ import '../../cubit/read_aloud_state.dart';
 import '../../widgets/auto_advance_on_upload_ready.dart';
 import '../../widgets/exam_scaffold.dart';
 import '../../widgets/instruction_text.dart';
-import '../../widgets/read_aloud_answer_status_card.dart';
+import '../../widgets/recorded_answer_status_card.dart';
 
 /// Renders inside Phase 4's shared shell as the shell's injected content
 /// region — builds no top/bottom chrome of its own (phase-05/06 Design
@@ -163,7 +163,7 @@ class _ReadAloudBody extends StatelessWidget {
 /// Recorded phase always wins (upload status), regardless of the live timer
 /// phase; otherwise response phase shows a live "Recording" countdown and
 /// prep phase shows a live "Beginning in…" countdown — both driven by the
-/// same [ReadAloudAnswerStatusCard] shell with a phase-appropriate
+/// same [RecordedAnswerStatusCard] shell with a phase-appropriate
 /// `statusLabel`/`progress`.
 class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.task, required this.recordingState, required this.snapshot});
@@ -175,10 +175,10 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
-      return ReadAloudAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
+      return RecordedAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
     }
     if (snapshot?.phase == TimerPhase.response) {
-      return ReadAloudAnswerStatusCard(
+      return RecordedAnswerStatusCard(
         statusLabel: _countdownLabel(
           prefix: AppStrings.recordingInProgressPrefix,
           suffix: AppStrings.recordingInProgressSuffix,
@@ -188,7 +188,7 @@ class _StatusCard extends StatelessWidget {
       );
     }
     final remaining = snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
-    return ReadAloudAnswerStatusCard(
+    return RecordedAnswerStatusCard(
       statusLabel: _countdownLabel(
         prefix: AppStrings.recordingBeginningInPrefix,
         suffix: AppStrings.recordingBeginningInSuffix,
