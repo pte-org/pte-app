@@ -7,7 +7,6 @@ import 'core/constants/app_dimensions.dart';
 import 'core/constants/app_strings.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
-import 'core/storage/storage_module.dart';
 import 'core/sync/media_upload_coordinator.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/widgets/loading_view.dart';
@@ -20,12 +19,10 @@ import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
-import 'features/exam_attempt/exam_attempt_module.dart';
 import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
 import 'features/live_proctor/domain/live_proctor_access_policy.dart';
 import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
-import 'features/report/report_module.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -134,8 +131,8 @@ class _StudentWorkspaceWithDevFab extends StatelessWidget {
     return Scaffold(
       body: const Center(child: Text(AppStrings.studentWorkspacePlaceholder)),
       floatingActionButton: kDebugMode
-          ? _DevFabColumn(onNavigate: (route) => Navigator.of(context).pushNamed(route)),
-        : null,
+          ? _DevFabColumn(onNavigate: (route) => Navigator.of(context).pushNamed(route))
+          : null,
     );
   }
 }
