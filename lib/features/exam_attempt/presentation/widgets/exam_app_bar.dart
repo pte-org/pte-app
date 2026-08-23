@@ -11,11 +11,12 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_eve
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
-/// Phase indicator + `orderIndex`/`totalTasks` + countdown display. Reads
-/// only the [TimerSnapshot] slice of [ExamAttemptState] via [BlocSelector]
-/// so unrelated attempt-state changes elsewhere never force a rebuild here
-/// (phase-04 Design Constraints) — `totalTasks` is passed in by the caller
-/// since it doesn't change while a single task is displayed.
+/// Phase label + countdown + `orderIndex`/`totalTasks` + a force-submit
+/// affordance. Reads only the [TimerSnapshot] slice of [ExamAttemptState]
+/// via [BlocSelector] so unrelated attempt-state changes elsewhere never
+/// force a rebuild here (phase-04 Design Constraints) — `totalTasks` is
+/// passed in by the caller since it doesn't change while a single task is
+/// displayed.
 class ExamAppBar extends StatelessWidget {
   const ExamAppBar({super.key, required this.totalTasks});
 
@@ -34,11 +35,13 @@ class ExamAppBar extends StatelessWidget {
             vertical: AppDimensions.spacingMedium,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
               const Spacer(),
               Text(
                 _formatRemaining(snapshot.remaining),
+                key: const ValueKey('examAppBarCountdown'),
                 style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),

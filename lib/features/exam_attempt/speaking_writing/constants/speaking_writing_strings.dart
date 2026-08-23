@@ -3,11 +3,68 @@
 class SpeakingWritingStrings {
   const SpeakingWritingStrings._();
 
-  static const String writeEssayTextFieldLabel ='Your response';
-  static const String readAloudStartRecordingLabel ='Start recording';
-  static const String readAloudStopRecordingLabel ='Stop recording';
-  static const String readAloudRecordingIndicator ='Recording…';
-  static const String readAloudNotRecordedYetLabel ='Tap "Start recording" to begin.';
-  static const String readAloudStillUploadingLabel ='Still uploading…';
-  static const String readAloudUploadReadyLabel ='Uploaded — ready to continue.';
+  static const String devSpeakingWritingPreviewTitle =
+      'Speaking/Writing task preview';
+
+  static const String writeEssayTextFieldLabel = 'Your response';
+
+  static const String readAloudInstructionPrefix =
+      'Look at the text below. In ';
+  static const String readAloudInstructionMiddle =
+      ' seconds, you must read this text aloud as naturally and clearly as possible. You have ';
+  static const String readAloudInstructionSuffix = ' seconds to read aloud.';
+  static const String recordedAnswerCardTitle = 'Recorded Answer';
+
+  // Shared by every auto-record speaking task's status card (Read Aloud,
+  // Repeat Sentence, Describe Image) — not Read-Aloud-specific despite
+  // historically living alongside those strings.
+  static const String recordingCurrentStatusLabel = 'Current Status:';
+  static const String recordingBeginningInPrefix = 'Beginning in ';
+  static const String recordingBeginningInSuffix = ' seconds';
+  static const String recordingInProgressPrefix = 'Recording ';
+  static const String recordingInProgressSuffix = ' seconds left';
+  static const String recordingStillUploadingLabel = 'Still uploading…';
+  static const String recordingUploadReadyLabel =
+      'Uploaded — ready to continue.';
+
+  static const String describeImageInstructionPrefix =
+      'Look at the image below. In ';
+  static const String describeImageInstructionMiddle =
+      ' seconds, please speak into the microphone and describe in detail what the image is showing. You will have ';
+  static const String describeImageInstructionSuffix =
+      ' seconds to give your response.';
+  static const String taskImageLoadErrorLabel = 'Image failed to load.';
+  static const String taskImageMissingLabel =
+      'No image available for this task.';
+
+  static const String repeatSentenceInstructionText =
+      'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the sentence '
+      'only once.';
+  static const String answerShortQuestionInstructionText =
+      'You will hear a question. Please give a simple and short answer. Often just once or a few words is '
+      'enough.';
+  static const String summarizeGroupDiscussionInstructionText =
+      'You will hear a group discussion. Please summarize the discussion, including the key points and '
+      'opinions expressed by each speaker.';
+  static const String respondToASituationInstructionText =
+      'Read the situation below. You will then hear it described again. Please respond appropriately, as you '
+      'would in the actual situation.';
+  static const String audioListeningVolumeLabel = 'Volume';
+  static const String audioListeningPlayingPrefix = 'Playing ';
+  static const String audioListeningPlayingSuffix = ' seconds left';
+
+  static const String retellLectureInstructionPrefix =
+      'You will hear a lecture. After listening to the lecture, in ';
+  static const String retellLectureInstructionMiddle =
+      ' seconds, please speak into the microphone and retell what you just heard from the lecture in your own '
+      'words. You will have ';
+  static const String retellLectureInstructionSuffix =
+      ' seconds to give your response.';
+
+  static const String personalIntroductionInstructionPrefix =
+      'Read the prompt below. In ';
+  static const String personalIntroductionInstructionMiddle =
+      ' seconds, you must reply in your own words, as naturally and clearly as possible. You have ';
+  static const String personalIntroductionInstructionSuffix =
+      ' seconds to record your response.';
 }

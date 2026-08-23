@@ -49,7 +49,8 @@ class ReadingTaskPreviewScreen extends StatefulWidget {
   final ExamAttemptBloc examAttemptBloc;
 
   @override
-  State<ReadingTaskPreviewScreen> createState() => _ReadingTaskPreviewScreenState();
+  State<ReadingTaskPreviewScreen> createState() =>
+      _ReadingTaskPreviewScreenState();
 }
 
 class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
@@ -74,7 +75,9 @@ class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
               audioPlayerService: widget.audioPlayerService,
             ),
           ),
-          DevPreviewBackButton(onPressed: () => setState(() => _selected = null)),
+          DevPreviewBackButton(
+            onPressed: () => setState(() => _selected = null),
+          ),
         ],
       );
     }
@@ -83,10 +86,18 @@ class _ReadingTaskPreviewScreenState extends State<ReadingTaskPreviewScreen> {
       body: ListView(
         children: [
           for (final task in ReadingTaskFixtures.all)
-            ListTile(title: Text(task.taskType), onTap: () => setState(() => _selected = task)),
+            ListTile(
+              title: Text(task.taskType),
+              onTap: () => setState(() => _selected = task),
+            ),
           ListTile(
-            title: const Text(ReadingStrings.devReadingPreviewBlankGroupsUnavailableLabel),
-            onTap: () => setState(() => _selected = ReadingTaskFixtures.fillBlanksReadingWritingUnavailable),
+            title: const Text(
+              ReadingStrings.devReadingPreviewBlankGroupsUnavailableLabel,
+            ),
+            onTap: () => setState(
+              () => _selected =
+                  ReadingTaskFixtures.fillBlanksReadingWritingUnavailable,
+            ),
           ),
         ],
       ),

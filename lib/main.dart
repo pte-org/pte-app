@@ -15,6 +15,7 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_reco
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
 import 'package:pte_app/features/report/report_module.dart';
 
@@ -42,14 +43,26 @@ class PteApp extends StatelessWidget {
                   children: [
                     FloatingActionButton(
                       heroTag: 'dev-reading-preview',
-                      onPressed: () => Navigator.of(context).pushNamed('/dev/reading-preview'),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed('/dev/reading-preview'),
                       child: const Icon(Icons.menu_book),
                     ),
                     const SizedBox(height: AppDimensions.spacingMedium),
                     FloatingActionButton(
                       heroTag: 'dev-listening-preview',
-                      onPressed: () => Navigator.of(context).pushNamed('/dev/listening-preview'),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed('/dev/listening-preview'),
                       child: const Icon(Icons.headphones),
+                    ),
+                    const SizedBox(height: AppDimensions.spacingMedium),
+                    FloatingActionButton(
+                      heroTag: 'dev-speaking-writing-preview',
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed('/dev/speaking-writing-preview'),
+                      child: const Icon(Icons.mic),
                     ),
                   ],
                 ),
@@ -59,7 +72,10 @@ class PteApp extends StatelessWidget {
       routes: kDebugMode
           ? {
               '/dev/reading-preview': (_) => _buildReadingTaskPreviewScreen(),
-              '/dev/listening-preview': (_) => _buildListeningTaskPreviewScreen(),
+              '/dev/listening-preview': (_) =>
+                  _buildListeningTaskPreviewScreen(),
+              '/dev/speaking-writing-preview': (_) =>
+                  _buildSpeakingWritingTaskPreviewScreen(),
             }
           : const {},
     );
@@ -81,6 +97,19 @@ class PteApp extends StatelessWidget {
   static Widget _buildListeningTaskPreviewScreen() {
     final getIt = GetIt.instance;
     return ListeningTaskPreviewScreen(
+      outboxDao: getIt<AnswerOutboxDao>(),
+      syncEngine: getIt<SyncEngine>(),
+      audioRecorderService: getIt<AudioRecorderService>(),
+      mediaDao: getIt<PendingMediaUploadDao>(),
+      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
+    );
+  }
+
+  static Widget _buildSpeakingWritingTaskPreviewScreen() {
+    final getIt = GetIt.instance;
+    return SpeakingWritingTaskPreviewScreen(
       outboxDao: getIt<AnswerOutboxDao>(),
       syncEngine: getIt<SyncEngine>(),
       audioRecorderService: getIt<AudioRecorderService>(),

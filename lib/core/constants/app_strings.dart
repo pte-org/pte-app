@@ -8,5 +8,5 @@
 class AppStrings {
   const AppStrings._();
 
-  static const String appTitle ='PTE Student';
+  static const String appTitle = 'PTE Student';
 }
