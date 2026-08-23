@@ -232,4 +232,30 @@ class AppStrings {
   static const String devReadingPreviewTitle = 'Reading task preview';
   static const String devReadingPreviewBlankGroupsUnavailableLabel =
       'FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+
+  // Writing task — text-editor toolbar tooltips.
+  static const String editorCutTooltip = 'Cut';
+  static const String editorCopyTooltip = 'Copy';
+  static const String editorPasteTooltip = 'Paste';
+  static const String editorUndoTooltip = 'Undo';
+  static const String editorRedoTooltip = 'Redo';
+
+  // Writing task — Summarize Written Text.
+  static const String summarizeWrittenTextTitle = 'Summarize Written Text';
+  static const String summarizeWrittenTextInstruction =
+      'Read the passage below and summarize it in one sentence (5 to 75 words).'
+      ' You will have 10 minutes to complete this task.';
+  static const String summarizeWrittenTextResponseLabel = 'Your response (one sentence)';
+
+  // Writing task — Write Essay (used when rendering without BLoC integration).
+  static const String writeEssayV2Title = 'Write Essay';
+  static const String writeEssayV2Instruction =
+      'You will have 20 minutes to plan, write and revise an essay about the topic below.'
+      ' Your response will be judged on how well you develop a position, organize ideas,'
+      ' and use language appropriately. Write 200-300 words.';
+  static const String writeEssayV2ResponseLabel = 'Your essay';
+
+  // Writing task — shared labels.
+  static const String countdownLabelPrefix = 'Time Remaining ';
+  static const String passagePanelLabel = 'Reading passage';
 }

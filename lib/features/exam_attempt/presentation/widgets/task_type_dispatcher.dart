@@ -13,7 +13,9 @@ import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
 import '../pages/read_aloud_screen.dart';
 import '../pages/re_order_paragraphs_screen.dart';
+import '../pages/summarize_written_text_screen.dart';
 import '../pages/write_essay_screen.dart';
+import '../pages/write_essay_v2_screen.dart';
 
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
 const String _taskTypeMcReadingMultiple = 'MC_READING_MULTIPLE';
@@ -22,6 +24,8 @@ const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
 const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeReadAloud = 'READ_ALOUD';
+const String _taskTypeSummarizeWrittenText = 'SUMMARIZE_WRITTEN_TEXT';
+const String _taskTypeWriteEssayV2 = 'WRITE_ESSAY_V2';
 
 /// Switches on `TaskView.taskType` to select the right task screen.
 class TaskTypeDispatcher extends StatelessWidget {
@@ -97,6 +101,8 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
+      _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task),
+      _taskTypeWriteEssayV2 => WriteEssayV2Screen(key: key, task: task),
       _taskTypeReadAloud => ReadAloudScreen(
         key: key,
         task: task,

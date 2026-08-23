@@ -20,4 +20,13 @@ class AppDimensions {
   static const double fillBlanksGapPadding = 6.0;
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
+
+  // Writing task — text editor + countdown affordances.
+  static const double editorToolbarIconSize = 22.0;
+  static const double editorToolbarButtonSize = 36.0;
+  static const double countdownTimerFontSize = 14.0;
+  static const double passagePanelMaxHeight = 240.0;
+  static const double passagePanelBorderWidth = 1.0;
+  static const double writingHeaderPaddingHorizontal = 16.0;
+  static const double writingHeaderPaddingVertical = 12.0;
 }
