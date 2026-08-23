@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/auto_record_status_card.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_status_card.dart';
 
 TaskView _task() {
   return TaskView(

@@ -11,14 +11,14 @@ import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
-import 'package:pte_app/features/exam_attempt/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/pages/speaking/read_aloud_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/read_aloud_screen.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 

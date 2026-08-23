@@ -76,9 +76,7 @@ void main() {
   /// `BlocSelector`'s `listenWhen` gate). Comparing `identical()` across
   /// pumps is therefore a faithful proxy for "did the countdown widget
   /// rebuild", satisfying Step 12's "must be an executed test" requirement
-  /// without needing to modify production code to inject a counter. Found
-  /// by key rather than position — the brand block adds more `Text`
-  /// widgets ahead of it in the tree.
+  /// without needing to modify production code to inject a counter.
   Text countdownTextWidget(WidgetTester tester) =>
       tester.widget<Text>(find.byKey(const ValueKey('examAppBarCountdown')));
 
@@ -87,7 +85,10 @@ void main() {
     (tester) async {
       await tester.pumpWidget(buildSubject());
       final beforeText = countdownTextWidget(tester);
-      expect(beforeText.data, 'Time Remaining 01:15:30');
+      // ExamAppBar's countdown shows the task-level snapshot.remaining as
+      // mm:ss (not the whole-exam examRemaining as hh:mm:ss) — snapshotA's
+      // remaining is 30 seconds.
+      expect(beforeText.data, '00:30');
 
       // Unrelated change: a different task, but the exact same
       // TimerSnapshot instance/value — mirrors what ExamAttemptBloc emits
@@ -100,7 +101,7 @@ void main() {
       expect(identical(beforeText, afterUnrelatedText), isTrue,
           reason: 'BlocSelector must not rebuild the countdown widget for a state change '
               'that leaves the TimerSnapshot slice unchanged');
-      expect(afterUnrelatedText.data, 'Time Remaining 01:15:30');
+      expect(afterUnrelatedText.data, '00:30');
     },
   );
 
@@ -114,6 +115,7 @@ void main() {
     final afterText = countdownTextWidget(tester);
     expect(identical(beforeText, afterText), isFalse,
         reason: 'BlocSelector must rebuild the countdown widget when the TimerSnapshot slice changes');
-    expect(afterText.data, 'Time Remaining 01:15:12');
+    // snapshotB's remaining is 12 seconds.
+    expect(afterText.data, '00:12');
   });
 }

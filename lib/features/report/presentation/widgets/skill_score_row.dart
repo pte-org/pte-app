@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../domain/report_response.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/features/report/domain/report_response.dart';
+import 'package:pte_app/features/report/constants/report_strings.dart';
 
 /// Shared by both `communicativeSkills` and `enablingSkills` sections
 /// (phase-08 Design Constraints) — one implementation, not two
@@ -28,7 +28,7 @@ class SkillScoreRow extends StatelessWidget {
           Text(skillScore.skill),
           if (!skillScore.sufficientData)
             const Text(
-              AppStrings.reportInsufficientDataLabel,
+              ReportStrings.reportInsufficientDataLabel,
               style: TextStyle(color: AppColors.textPrimary, fontStyle: FontStyle.italic),
             )
           else

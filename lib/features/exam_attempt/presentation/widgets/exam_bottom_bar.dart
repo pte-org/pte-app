@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
 
 /// Container + a single [action] slot — the actual submit/advance affordance
 /// is wired by the task-type screen that embeds this bar (Phase 5/6/7), not

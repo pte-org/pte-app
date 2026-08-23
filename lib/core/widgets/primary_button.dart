@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
 
 /// Standard elevated button with a built-in loading spinner — every
 /// primary action across the app (advance, submit, retry) uses this

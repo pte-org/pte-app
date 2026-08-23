@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/features/report/domain/report_response.dart';
 import 'package:pte_app/features/report/presentation/widgets/skill_score_row.dart';
+import 'package:pte_app/features/report/constants/report_strings.dart';
 
 void main() {
   Widget buildSubject(SkillScoreResponse skillScore) {
@@ -18,7 +18,7 @@ void main() {
         buildSubject(const SkillScoreResponse(skill: 'Speaking', score: 75, sufficientData: false)),
       );
 
-      expect(find.text(AppStrings.reportInsufficientDataLabel), findsOneWidget);
+      expect(find.text(ReportStrings.reportInsufficientDataLabel), findsOneWidget);
       expect(find.text('75'), findsNothing);
     });
 
@@ -29,7 +29,7 @@ void main() {
         buildSubject(const SkillScoreResponse(skill: 'Speaking', score: null, sufficientData: false)),
       );
 
-      expect(find.text(AppStrings.reportInsufficientDataLabel), findsOneWidget);
+      expect(find.text(ReportStrings.reportInsufficientDataLabel), findsOneWidget);
     });
   });
 
@@ -42,7 +42,7 @@ void main() {
       );
 
       expect(find.text('82'), findsOneWidget);
-      expect(find.text(AppStrings.reportInsufficientDataLabel), findsNothing);
+      expect(find.text(ReportStrings.reportInsufficientDataLabel), findsNothing);
 
       final scoreText = tester.widget<Text>(find.text('82'));
       expect(scoreText.style?.fontWeight, FontWeight.bold);
@@ -56,7 +56,7 @@ void main() {
         buildSubject(const SkillScoreResponse(skill: 'Speaking', score: null, sufficientData: false)),
       );
 
-      final label = tester.widget<Text>(find.text(AppStrings.reportInsufficientDataLabel));
+      final label = tester.widget<Text>(find.text(ReportStrings.reportInsufficientDataLabel));
       expect(label.style?.fontStyle, FontStyle.italic);
       expect(label.style?.fontWeight, isNot(FontWeight.bold));
     });

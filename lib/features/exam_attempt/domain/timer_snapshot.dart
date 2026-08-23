@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import 'timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 
 /// The shape `TimerService` exposes on every tick/reconciliation.
 /// Equatable so `BlocSelector` can skip a rebuild when an unrelated part of

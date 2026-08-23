@@ -9,11 +9,12 @@ class AppDimensions {
   static const double advanceButtonSpinnerSize = 16.0;
   static const double advanceButtonSpinnerStrokeWidth = 2.0;
 
-  static const double readingHeaderBannerRadius = 12.0;
-  static const double readingHeaderBannerPaddingVertical = 12.0;
-  static const double readingHeaderBannerPaddingHorizontal = 16.0;
-  static const double readingHeaderStarIconSize = 20.0;
-  static const double readingHeaderTitleFontSize = 16.0;
+  static const double examHeaderBannerRadius = 12.0;
+  static const double examHeaderBannerPaddingVertical = 12.0;
+  static const double examHeaderBannerPaddingHorizontal = 16.0;
+  static const double examHeaderStarIconSize = 20.0;
+  static const double examHeaderTitleFontSize = 16.0;
+  static const double devPreviewBackButtonOffset = 8.0;
   static const double readingPassageLayoutBreakpoint = 720.0;
   static const double fillBlanksGapMinWidth = 72.0;
   static const double fillBlanksGapPadding = 6.0;

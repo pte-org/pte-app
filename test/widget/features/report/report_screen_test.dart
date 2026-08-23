@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/report/domain/report_response.dart';
 import 'package:pte_app/features/report/domain/repositories/report_repository.dart';
 import 'package:pte_app/features/report/presentation/pages/report_screen.dart';
+import 'package:pte_app/features/report/constants/report_strings.dart';
 
 class _MockReportRepository extends Mock implements ReportRepository {}
 
@@ -41,8 +41,8 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump(); // let initState's ReportRequested resolve
 
-    expect(find.text(AppStrings.reportNotPublishedTitle), findsOneWidget);
-    expect(find.text(AppStrings.reportErrorTitle), findsNothing);
+    expect(find.text(ReportStrings.reportNotPublishedTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportErrorTitle), findsNothing);
   });
 
   testWidgets('Step 8 — a thrown network error renders the error view, distinct from the not-published view', (
@@ -53,8 +53,8 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text(AppStrings.reportErrorTitle), findsOneWidget);
-    expect(find.text(AppStrings.reportNotPublishedTitle), findsNothing);
+    expect(find.text(ReportStrings.reportErrorTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportNotPublishedTitle), findsNothing);
   });
 
   testWidgets('a successful fetch renders Overall/Communicative/Enabling sections via SkillScoreRow', (tester) async {
@@ -63,12 +63,12 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text(AppStrings.reportOverallSectionTitle), findsOneWidget);
-    expect(find.text(AppStrings.reportCommunicativeSkillsSectionTitle), findsOneWidget);
-    expect(find.text(AppStrings.reportEnablingSkillsSectionTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportOverallSectionTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportCommunicativeSkillsSectionTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportEnablingSkillsSectionTitle), findsOneWidget);
     expect(find.text('65'), findsOneWidget);
     expect(find.text('70'), findsOneWidget);
-    expect(find.text(AppStrings.reportInsufficientDataLabel), findsOneWidget);
+    expect(find.text(ReportStrings.reportInsufficientDataLabel), findsOneWidget);
   });
 
   testWidgets('pull-to-refresh dispatches ReportRefreshRequested and can transition NotPublished -> Ready', (
@@ -83,12 +83,12 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text(AppStrings.reportNotPublishedTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportNotPublishedTitle), findsOneWidget);
 
     await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.reportOverallSectionTitle), findsOneWidget);
+    expect(find.text(ReportStrings.reportOverallSectionTitle), findsOneWidget);
     verify(() => repository.fetchReport('attempt-1')).called(2);
   });
 

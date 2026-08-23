@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
 
-import '../answer_sync_status.dart';
-import '../app_database.dart';
-import '../tables/answer_outbox_table.dart';
+import 'package:pte_app/core/storage/answer_sync_status.dart';
+import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/storage/tables/answer_outbox_table.dart';
 
 part 'answer_outbox_dao.g.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/audio_listening_status_card.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 
 void main() {
   testWidgets('renders the status label and the Volume row', (tester) async {

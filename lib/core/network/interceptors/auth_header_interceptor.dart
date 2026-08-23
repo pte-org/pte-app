@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../../storage/token_store.dart';
+import 'package:pte_app/core/storage/token_store.dart';
 
 /// Attaches the current access token as a Bearer header on every outgoing
 /// request. Without this, every protected request would 401 on its first

@@ -5,11 +5,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
-import 'package:pte_app/features/exam_attempt/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 
 class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 

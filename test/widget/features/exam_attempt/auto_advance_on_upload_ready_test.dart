@@ -11,9 +11,9 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/auto_advance_on_upload_ready.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
 
 // Exercised via one concrete binding, AutoAdvanceOnUploadReady<AutoRecordCubit,
 // AutoRecordState> — the generic widget has no logic that varies by type

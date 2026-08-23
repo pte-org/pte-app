@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pte_app/features/exam_attempt/presentation/widgets/task_image_display.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/task_image_display.dart';
 
 void main() {
   const imageUrl = 'https://picsum.photos/seed/describe-image-fixture/800/600';
