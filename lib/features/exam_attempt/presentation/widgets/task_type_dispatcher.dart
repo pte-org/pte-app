@@ -20,9 +20,12 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/pages/re_orde
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/select_missing_word_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/answer_short_question_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/describe_image_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/personal_introduction_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/read_aloud_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/repeat_sentence_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/respond_to_a_situation_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/retell_lecture_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/summarize_group_discussion_screen.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/summarize_spoken_text_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/write_essay_screen.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/write_from_dictation_screen.dart';
@@ -34,11 +37,14 @@ const String _taskTypeReOrderParagraphs = 'RE_ORDER_PARAGRAPHS';
 const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
 const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
+const String _taskTypePersonalIntroduction = 'PERSONAL_INTRODUCTION';
 const String _taskTypeReadAloud = 'READ_ALOUD';
 const String _taskTypeRepeatSentence = 'REPEAT_SENTENCE';
 const String _taskTypeDescribeImage = 'DESCRIBE_IMAGE';
 const String _taskTypeRetellLecture = 'RE_TELL_LECTURE';
 const String _taskTypeAnswerShortQuestion = 'ANSWER_SHORT_QUESTION';
+const String _taskTypeSummarizeGroupDiscussion = 'SUMMARIZE_GROUP_DISCUSSION';
+const String _taskTypeRespondToASituation = 'RESPOND_TO_A_SITUATION';
 
 // Listening — string constants verified against
 // `pte-api/services/authoring/.../PteTaskType.java` (phase-01 Design
@@ -132,6 +138,15 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
+      _taskTypePersonalIntroduction => PersonalIntroductionScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
       _taskTypeReadAloud => ReadAloudScreen(
         key: key,
         task: task,
@@ -169,6 +184,24 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
       ),
       _taskTypeAnswerShortQuestion => AnswerShortQuestionScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeSummarizeGroupDiscussion => SummarizeGroupDiscussionScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeRespondToASituation => RespondToASituationScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,

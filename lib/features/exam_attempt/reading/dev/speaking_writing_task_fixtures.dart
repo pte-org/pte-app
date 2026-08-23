@@ -10,6 +10,44 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 class SpeakingWritingTaskFixtures {
   const SpeakingWritingTaskFixtures._();
 
+  /// `prepSeconds: 25`/`responseSeconds: 30` are the user's literal mock
+  /// values — same as [describeImage]'s fixture, neither lands on the
+  /// dev-preview `ExamAttemptBloc`'s 10-second poll boundary (nearest
+  /// boundaries 20/30 and 50/60), and unlike the sub-staged fixtures
+  /// ([repeatSentence], [retellLecture], [answerShortQuestion]) there is no
+  /// internal sub-stage split to redistribute seconds within to hit one —
+  /// `PERSONAL_INTRODUCTION` has no audio-listening sub-stage at all. This
+  /// means up to ~5-9s of dev-preview-ONLY UI lag is expected at both
+  /// transitions, never a production concern (see [describeImage]'s doc
+  /// comment for the identical tradeoff and rationale).
+  static TaskView get personalIntroduction {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 25;
+    const responseSeconds = 30;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-PERSONAL_INTRODUCTION',
+      orderIndex: 0,
+      totalTasks: 5,
+      section: 'SPEAKING',
+      taskType: 'PERSONAL_INTRODUCTION',
+      title: 'Sample PERSONAL_INTRODUCTION',
+      promptText:
+          'Please introduce yourself. For example, you could talk about one or more of the following:\n\n'
+          '• Your interests\n'
+          '• Your plans for future study\n'
+          '• Why you want to study abroad\n'
+          '• Why you need to learn English\n'
+          '• Why you chose this test',
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
   static TaskView get readAloud {
     final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 30;
@@ -189,11 +227,82 @@ class SpeakingWritingTaskFixtures {
     );
   }
 
+  /// `prepSeconds: 200` is a sum of 3 mocked sub-stages: 5s pre-listen prep
+  /// + 185s mocked group-discussion-audio playback + 10s pre-record "chuẩn
+  /// bị" prep (`5 + 185 + 10 = 200`) — same 3-stage shape as
+  /// [retellLecture]'s split. The 185s audio duration is a deliberate
+  /// rounding-down from the originally-discussed ~180s (3 minutes),
+  /// user-confirmed, kept to land `prepSeconds` on `200`.
+  ///
+  /// Both `200` (prep→response) and `320` (`prepSeconds + responseSeconds`,
+  /// response→recorded) land exactly on the dev-preview `ExamAttemptBloc`'s
+  /// 10-second poll boundary — same alignment goal as [retellLecture]'s
+  /// fixture, avoiding the "Beginning in 0 seconds" stuck-UI dev-preview-only
+  /// lag (see [repeatSentence]'s doc comment).
+  static TaskView get summarizeGroupDiscussion {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 200;
+    const responseSeconds = 120;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-SUMMARIZE_GROUP_DISCUSSION',
+      orderIndex: 0,
+      totalTasks: 5,
+      section: 'SPEAKING',
+      taskType: 'SUMMARIZE_GROUP_DISCUSSION',
+      title: 'Sample SUMMARIZE_GROUP_DISCUSSION',
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
+  /// `prepSeconds: 40` is a sum of 3 mocked sub-stages: 20s pre-listen prep
+  /// (itself a merge of "15s reading the situation + 5s waiting for audio",
+  /// per user decision — see `RespondToASituationScreen`'s doc comment) +
+  /// 10s mocked audio playback (the situation re-read aloud) + 10s
+  /// pre-record "chuẩn bị" prep (`20 + 10 + 10 = 40`). `responseSeconds: 40`
+  /// is the recording window.
+  ///
+  /// Both `40` (prep→response) and `80` (`prepSeconds + responseSeconds`,
+  /// response→recorded) already land exactly on the dev-preview
+  /// `ExamAttemptBloc`'s 10-second poll boundary — no rounding needed here,
+  /// unlike [retellLecture]'s/[summarizeGroupDiscussion]'s fixtures.
+  static TaskView get respondToASituation {
+    final now = DateTime(2026, 1, 1, 9);
+    const prepSeconds = 40;
+    const responseSeconds = 40;
+    return TaskView(
+      pinnedItemPublicId: 'fixture-RESPOND_TO_A_SITUATION',
+      orderIndex: 0,
+      totalTasks: 5,
+      section: 'SPEAKING',
+      taskType: 'RESPOND_TO_A_SITUATION',
+      title: 'Sample RESPOND_TO_A_SITUATION',
+      promptText:
+          'You are a student at a university. You have realized that you will miss an important exam because '
+          'of a family emergency. Explain the situation to your professor and ask what you should do.',
+      prepSeconds: prepSeconds,
+      responseSeconds: responseSeconds,
+      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
+      responseDeadline: now.add(
+        const Duration(seconds: prepSeconds + responseSeconds),
+      ),
+      serverNow: now,
+    );
+  }
+
   static List<TaskView> get all => [
+    personalIntroduction,
     readAloud,
     repeatSentence,
     describeImage,
     retellLecture,
     answerShortQuestion,
+    summarizeGroupDiscussion,
+    respondToASituation,
   ];
 }

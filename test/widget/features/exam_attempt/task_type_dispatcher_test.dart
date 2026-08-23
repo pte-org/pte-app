@@ -114,6 +114,56 @@ TaskView _answerShortQuestionTask({required String pinnedItemPublicId}) {
   );
 }
 
+TaskView _summarizeGroupDiscussionTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'SUMMARIZE_GROUP_DISCUSSION',
+    title: 'Task title',
+    prepSeconds: 200,
+    responseSeconds: 120,
+    prepDeadline: DateTime(2026, 1, 1, 0, 3, 20),
+    responseDeadline: DateTime(2026, 1, 1, 0, 5, 20),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
+TaskView _respondToASituationTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'RESPOND_TO_A_SITUATION',
+    title: 'Task title',
+    promptText: 'You are a student at a university.',
+    prepSeconds: 40,
+    responseSeconds: 40,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 40),
+    responseDeadline: DateTime(2026, 1, 1, 0, 1, 20),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
+TaskView _personalIntroductionTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'PERSONAL_INTRODUCTION',
+    title: 'Task title',
+    promptText: 'Please introduce yourself.',
+    prepSeconds: 25,
+    responseSeconds: 30,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
+    responseDeadline: DateTime(2026, 1, 1, 0, 0, 55),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
 TaskView _mcTask({required String pinnedItemPublicId}) {
@@ -469,6 +519,103 @@ void main() {
           find.text(
             'You will hear a question. Please give a simple and short answer. Often just once or a few words '
             'is enough.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('TaskTypeDispatcher — PERSONAL_INTRODUCTION routing', () {
+    testWidgets(
+      'routes to PersonalIntroductionScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // PersonalIntroductionScreen constructs an AutoRecordCubit internally,
+        // which subscribes to PendingMediaUploadDao.watchRow immediately in
+        // its constructor — needs a stub even though this test never asserts
+        // on upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(
+            _personalIntroductionTask(pinnedItemPublicId: 'item-99'),
+          ),
+        );
+
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'Read the prompt below. In 25 seconds, you must reply in your own words, as naturally and clearly '
+            'as possible. You have 30 seconds to record your response.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('TaskTypeDispatcher — SUMMARIZE_GROUP_DISCUSSION routing', () {
+    testWidgets(
+      'routes to SummarizeGroupDiscussionScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // SummarizeGroupDiscussionScreen constructs an AutoRecordCubit
+        // internally, which subscribes to PendingMediaUploadDao.watchRow
+        // immediately in its constructor — needs a stub even though this
+        // test never asserts on upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(
+            _summarizeGroupDiscussionTask(pinnedItemPublicId: 'item-99'),
+          ),
+        );
+
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'You will hear a group discussion. Please summarize the discussion, including the key points and '
+            'opinions expressed by each speaker.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('TaskTypeDispatcher — RESPOND_TO_A_SITUATION routing', () {
+    testWidgets(
+      'routes to RespondToASituationScreen, not the unsupported-task-type placeholder',
+      (tester) async {
+        // RespondToASituationScreen constructs an AutoRecordCubit
+        // internally, which subscribes to PendingMediaUploadDao.watchRow
+        // immediately in its constructor — needs a stub even though this
+        // test never asserts on upload status.
+        when(
+          () => mediaDao.watchRow(any(), any()),
+        ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+        // A different pinnedItemPublicId than the default stubbed bloc
+        // state's task ('item-1') so the timer-bridge identity guard never
+        // matches — this test only checks routing/rendering, not auto-record
+        // behavior, so no recorder stub is set up here.
+        await tester.pumpWidget(
+          buildSubject(_respondToASituationTask(pinnedItemPublicId: 'item-99')),
+        );
+
+        expect(find.textContaining('Unsupported task type'), findsNothing);
+        expect(
+          find.text(
+            'Read the situation below. You will then hear it described again. Please respond appropriately, '
+            'as you would in the actual situation.',
           ),
           findsOneWidget,
         );

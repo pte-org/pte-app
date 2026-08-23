@@ -19,13 +19,18 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// Image needed the exact same shape (this project's 3-occurrence DRY
 /// threshold — 2 concrete uses today, Read Aloud and Describe Image, would
 /// have hit a 3rd if any future screen needed it). `RepeatSentenceScreen`'s
-/// `_RecordCard` is deliberately **not** merged into this — it has extra
-/// pre-record sub-stage clamping logic (`_elapsedPrepSeconds`,
-/// `_preRecordSeconds` boundary) that genuinely diverges from this simpler,
+/// `RecordedAnswerPrepCard` is deliberately **not** merged into this — it has extra
+/// pre-record sub-stage clamping logic (`elapsedPrepSeconds`,
+/// `preRecordSeconds` boundary) that genuinely diverges from this simpler,
 /// non-sub-staged shape, so forcing a shared abstraction there would add
 /// branching complexity for no duplication removed.
 class AutoRecordStatusCard extends StatelessWidget {
-  const AutoRecordStatusCard({super.key, required this.task, required this.recordingState, required this.snapshot});
+  const AutoRecordStatusCard({
+    super.key,
+    required this.task,
+    required this.recordingState,
+    required this.snapshot,
+  });
 
   final TaskView task;
   final AutoRecordState recordingState;
@@ -34,7 +39,10 @@ class AutoRecordStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
-      return RecordedAnswerStatusCard(statusLabel: _uploadStatusLabel(), progress: 1.0);
+      return RecordedAnswerStatusCard(
+        statusLabel: _uploadStatusLabel(),
+        progress: 1.0,
+      );
     }
     if (snapshot?.phase == TimerPhase.response) {
       return RecordedAnswerStatusCard(
@@ -43,10 +51,14 @@ class AutoRecordStatusCard extends StatelessWidget {
           suffix: SpeakingWritingStrings.recordingInProgressSuffix,
           remaining: snapshot!.remaining,
         ),
-        progress: _elapsedFraction(totalSeconds: task.responseSeconds, remaining: snapshot!.remaining),
+        progress: _elapsedFraction(
+          totalSeconds: task.responseSeconds,
+          remaining: snapshot!.remaining,
+        ),
       );
     }
-    final remaining = snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
+    final remaining =
+        snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
     return RecordedAnswerStatusCard(
       statusLabel: _countdownLabel(
         prefix: SpeakingWritingStrings.recordingBeginningInPrefix,
@@ -60,11 +72,18 @@ class AutoRecordStatusCard extends StatelessWidget {
     );
   }
 
-  String _countdownLabel({required String prefix, required String suffix, required Duration remaining}) {
+  String _countdownLabel({
+    required String prefix,
+    required String suffix,
+    required Duration remaining,
+  }) {
     return '$prefix${remaining.inSeconds}$suffix';
   }
 
-  double _elapsedFraction({required int totalSeconds, required Duration remaining}) {
+  double _elapsedFraction({
+    required int totalSeconds,
+    required Duration remaining,
+  }) {
     if (totalSeconds <= 0) return 1.0;
     final elapsedSeconds = totalSeconds - remaining.inSeconds;
     return (elapsedSeconds / totalSeconds).clamp(0.0, 1.0);
@@ -72,7 +91,9 @@ class AutoRecordStatusCard extends StatelessWidget {
 
   String _uploadStatusLabel() {
     final status = recordingState.uploadStatus;
-    if (status == null) return SpeakingWritingStrings.recordingStillUploadingLabel;
+    if (status == null) {
+      return SpeakingWritingStrings.recordingStillUploadingLabel;
+    }
     return status == PendingMediaUploadStatus.ready
         ? SpeakingWritingStrings.recordingUploadReadyLabel
         : SpeakingWritingStrings.recordingStillUploadingLabel;

@@ -43,6 +43,12 @@ class SpeakingWritingStrings {
   static const String answerShortQuestionInstructionText =
       'You will hear a question. Please give a simple and short answer. Often just once or a few words is '
       'enough.';
+  static const String summarizeGroupDiscussionInstructionText =
+      'You will hear a group discussion. Please summarize the discussion, including the key points and '
+      'opinions expressed by each speaker.';
+  static const String respondToASituationInstructionText =
+      'Read the situation below. You will then hear it described again. Please respond appropriately, as you '
+      'would in the actual situation.';
   static const String audioListeningVolumeLabel = 'Volume';
   static const String audioListeningPlayingPrefix = 'Playing ';
   static const String audioListeningPlayingSuffix = ' seconds left';
@@ -54,4 +60,11 @@ class SpeakingWritingStrings {
       'words. You will have ';
   static const String retellLectureInstructionSuffix =
       ' seconds to give your response.';
+
+  static const String personalIntroductionInstructionPrefix =
+      'Read the prompt below. In ';
+  static const String personalIntroductionInstructionMiddle =
+      ' seconds, you must reply in your own words, as naturally and clearly as possible. You have ';
+  static const String personalIntroductionInstructionSuffix =
+      ' seconds to record your response.';
 }

@@ -18,21 +18,29 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// Shared body for every Speaking-task screen whose `prep` phase covers a
 /// pre-listen countdown → mocked audio playback → pre-record countdown,
 /// followed by an actual recording `response` phase — currently
-/// `RepeatSentenceScreen`, `RetellLectureScreen`, and `AnswerShortQuestionScreen`.
+/// `RepeatSentenceScreen`, `RetellLectureScreen`, `AnswerShortQuestionScreen`,
+/// and `SummarizeGroupDiscussionScreen`.
 /// Extracted once this shape hit this project's 3-occurrence DRY threshold
 /// (same rule that previously unified `AutoRecordCubit`/
 /// `AutoRecordTimerBridgeMixin` for Read Aloud/Describe Image). A pure move
-/// of what was 3x-duplicated `_elapsedPrepSeconds`/`_ListeningCard`/
-/// `_RecordCard` — zero behavior change, only [preListenSeconds]/
+/// of what was 3x-duplicated `elapsedPrepSeconds`/`AudioListeningPrepCard`/
+/// `RecordedAnswerPrepCard` — zero behavior change, only [preListenSeconds]/
 /// [preRecordSeconds] moved from module-level constants to constructor
-/// params so 3 screens with different sub-stage splits can share one copy.
+/// params so screens with different sub-stage splits can share one copy.
 ///
 /// [instructionText] is a fully pre-built string — screens differ in
-/// whether it's a fixed constant (Repeat Sentence, Answer Short Question) or
-/// interpolated from [preRecordSeconds]/`task.responseSeconds` (Retell
-/// Lecture); this widget has no opinion on that, it just renders whatever
-/// string it's given. Callers are responsible for keeping any interpolated
-/// value consistent with the [preRecordSeconds] passed here.
+/// whether it's a fixed constant (Repeat Sentence, Answer Short Question,
+/// Summarize Group Discussion) or interpolated from [preRecordSeconds]/
+/// `task.responseSeconds` (Retell Lecture); this widget has no opinion on
+/// that, it just renders whatever string it's given. Callers are
+/// responsible for keeping any interpolated value consistent with the
+/// [preRecordSeconds] passed here.
+///
+/// [elapsedPrepSeconds]/[AudioListeningPrepCard]/[RecordedAnswerPrepCard]
+/// are public (not `_`-prefixed) so `RespondToASituationScreen` can compose
+/// them directly alongside a persistent situation-text display that this
+/// widget's own fixed internal layout can't interleave — a mechanical
+/// rename, not a new abstraction; behavior is identical to before.
 class AudioPromptRecordBody extends StatelessWidget {
   const AudioPromptRecordBody({
     super.key,
@@ -62,14 +70,14 @@ class AudioPromptRecordBody extends StatelessWidget {
                 children: [
                   InstructionText(text: instructionText),
                   const SizedBox(height: AppDimensions.spacingMedium),
-                  _ListeningCard(
+                  AudioListeningPrepCard(
                     task: task,
                     snapshot: snapshot,
                     preListenSeconds: preListenSeconds,
                     preRecordSeconds: preRecordSeconds,
                   ),
                   const SizedBox(height: AppDimensions.spacingMedium),
-                  _RecordCard(
+                  RecordedAnswerPrepCard(
                     task: task,
                     recordingState: state,
                     snapshot: snapshot,
@@ -88,9 +96,9 @@ class AudioPromptRecordBody extends StatelessWidget {
 /// How much of the shared `prep` window has elapsed, clamped to
 /// `[0, task.prepSeconds]` — once `response` begins (or the task is
 /// recorded), prep is by definition fully elapsed, which is exactly what
-/// [_ListeningCard] needs to render its final ("audio finished") state
-/// without any extra phase branching.
-int _elapsedPrepSeconds(TaskView task, TimerSnapshot? snapshot) {
+/// [AudioListeningPrepCard] needs to render its final ("audio finished")
+/// state without any extra phase branching.
+int elapsedPrepSeconds(TaskView task, TimerSnapshot? snapshot) {
   if (snapshot == null) return 0;
   if (snapshot.phase == TimerPhase.response) return task.prepSeconds;
   return (task.prepSeconds - snapshot.remaining.inSeconds).clamp(
@@ -103,9 +111,11 @@ int _elapsedPrepSeconds(TaskView task, TimerSnapshot? snapshot) {
 /// "Playing" (mocked audio) sequence, driven purely by how much of the
 /// shared prep window has elapsed. The progress bar only fills during the
 /// active "Playing" sub-stage, staying empty through "Beginning in". Never
-/// shows a recording-related label — that's [_RecordCard]'s concern.
-class _ListeningCard extends StatelessWidget {
-  const _ListeningCard({
+/// shows a recording-related label — that's [RecordedAnswerPrepCard]'s
+/// concern.
+class AudioListeningPrepCard extends StatelessWidget {
+  const AudioListeningPrepCard({
+    super.key,
     required this.task,
     required this.snapshot,
     required this.preListenSeconds,
@@ -119,7 +129,7 @@ class _ListeningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final elapsed = _elapsedPrepSeconds(task, snapshot);
+    final elapsed = elapsedPrepSeconds(task, snapshot);
     if (elapsed < preListenSeconds) {
       final remaining = preListenSeconds - elapsed;
       return AudioListeningStatusCard(
@@ -149,12 +159,13 @@ class _ListeningCard extends StatelessWidget {
 }
 
 /// Bottom card ("Recorded Answer", reusing [RecordedAnswerStatusCard]) —
-/// blank while [_ListeningCard] is still active, then its own independent
-/// "Beginning in" (pre-record prep) → "Recording" → upload-status
-/// sequence once the listening sequence finishes. Recorded phase always
-/// wins over the live timer phase, regardless of sub-stage.
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({
+/// blank while [AudioListeningPrepCard] is still active, then its own
+/// independent "Beginning in" (pre-record prep) → "Recording" → upload-
+/// status sequence once the listening sequence finishes. Recorded phase
+/// always wins over the live timer phase, regardless of sub-stage.
+class RecordedAnswerPrepCard extends StatelessWidget {
+  const RecordedAnswerPrepCard({
+    super.key,
     required this.task,
     required this.recordingState,
     required this.snapshot,
@@ -188,7 +199,7 @@ class _RecordCard extends StatelessWidget {
       );
     }
 
-    final elapsed = _elapsedPrepSeconds(task, snapshot);
+    final elapsed = elapsedPrepSeconds(task, snapshot);
     final preRecordStart = (task.prepSeconds - preRecordSeconds).clamp(
       0,
       task.prepSeconds,

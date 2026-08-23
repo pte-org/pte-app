@@ -9,8 +9,9 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 
 /// Shared timer-bridge boilerplate for every auto-record speaking screen
-/// (Read Aloud, Repeat Sentence, Describe Image, Retell Lecture, Answer
-/// Short Question) — bridges `ExamAttemptBloc`'s
+/// (Personal Introduction, Read Aloud, Repeat Sentence, Describe Image,
+/// Retell Lecture, Answer Short Question, Summarize Group Discussion,
+/// Respond to a Situation) — bridges `ExamAttemptBloc`'s
 /// clock into an [AutoRecordCubit], the single authoritative source (see
 /// `AutoRecordCubit.onTimerSnapshot`'s doc), never a second timer.
 ///

@@ -20,8 +20,8 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// exercising it only indirectly through `RepeatSentenceScreen`/
 /// `RetellLectureScreen`/`AnswerShortQuestionScreen`. Those 3 screens'
 /// hardcoded `preListenSeconds`/`preRecordSeconds` values (3/3, 3/10, 3/3)
-/// never sum to >= their `prepSeconds`, so the `_ListeningCard` "audio
-/// window is non-positive" clamp (`audioSeconds <= 0 ? 1.0 : ...`) — real
+/// never sum to >= their `prepSeconds`, so the `AudioListeningPrepCard`
+/// "audio window is non-positive" clamp (`audioSeconds <= 0 ? 1.0 : ...`) — real
 /// widget logic introduced by moving these constants to per-call
 /// constructor params — has zero coverage anywhere else in the suite. Only
 /// this specific boundary is targeted here; every other code path in
