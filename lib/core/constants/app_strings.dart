@@ -1,5 +1,11 @@
 /// User-facing strings. No `Text('literal')` anywhere in the app — every
 /// label goes through this class per `docs/CODING_STANDARDS_APP.md`.
+///
+/// Note: `origin/dev` is mid-refactor — feature strings are being moved into
+/// per-feature `constants/` classes (`ExamAttemptStrings`, `ReadingStrings`,
+/// `SpeakingWritingStrings`, etc.). This file currently still holds the full
+/// pre-refactor set because the move is incomplete; we keep it to avoid
+/// breaking compilation for files that still reference `AppStrings.*`.
 class AppStrings {
   const AppStrings._();
 

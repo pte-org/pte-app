@@ -22,7 +22,7 @@ class AppDimensions {
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
 
-  // Writing task — text editor + countdown affordances.
+// Writing task — text editor + countdown affordances.
   static const double editorToolbarIconSize = 22.0;
   static const double editorToolbarButtonSize = 36.0;
   static const double countdownTimerFontSize = 14.0;
@@ -30,4 +30,18 @@ class AppDimensions {
   static const double passagePanelBorderWidth = 1.0;
   static const double writingHeaderPaddingHorizontal = 16.0;
   static const double writingHeaderPaddingVertical = 12.0;
+
+  // Speaking task — recording progress + audio meter affordances (from origin/dev).
+  static const double recordingProgressBarHeight = 8.0;
+  static const double recordingProgressBarRadius = 4.0;
+
+  static const double examBrandFontSize = 11.0;
+
+  static const double audioListeningMeterHeight = 2.0;
+  static const double audioListeningDotSize = 12.0;
+
+  /// Bounded height `TaskImageDisplay` renders inside — required for
+  /// `Image.network`'s `loadingBuilder` (`CircularProgressIndicator`) to
+  /// lay out correctly before the real image's intrinsic size is known.
+  static const double taskImageDisplayHeight = 240.0;
 }

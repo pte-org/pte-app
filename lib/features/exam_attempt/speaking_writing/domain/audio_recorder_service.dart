@@ -1,4 +1,4 @@
-/// Thin seam over `package:record`'s recorder so `ReadAloudCubit` is
+/// Thin seam over `package:record`'s recorder so `AutoRecordCubit` is
 /// testable without touching real device hardware.
 abstract class AudioRecorderService {
   /// Starts recording, writing to [filePath] as it captures — never held

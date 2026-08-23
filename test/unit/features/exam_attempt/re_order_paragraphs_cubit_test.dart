@@ -58,7 +58,9 @@ void main() {
         initialOrder: _shuffledParagraphs(),
       );
 
-      // onReorderItem's newIndex is already adjusted for the removed item.
+      // newIndex is already adjusted for the removed item (the widget's
+      // ReorderableListView.onReorder handler does that adjustment before
+      // calling this cubit — see ReOrderParagraphsList).
       await cubit.reorder(0, 3);
 
       final captured = verify(

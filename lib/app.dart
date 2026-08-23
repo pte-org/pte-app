@@ -1,16 +1,31 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import 'core/constants/app_dimensions.dart';
 import 'core/constants/app_strings.dart';
+import 'core/storage/dao/answer_outbox_dao.dart';
+import 'core/storage/dao/pending_media_upload_dao.dart';
+import 'core/storage/storage_module.dart';
+import 'core/sync/media_upload_coordinator.dart';
+import 'core/sync/sync_engine.dart';
 import 'core/widgets/loading_view.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
+import 'features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
+import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
+import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'features/exam_attempt/exam_attempt_module.dart';
 import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
 import 'features/live_proctor/domain/live_proctor_access_policy.dart';
 import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
+import 'features/report/report_module.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -23,6 +38,54 @@ class PteApp extends StatelessWidget {
         value: GetIt.instance<AuthBloc>(),
         child: const AppAuthGate(),
       ),
+      routes: kDebugMode
+          ? {
+              '/dev/reading-preview': (_) => _buildReadingTaskPreviewScreen(),
+              '/dev/listening-preview': (_) =>
+                  _buildListeningTaskPreviewScreen(),
+              '/dev/speaking-writing-preview': (_) =>
+                  _buildSpeakingWritingTaskPreviewScreen(),
+            }
+          : const {},
+    );
+  }
+
+  static Widget _buildReadingTaskPreviewScreen() {
+    final getIt = GetIt.instance;
+    return ReadingTaskPreviewScreen(
+      outboxDao: getIt<AnswerOutboxDao>(),
+      syncEngine: getIt<SyncEngine>(),
+      audioRecorderService: getIt<AudioRecorderService>(),
+      mediaDao: getIt<PendingMediaUploadDao>(),
+      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
+    );
+  }
+
+  static Widget _buildListeningTaskPreviewScreen() {
+    final getIt = GetIt.instance;
+    return ListeningTaskPreviewScreen(
+      outboxDao: getIt<AnswerOutboxDao>(),
+      syncEngine: getIt<SyncEngine>(),
+      audioRecorderService: getIt<AudioRecorderService>(),
+      mediaDao: getIt<PendingMediaUploadDao>(),
+      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
+    );
+  }
+
+  static Widget _buildSpeakingWritingTaskPreviewScreen() {
+    final getIt = GetIt.instance;
+    return SpeakingWritingTaskPreviewScreen(
+      outboxDao: getIt<AnswerOutboxDao>(),
+      syncEngine: getIt<SyncEngine>(),
+      audioRecorderService: getIt<AudioRecorderService>(),
+      mediaDao: getIt<PendingMediaUploadDao>(),
+      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      audioPlayerService: getIt<AudioPlayerService>(),
+      examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
 }
@@ -53,7 +116,7 @@ class AppAuthGate extends StatelessWidget {
             AuthAuthenticated(:final claims)
                 when LiveProctorAccessPolicy.canControl(claims) =>
               const ProctorWorkspacePage(),
-            AuthAuthenticated() => const _StudentWorkspacePlaceholder(),
+            AuthAuthenticated() => _StudentWorkspaceWithDevFab(),
           };
         },
       ),
@@ -61,13 +124,50 @@ class AppAuthGate extends StatelessWidget {
   }
 }
 
-class _StudentWorkspacePlaceholder extends StatelessWidget {
-  const _StudentWorkspacePlaceholder();
+/// Wraps the student placeholder with a debug-only FAB column for the three
+/// dev preview screens. Hidden in release builds.
+class _StudentWorkspaceWithDevFab extends StatelessWidget {
+  const _StudentWorkspaceWithDevFab();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text(AppStrings.studentWorkspacePlaceholder)),
+    return Scaffold(
+      body: const Center(child: Text(AppStrings.studentWorkspacePlaceholder)),
+      floatingActionButton: kDebugMode
+          ? _DevFabColumn(onNavigate: (route) => Navigator.of(context).pushNamed(route)),
+        : null,
+    );
+  }
+}
+
+class _DevFabColumn extends StatelessWidget {
+  const _DevFabColumn({required this.onNavigate});
+
+  final void Function(String route) onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: 'dev-reading-preview',
+          onPressed: () => onNavigate('/dev/reading-preview'),
+          child: const Icon(Icons.menu_book),
+        ),
+        const SizedBox(height: AppDimensions.spacingMedium),
+        FloatingActionButton(
+          heroTag: 'dev-listening-preview',
+          onPressed: () => onNavigate('/dev/listening-preview'),
+          child: const Icon(Icons.headphones),
+        ),
+        const SizedBox(height: AppDimensions.spacingMedium),
+        FloatingActionButton(
+          heroTag: 'dev-speaking-writing-preview',
+          onPressed: () => onNavigate('/dev/speaking-writing-preview'),
+          child: const Icon(Icons.mic),
+        ),
+      ],
     );
   }
 }
