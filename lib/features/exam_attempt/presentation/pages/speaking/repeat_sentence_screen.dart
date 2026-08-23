@@ -15,11 +15,11 @@ import '../../../domain/timer_phase.dart';
 import '../../../domain/timer_snapshot.dart';
 import '../../bloc/exam_attempt_bloc.dart';
 import '../../bloc/exam_attempt_state.dart';
-import '../../cubit/recording_phase.dart';
-import '../../cubit/repeat_sentence_cubit.dart';
-import '../../cubit/repeat_sentence_state.dart';
+import '../../cubit/auto_record_cubit.dart';
+import '../../cubit/auto_record_state.dart';
 import '../../widgets/audio_listening_status_card.dart';
 import '../../widgets/auto_advance_on_upload_ready.dart';
+import '../../widgets/auto_record_timer_bridge_mixin.dart';
 import '../../widgets/exam_scaffold.dart';
 import '../../widgets/instruction_text.dart';
 import '../../widgets/recorded_answer_status_card.dart';
@@ -35,9 +35,12 @@ const int _preRecordSeconds = 3;
 
 /// Renders inside the shared exam shell as its injected content region —
 /// builds no top/bottom chrome of its own. Structurally mirrors
-/// `ReadAloudScreen` exactly (same [RepeatSentenceCubit] lifecycle, same
-/// timer-bridge mechanics, same fully-automatic advance) — duplicated, not
-/// shared, per this plan's "extract at the 3rd occurrence" decision.
+/// `ReadAloudScreen` exactly (same [AutoRecordCubit] lifecycle, same
+/// [AutoRecordTimerBridgeMixin] bridge, same fully-automatic advance) —
+/// both now share [AutoRecordCubit]/[AutoRecordState] and the timer-bridge
+/// mixin (unified once Describe Image hit this project's 3-occurrence DRY
+/// threshold); only this screen's body layout (2 always-visible cards vs.
+/// 1) remains screen-specific.
 ///
 /// The `prep` phase here covers the whole real-world "listening" sequence:
 /// pre-listen prep ([_preListenSeconds]) → mocked audio playback → pre-
@@ -68,48 +71,26 @@ class RepeatSentenceScreen extends StatefulWidget {
   State<RepeatSentenceScreen> createState() => _RepeatSentenceScreenState();
 }
 
-class _RepeatSentenceScreenState extends State<RepeatSentenceScreen> {
-  late final RepeatSentenceCubit _cubit;
-  StreamSubscription<ExamAttemptState>? _timerBridgeSubscription;
+class _RepeatSentenceScreenState extends State<RepeatSentenceScreen>
+    with AutoRecordTimerBridgeMixin<RepeatSentenceScreen> {
+  late final AutoRecordCubit _cubit;
 
   @override
   void initState() {
     super.initState();
-    _cubit = RepeatSentenceCubit(
+    _cubit = AutoRecordCubit(
       recorder: widget.recorder,
       mediaDao: widget.mediaDao,
       coordinator: widget.coordinator,
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
     );
-    final bloc = context.read<ExamAttemptBloc>();
-    // Seed from the bloc's current state immediately (covers resuming
-    // mid-task — don't wait for the next ~1s tick), then keep forwarding
-    // for the screen's lifetime.
-    _forwardIfCurrentTask(bloc.state);
-    _timerBridgeSubscription = bloc.stream.listen(_forwardIfCurrentTask);
-  }
-
-  /// Bridges `ExamAttemptBloc`'s clock into the cubit — the single
-  /// authoritative source, never a second timer. Guards on
-  /// `pinnedItemPublicId` matching this screen's own task:
-  /// `TaskTypeDispatcher` defers the outgoing screen's `dispose()` to
-  /// end-of-frame while the bloc's next-task emission is delivered via
-  /// microtask, so a stale screen's subscription can otherwise receive the
-  /// *new* task's first snapshot before its own teardown runs — reachable
-  /// via proctor-forced/rejected-submission advances, which bypass the
-  /// recorded/upload gate that makes the normal advance path safe (the same
-  /// CRITICAL bug class already fixed once for `ReadAloudScreen`; this
-  /// guard is mandatory, not optional).
-  void _forwardIfCurrentTask(ExamAttemptState state) {
-    if (state is! AttemptInProgress) return;
-    if (state.task.pinnedItemPublicId != widget.task.pinnedItemPublicId) return;
-    _cubit.onTimerSnapshot(state.timerSnapshot);
+    startAutoRecordBridge(task: widget.task, cubit: _cubit);
   }
 
   @override
   void dispose() {
-    unawaited(_timerBridgeSubscription?.cancel());
+    disposeAutoRecordBridge();
     unawaited(_cubit.close());
     super.dispose();
   }
@@ -124,7 +105,7 @@ class _RepeatSentenceScreenState extends State<RepeatSentenceScreen> {
         // Renders nothing — advancing is fully automatic, driven by
         // AutoAdvanceOnUploadReady's own BlocListener once the upload is
         // ready.
-        bottomAction: AutoAdvanceOnUploadReady<RepeatSentenceCubit, RepeatSentenceState>(
+        bottomAction: AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
           pinnedItemPublicId: widget.task.pinnedItemPublicId,
           syncEngine: widget.syncEngine,
         ),
@@ -145,7 +126,7 @@ class _RepeatSentenceBody extends StatelessWidget {
       child: BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
         selector: (state) => state is AttemptInProgress ? state.timerSnapshot : null,
         builder: (context, snapshot) {
-          return BlocBuilder<RepeatSentenceCubit, RepeatSentenceState>(
+          return BlocBuilder<AutoRecordCubit, AutoRecordState>(
             builder: (context, state) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +201,7 @@ class _RecordCard extends StatelessWidget {
   const _RecordCard({required this.task, required this.recordingState, required this.snapshot});
 
   final TaskView task;
-  final RepeatSentenceState recordingState;
+  final AutoRecordState recordingState;
   final TimerSnapshot? snapshot;
 
   @override

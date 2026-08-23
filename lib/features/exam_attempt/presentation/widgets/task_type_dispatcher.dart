@@ -12,6 +12,7 @@ import '../pages/fill_blanks_dropdown_screen.dart';
 import '../pages/mc_reading_multiple_screen.dart';
 import '../pages/mc_reading_single_screen.dart';
 import '../pages/re_order_paragraphs_screen.dart';
+import '../pages/speaking/describe_image_screen.dart';
 import '../pages/speaking/read_aloud_screen.dart';
 import '../pages/speaking/repeat_sentence_screen.dart';
 import '../pages/writing/write_essay_screen.dart';
@@ -24,6 +25,7 @@ const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeReadAloud = 'READ_ALOUD';
 const String _taskTypeRepeatSentence = 'REPEAT_SENTENCE';
+const String _taskTypeDescribeImage = 'DESCRIBE_IMAGE';
 
 /// Switches on `TaskView.taskType` to select the right task screen.
 class TaskTypeDispatcher extends StatelessWidget {
@@ -109,6 +111,15 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
       ),
       _taskTypeRepeatSentence => RepeatSentenceScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        recorder: audioRecorderService,
+        mediaDao: mediaDao,
+        coordinator: mediaUploadCoordinator,
+        syncEngine: syncEngine,
+      ),
+      _taskTypeDescribeImage => DescribeImageScreen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,

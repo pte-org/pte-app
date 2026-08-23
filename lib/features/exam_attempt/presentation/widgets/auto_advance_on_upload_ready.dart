@@ -20,8 +20,9 @@ import '../cubit/upload_tracking_state.dart';
 /// `StateStreamable<S>` is `flutter_bloc`'s own bound (the same one
 /// `BlocListener<B extends StateStreamable<S>, S>` itself uses), so this
 /// isn't a new abstraction, just reusing the library's existing
-/// generalization mechanism. Shared by `ReadAloudCubit`/`ReadAloudState`
-/// and `RepeatSentenceCubit`/`RepeatSentenceState`.
+/// generalization mechanism. Bound by `AutoRecordCubit`/`AutoRecordState`
+/// through one shared binding used by every auto-record speaking screen
+/// (Read Aloud, Repeat Sentence, Describe Image).
 class AutoAdvanceOnUploadReady<C extends StateStreamable<S>, S extends UploadTrackingState>
     extends StatefulWidget {
   const AutoAdvanceOnUploadReady({super.key, required this.pinnedItemPublicId, required this.syncEngine});

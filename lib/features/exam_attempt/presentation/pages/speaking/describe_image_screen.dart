@@ -21,19 +21,19 @@ import '../../widgets/auto_record_status_card.dart';
 import '../../widgets/auto_record_timer_bridge_mixin.dart';
 import '../../widgets/exam_scaffold.dart';
 import '../../widgets/instruction_text.dart';
+import '../../widgets/task_image_display.dart';
 
-/// Renders inside Phase 4's shared shell as the shell's injected content
-/// region — builds no top/bottom chrome of its own (phase-05/06 Design
-/// Constraints). The [AutoRecordCubit] is created in [initState] and closed
-/// in [dispose]. Recording is fully automatic — driven by
-/// [AutoRecordTimerBridgeMixin] bridging `ExamAttemptBloc`'s [TimerSnapshot]
-/// into the cubit — there is no manual start/stop control, no Skip button,
-/// and (via [AutoAdvanceOnUploadReady]) no manual "Next" tap either: once
-/// the response window ends and the recording finishes uploading, the
-/// attempt advances to the next task on its own, matching real PTE
-/// speaking-task behavior.
-class ReadAloudScreen extends StatefulWidget {
-  const ReadAloudScreen({
+/// Renders inside the shared exam shell as its injected content region —
+/// builds no top/bottom chrome of its own. Structurally mirrors
+/// `ReadAloudScreen` exactly (same [AutoRecordCubit] lifecycle, same
+/// [AutoRecordTimerBridgeMixin] bridge, same [AutoRecordStatusCard], same
+/// fully-automatic advance) — the only real difference is the body's
+/// content: a 2-variable instruction template (interpolating both
+/// `task.prepSeconds` and `task.responseSeconds`, unlike Read Aloud's
+/// response-only template) and a displayed image (via [TaskImageDisplay])
+/// instead of a scrollable passage.
+class DescribeImageScreen extends StatefulWidget {
+  const DescribeImageScreen({
     super.key,
     required this.task,
     required this.attemptPublicId,
@@ -51,10 +51,11 @@ class ReadAloudScreen extends StatefulWidget {
   final SyncEngine syncEngine;
 
   @override
-  State<ReadAloudScreen> createState() => _ReadAloudScreenState();
+  State<DescribeImageScreen> createState() => _DescribeImageScreenState();
 }
 
-class _ReadAloudScreenState extends State<ReadAloudScreen> with AutoRecordTimerBridgeMixin<ReadAloudScreen> {
+class _DescribeImageScreenState extends State<DescribeImageScreen>
+    with AutoRecordTimerBridgeMixin<DescribeImageScreen> {
   late final AutoRecordCubit _cubit;
 
   @override
@@ -83,8 +84,8 @@ class _ReadAloudScreenState extends State<ReadAloudScreen> with AutoRecordTimerB
       value: _cubit,
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
-        body: _ReadAloudBody(task: widget.task),
-        // Renders nothing — advancing is fully automatic now, driven by
+        body: _DescribeImageBody(task: widget.task),
+        // Renders nothing — advancing is fully automatic, driven by
         // AutoAdvanceOnUploadReady's own BlocListener once the upload is
         // ready.
         bottomAction: AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
@@ -96,8 +97,8 @@ class _ReadAloudScreenState extends State<ReadAloudScreen> with AutoRecordTimerB
   }
 }
 
-class _ReadAloudBody extends StatelessWidget {
-  const _ReadAloudBody({required this.task});
+class _DescribeImageBody extends StatelessWidget {
+  const _DescribeImageBody({required this.task});
 
   final TaskView task;
 
@@ -113,15 +114,11 @@ class _ReadAloudBody extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InstructionText(text: _instructionText(task.responseSeconds)),
+                  InstructionText(text: _instructionText(task.prepSeconds, task.responseSeconds)),
                   const SizedBox(height: AppDimensions.spacingMedium),
                   AutoRecordStatusCard(task: task, recordingState: state, snapshot: snapshot),
                   const SizedBox(height: AppDimensions.spacingMedium),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(task.promptText ?? '', style: const TextStyle(color: AppColors.textPrimary)),
-                    ),
-                  ),
+                  Expanded(child: SingleChildScrollView(child: _ImageRegion(imageUrl: task.imagePromptRef))),
                 ],
               );
             },
@@ -131,9 +128,30 @@ class _ReadAloudBody extends StatelessWidget {
     );
   }
 
-  String _instructionText(int responseSeconds) {
-    return '${AppStrings.readAloudInstructionPrefix}$responseSeconds'
-        '${AppStrings.readAloudInstructionMiddle}$responseSeconds'
-        '${AppStrings.readAloudInstructionSuffix}';
+  String _instructionText(int prepSeconds, int responseSeconds) {
+    return '${AppStrings.describeImageInstructionPrefix}$prepSeconds'
+        '${AppStrings.describeImageInstructionMiddle}$responseSeconds'
+        '${AppStrings.describeImageInstructionSuffix}';
+  }
+}
+
+/// A real `DESCRIBE_IMAGE` task always carries an image per PTE's task
+/// definition — a `null` [imageUrl] here is treated as a fixture/data
+/// error, not a normal runtime state to design deeply around, but it must
+/// still never crash the screen.
+class _ImageRegion extends StatelessWidget {
+  const _ImageRegion({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url == null) {
+      return Center(
+        child: Text(AppStrings.taskImageMissingLabel, style: const TextStyle(color: AppColors.textPrimary)),
+      );
+    }
+    return TaskImageDisplay(imageUrl: url);
   }
 }

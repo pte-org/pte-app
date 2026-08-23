@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/storage/app_database.dart';
 import '../../../../core/storage/dao/pending_media_upload_dao.dart';
@@ -9,22 +11,28 @@ import '../../../../core/sync/media_upload_coordinator.dart';
 import '../../domain/audio_recorder_service.dart';
 import '../../domain/timer_phase.dart';
 import '../../domain/timer_snapshot.dart';
-import 'read_aloud_cubit.dart' show resolveReadAloudFilePath;
-import 'recording_phase.dart';
-import 'repeat_sentence_state.dart';
+import 'auto_record_state.dart';
+
+/// Resolves the local temp-file path a recording for `(attemptPublicId,
+/// pinnedItemPublicId)` is written to — deterministic per key so a
+/// restart can locate the same file (phase-06 Design Constraints).
+Future<String> resolveRecordingFilePath(String attemptPublicId, String pinnedItemPublicId) async {
+  final dir = await getTemporaryDirectory();
+  return p.join(dir.path, '${attemptPublicId}_$pinnedItemPublicId.wav');
+}
 
 /// Owns start/stop recording and observes the resulting
 /// `PendingMediaUploadTable` row's progress through
 /// [MediaUploadCoordinator]'s pipeline. Never calls `SyncEngine.flushOne`
-/// itself — that stays `AutoAdvanceOnUploadReady`'s job once
-/// [RepeatSentenceState.uploadStatus] reaches [PendingMediaUploadStatus.ready].
+/// itself — that stays the advance button's job once [AutoRecordState.uploadStatus]
+/// reaches [PendingMediaUploadStatus.ready] (phase-06 Design Constraints).
 ///
-/// Mirrors `ReadAloudCubit`'s mechanics exactly (duplicated, not shared —
-/// this is only the 2nd auto-record cubit, below this project's
-/// 3-occurrence DRY threshold; extract a shared base/mixin if a 3rd lands,
-/// e.g. Describe Image or Retell Lecture, not before).
-class RepeatSentenceCubit extends Cubit<RepeatSentenceState> {
-  RepeatSentenceCubit({
+/// Shared by every auto-record speaking task's screen (Read Aloud, Repeat
+/// Sentence, Describe Image) — mechanically identical across all of them
+/// (this project's 3-occurrence DRY threshold was hit when Describe Image
+/// landed, unifying what were previously two duplicated cubits).
+class AutoRecordCubit extends Cubit<AutoRecordState> {
+  AutoRecordCubit({
     required AudioRecorderService recorder,
     required PendingMediaUploadDao mediaDao,
     required MediaUploadCoordinator coordinator,
@@ -34,8 +42,8 @@ class RepeatSentenceCubit extends Cubit<RepeatSentenceState> {
   }) : _recorder = recorder,
        _mediaDao = mediaDao,
        _coordinator = coordinator,
-       _resolveFilePath = resolveFilePath ?? resolveReadAloudFilePath,
-       super(const RepeatSentenceState()) {
+       _resolveFilePath = resolveFilePath ?? resolveRecordingFilePath,
+       super(const AutoRecordState()) {
     _rowSubscription = _mediaDao.watchRow(attemptPublicId, pinnedItemPublicId).listen((row) {
       emit(state.copyWith(uploadStatus: row == null ? null : PendingMediaUploadStatus.values.byName(row.status)));
     });
@@ -69,12 +77,10 @@ class RepeatSentenceCubit extends Cubit<RepeatSentenceState> {
   /// check). Never derives its own deadline from `TaskView` — `TimerService`
   /// is the single authoritative clock in the app (its own doc comment says
   /// "not two independent timer mechanisms"), so this only ever reacts to
-  /// what it's handed. The `prep` phase here covers the whole real-world
-  /// "listening" sequence (pre-listen prep + mocked audio playback +
-  /// pre-record prep, rendered as one continuous countdown — see
-  /// `AudioListeningStatusCard`) — this cubit doesn't need to know about
-  /// that sub-structure at all, only that `response` means "start
-  /// recording now."
+  /// what it's handed. For tasks whose `prep` phase covers a multi-stage
+  /// sub-sequence (e.g. Repeat Sentence's listen-then-prep-to-record), this
+  /// cubit doesn't need to know about that sub-structure at all — only that
+  /// `response` means "start recording now."
   ///
   /// The `remaining <= Duration.zero` stop check relies on `TimerService`'s
   /// `_nonNegative` clamp always keeping `remaining` at exactly zero (never
@@ -104,7 +110,8 @@ class RepeatSentenceCubit extends Cubit<RepeatSentenceState> {
     if (path == null) {
       // A failed re-record attempt must not discard a prior successful
       // recording's `recorded` phase — only fall back to `idle` if there
-      // wasn't one already (matches `ReadAloudCubit`'s behavior).
+      // wasn't one already (matches the pre-refactor boolean behavior:
+      // `hasRecorded` was left untouched here).
       if (state.recordingPhase != RecordingPhase.recorded) {
         emit(state.copyWith(recordingPhase: RecordingPhase.idle));
       }

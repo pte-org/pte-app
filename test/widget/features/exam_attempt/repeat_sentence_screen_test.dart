@@ -30,8 +30,8 @@ class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
-/// `RepeatSentenceScreen` constructs its own `RepeatSentenceCubit`
-/// internally using the real `resolveReadAloudFilePath`, which calls
+/// `RepeatSentenceScreen` constructs its own `AutoRecordCubit`
+/// internally using the real `resolveRecordingFilePath`, which calls
 /// `path_provider` — no platform channel handler is registered in the
 /// widget-test environment by default, so `getTemporaryDirectory()` throws
 /// `MissingPluginException` unless this fake is installed. The path never

@@ -27,4 +27,9 @@ class AppDimensions {
 
   static const double audioListeningMeterHeight = 2.0;
   static const double audioListeningDotSize = 12.0;
+
+  /// Bounded height `TaskImageDisplay` renders inside — required for
+  /// `Image.network`'s `loadingBuilder` (`CircularProgressIndicator`) to
+  /// lay out correctly before the real image's intrinsic size is known.
+  static const double taskImageDisplayHeight = 240.0;
 }

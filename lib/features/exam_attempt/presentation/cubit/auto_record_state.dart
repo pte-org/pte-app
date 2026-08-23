@@ -4,8 +4,13 @@ import '../../../../core/storage/pending_media_upload_status.dart';
 import 'recording_phase.dart';
 import 'upload_tracking_state.dart';
 
-class RepeatSentenceState extends Equatable implements UploadTrackingState {
-  const RepeatSentenceState({this.recordingPhase = RecordingPhase.idle, this.uploadStatus});
+export 'recording_phase.dart';
+
+/// Shared by every auto-record speaking task's screen (Read Aloud, Repeat
+/// Sentence, Describe Image) — a single state shape for [AutoRecordCubit],
+/// since none of these tasks' recording mechanics differ.
+class AutoRecordState extends Equatable implements UploadTrackingState {
+  const AutoRecordState({this.recordingPhase = RecordingPhase.idle, this.uploadStatus});
 
   final RecordingPhase recordingPhase;
 
@@ -14,8 +19,8 @@ class RepeatSentenceState extends Equatable implements UploadTrackingState {
   @override
   final PendingMediaUploadStatus? uploadStatus;
 
-  RepeatSentenceState copyWith({RecordingPhase? recordingPhase, PendingMediaUploadStatus? uploadStatus}) {
-    return RepeatSentenceState(
+  AutoRecordState copyWith({RecordingPhase? recordingPhase, PendingMediaUploadStatus? uploadStatus}) {
+    return AutoRecordState(
       recordingPhase: recordingPhase ?? this.recordingPhase,
       uploadStatus: uploadStatus ?? this.uploadStatus,
     );

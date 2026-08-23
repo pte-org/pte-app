@@ -11,19 +11,20 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_cubit.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/read_aloud_state.dart';
+import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_cubit.dart';
+import 'package:pte_app/features/exam_attempt/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/auto_advance_on_upload_ready.dart';
 
-// Exercised via one concrete binding, AutoAdvanceOnUploadReady<ReadAloudCubit,
-// ReadAloudState> — the generic widget has no logic that varies by type
-// parameter (RepeatSentenceScreen's own screen-level test exercises the
-// RepeatSentenceCubit/RepeatSentenceState binding separately).
+// Exercised via one concrete binding, AutoAdvanceOnUploadReady<AutoRecordCubit,
+// AutoRecordState> — the generic widget has no logic that varies by type
+// parameter, and since Read Aloud, Repeat Sentence, and Describe Image all
+// share the same AutoRecordCubit/AutoRecordState now, one binding covers
+// all three screens' usage.
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
-class _MockReadAloudCubit extends MockCubit<ReadAloudState> implements ReadAloudCubit {}
+class _MockAutoRecordCubit extends MockCubit<AutoRecordState> implements AutoRecordCubit {}
 
 void main() {
   setUpAll(() {
@@ -32,14 +33,14 @@ void main() {
 
   late _MockExamAttemptBloc bloc;
   late _MockSyncEngine syncEngine;
-  late _MockReadAloudCubit readAloudCubit;
-  late StreamController<ReadAloudState> cubitStateController;
+  late _MockAutoRecordCubit autoRecordCubit;
+  late StreamController<AutoRecordState> cubitStateController;
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
     syncEngine = _MockSyncEngine();
-    readAloudCubit = _MockReadAloudCubit();
-    cubitStateController = StreamController<ReadAloudState>.broadcast();
+    autoRecordCubit = _MockAutoRecordCubit();
+    cubitStateController = StreamController<AutoRecordState>.broadcast();
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
   });
 
@@ -49,10 +50,10 @@ void main() {
     return MaterialApp(
       home: BlocProvider<ExamAttemptBloc>.value(
         value: bloc,
-        child: BlocProvider<ReadAloudCubit>.value(
-          value: readAloudCubit,
+        child: BlocProvider<AutoRecordCubit>.value(
+          value: autoRecordCubit,
           child: Scaffold(
-            body: AutoAdvanceOnUploadReady<ReadAloudCubit, ReadAloudState>(
+            body: AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
               pinnedItemPublicId: 'item-1',
               syncEngine: syncEngine,
             ),
@@ -62,14 +63,14 @@ void main() {
     );
   }
 
-  void stubCubitState(ReadAloudState initial) {
-    when(() => readAloudCubit.state).thenReturn(initial);
-    whenListen(readAloudCubit, cubitStateController.stream, initialState: initial);
+  void stubCubitState(AutoRecordState initial) {
+    when(() => autoRecordCubit.state).thenReturn(initial);
+    whenListen(autoRecordCubit, cubitStateController.stream, initialState: initial);
   }
 
   group('AutoAdvanceOnUploadReady — advances on its own once ready, no tap required', () {
     testWidgets('renders nothing while not yet ready, and never advances', (tester) async {
-      stubCubitState(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.uploading));
+      stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
 
       await tester.pumpWidget(buildSubject());
       await tester.pump();
@@ -82,10 +83,10 @@ void main() {
       'the moment uploadStatus transitions to ready, flushOne is called then NextTaskRequested is dispatched — '
       'automatically, with no user interaction',
       (tester) async {
-        stubCubitState(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.uploading));
+        stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
         await tester.pumpWidget(buildSubject());
 
-        cubitStateController.add(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.ready));
+        cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
         await tester.pump();
         await tester.pump();
 
@@ -95,17 +96,17 @@ void main() {
     );
 
     testWidgets('a later unrelated rebuild while already ready never advances a second time', (tester) async {
-      stubCubitState(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.uploading));
+      stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
       await tester.pumpWidget(buildSubject());
 
-      cubitStateController.add(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.ready));
+      cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
       await tester.pump();
       await tester.pump();
 
       // Same uploadStatus emitted again (e.g. an unrelated recordingPhase
       // no-op re-emission) — listenWhen only fires on the not-ready->ready
       // transition, so this must not trigger a second advance.
-      cubitStateController.add(const ReadAloudState(uploadStatus: PendingMediaUploadStatus.ready));
+      cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
       await tester.pump();
       await tester.pump();
 

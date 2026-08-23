@@ -42,6 +42,13 @@ class AppStrings {
   static const String recordingStillUploadingLabel = 'Still uploading…';
   static const String recordingUploadReadyLabel = 'Uploaded — ready to continue.';
 
+  static const String describeImageInstructionPrefix = 'Look at the image below. In ';
+  static const String describeImageInstructionMiddle =
+      ' seconds, please speak into the microphone and describe in detail what the image is showing. You will have ';
+  static const String describeImageInstructionSuffix = ' seconds to give your response.';
+  static const String taskImageLoadErrorLabel = 'Image failed to load.';
+  static const String taskImageMissingLabel = 'No image available for this task.';
+
   static const String repeatSentenceInstructionText =
       'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the sentence '
       'only once.';

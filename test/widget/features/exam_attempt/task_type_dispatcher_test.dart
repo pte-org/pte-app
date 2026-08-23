@@ -36,7 +36,7 @@ class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {
 class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
 
 /// `RepeatSentenceScreen`/`ReadAloudScreen` construct their own cubit
-/// internally using the real `resolveReadAloudFilePath`, which calls
+/// internally using the real `resolveRecordingFilePath`, which calls
 /// `path_provider` — no platform channel handler is registered in the
 /// widget-test environment by default, so `getTemporaryDirectory()` throws
 /// `MissingPluginException` unless this fake is installed.
@@ -57,6 +57,23 @@ TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {
     responseSeconds: 15,
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
     responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
+    serverNow: DateTime(2026, 1, 1),
+  );
+}
+
+TaskView _describeImageTask({required String pinnedItemPublicId}) {
+  return TaskView(
+    pinnedItemPublicId: pinnedItemPublicId,
+    orderIndex: 1,
+    totalTasks: 5,
+    section: 'SPEAKING',
+    taskType: 'DESCRIBE_IMAGE',
+    title: 'Task title',
+    imagePromptRef: 'https://example.com/img.png',
+    prepSeconds: 25,
+    responseSeconds: 40,
+    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
+    responseDeadline: DateTime(2026, 1, 1, 0, 1, 5),
     serverNow: DateTime(2026, 1, 1),
   );
 }
@@ -232,7 +249,7 @@ void main() {
 
   group('TaskTypeDispatcher — REPEAT_SENTENCE routing', () {
     testWidgets('routes to RepeatSentenceScreen, not the unsupported-task-type placeholder', (tester) async {
-      // RepeatSentenceScreen constructs a RepeatSentenceCubit internally,
+      // RepeatSentenceScreen constructs an AutoRecordCubit internally,
       // which subscribes to PendingMediaUploadDao.watchRow immediately in
       // its constructor — needs a stub even though this test never asserts
       // on upload status.
@@ -250,6 +267,30 @@ void main() {
         find.text(
           'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
           'sentence only once.',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('TaskTypeDispatcher — DESCRIBE_IMAGE routing', () {
+    testWidgets('routes to DescribeImageScreen, not the unsupported-task-type placeholder', (tester) async {
+      // DescribeImageScreen constructs an AutoRecordCubit internally, which
+      // subscribes to PendingMediaUploadDao.watchRow immediately in its
+      // constructor — needs a stub even though this test never asserts on
+      // upload status.
+      when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+      // A different pinnedItemPublicId than the default stubbed bloc
+      // state's task ('item-1') so the timer-bridge identity guard never
+      // matches — this test only checks routing/rendering, not auto-record
+      // behavior, so no recorder stub is set up here.
+      await tester.pumpWidget(buildSubject(_describeImageTask(pinnedItemPublicId: 'item-99')));
+
+      expect(find.textContaining('Unsupported task type'), findsNothing);
+      expect(
+        find.text(
+          'Look at the image below. In 25 seconds, please speak into the microphone and describe in detail '
+          'what the image is showing. You will have 40 seconds to give your response.',
         ),
         findsOneWidget,
       );
