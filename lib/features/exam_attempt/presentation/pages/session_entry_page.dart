@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/network/friendly_error_message.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../bloc/exam_attempt_bloc.dart';
 import '../bloc/exam_attempt_event.dart';
@@ -45,7 +46,7 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
       body: BlocConsumer<ExamAttemptBloc, ExamAttemptState>(
         listener: (context, state) {
           if (state is AttemptError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error.toString())));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(state.error))));
           }
         },
         builder: (context, state) {

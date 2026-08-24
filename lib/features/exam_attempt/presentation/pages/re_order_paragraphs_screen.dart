@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/task_view.dart';
 import '../cubit/re_order_paragraphs_cubit.dart';
 import '../widgets/exam_scaffold.dart';
 import '../widgets/re_order_paragraphs_list.dart';
+import '../widgets/reading_content_card.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
 import '../widgets/task_advance_button.dart';
@@ -41,14 +43,17 @@ class ReOrderParagraphsScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ReadingTaskHeaderBanner(
-                title: readingTaskHeaderTitle(task.taskType),
-                instruction: readingTaskInstruction(task.taskType),
-              ),
-              const Expanded(child: ReOrderParagraphsList()),
-            ],
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ReadingTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
+                ),
+                const Expanded(child: ReadingContentCard(child: ReOrderParagraphsList())),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<ReOrderParagraphsCubit>(),
