@@ -122,8 +122,9 @@ void main() {
     });
   });
 
-  group('flushPendingEdit — intentional no-op (discrete drop needs no debounce flush)', () {
-    test('does not throw and does not trigger an extra upsertAnswer call', () async {
+  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+      'must still leave a submittable row)', () {
+    test('with no prior reorder, writes the untouched server-shuffled order as the payload', () async {
       final cubit = ReOrderParagraphsCubit(
         outboxDao: outboxDao,
         attemptPublicId: 'attempt-1',
@@ -133,13 +134,13 @@ void main() {
 
       await cubit.flushPendingEdit();
 
-      verifyNever(
+      verify(
         () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'item-1',
+          payload: '3,0,1,2',
         ),
-      );
+      ).called(1);
 
       await cubit.close();
     });
