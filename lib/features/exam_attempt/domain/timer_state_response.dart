@@ -8,7 +8,6 @@ import 'timer_phase.dart';
 /// Constraints).
 class TimerStateResponse {
   const TimerStateResponse({
-    required this.attemptPublicId,
     required this.phase,
     required this.currentOrderIndex,
     required this.prepDeadline,
@@ -16,7 +15,6 @@ class TimerStateResponse {
     required this.serverNow,
   });
 
-  final String attemptPublicId;
   final TimerPhase phase;
   final int currentOrderIndex;
   final DateTime prepDeadline;
@@ -25,7 +23,6 @@ class TimerStateResponse {
 
   factory TimerStateResponse.fromJson(Map<String, dynamic> json) {
     return TimerStateResponse(
-      attemptPublicId: json['attemptPublicId'] as String,
       phase: _phaseFromWire(json['phase'] as String),
       currentOrderIndex: json['currentOrderIndex'] as int,
       prepDeadline: DateTime.parse(json['prepDeadline'] as String),
