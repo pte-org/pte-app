@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/blank_prompt_parser.dart';
@@ -8,6 +9,7 @@ import '../../domain/task_view.dart';
 import '../cubit/fill_blanks_drag_drop_cubit.dart';
 import '../widgets/exam_scaffold.dart';
 import '../widgets/fill_blanks_drag_drop_body.dart';
+import '../widgets/reading_content_card.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
 import '../widgets/task_advance_button.dart';
@@ -42,14 +44,17 @@ class FillBlanksDragDropScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ReadingTaskHeaderBanner(
-                title: readingTaskHeaderTitle(task.taskType),
-                instruction: readingTaskInstruction(task.taskType),
-              ),
-              Expanded(child: FillBlanksDragDropBody(task: task)),
-            ],
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ReadingTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
+                ),
+                Expanded(child: ReadingContentCard(child: FillBlanksDragDropBody(task: task))),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<FillBlanksDragDropCubit>(),

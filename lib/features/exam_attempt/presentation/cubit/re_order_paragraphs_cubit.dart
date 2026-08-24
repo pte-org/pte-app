@@ -41,8 +41,17 @@ class ReOrderParagraphsCubit extends TaskAnswerCubit<ReOrderParagraphsState> {
 
   @override
   Future<void> flushPendingEdit() async {
-    // Each reorder already writes immediately — nothing left to flush.
-    // Implemented as a no-op (not omitted) so the shared advance button can
-    // call every task-type cubit uniformly through `FlushableAnswerCubit`.
+    // Every reorder already writes immediately, but if the student never
+    // touches this task at all (skips straight to Next), no outbox row
+    // exists yet — write the current state (the server-shuffled order,
+    // unchanged) unconditionally so `SyncEngine.flushOne` always has a row
+    // to submit, matching real PTE's "leave it as shown, it's just scored
+    // wrong" rather than leaving the advance button stuck with nothing to
+    // flush.
+    await _outboxDao.upsertAnswer(
+      attemptPublicId: attemptPublicId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: state.currentOrder.map((option) => option.orderIndex).join(','),
+    );
   }
 }

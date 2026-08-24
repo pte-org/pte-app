@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/dao/answer_outbox_dao.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../domain/task_view.dart';
 import '../cubit/mc_reading_multiple_cubit.dart';
 import '../widgets/exam_scaffold.dart';
 import '../widgets/mc_multiple_option_list.dart';
+import '../widgets/reading_content_card.dart';
 import '../widgets/reading_passage_layout.dart';
 import '../widgets/reading_task_header_banner.dart';
 import '../widgets/reading_task_header_labels.dart';
@@ -39,19 +41,24 @@ class McReadingMultipleScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ReadingTaskHeaderBanner(
-                title: readingTaskHeaderTitle(task.taskType),
-                instruction: readingTaskInstruction(task.taskType),
-              ),
-              Expanded(
-                child: ReadingPassageLayout(
-                  passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
-                  interactive: McMultipleOptionList(options: task.options ?? const []),
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ReadingTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: ReadingContentCard(
+                    child: ReadingPassageLayout(
+                      passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
+                      interactive: McMultipleOptionList(options: task.options ?? const []),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<McReadingMultipleCubit>(),
