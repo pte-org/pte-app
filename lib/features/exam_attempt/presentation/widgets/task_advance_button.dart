@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/sync/sync_engine.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -58,7 +60,41 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
     return BlocListener<ExamAttemptBloc, ExamAttemptState>(
       listenWhen: (previous, current) => !_isExpired(previous) && _isExpired(current),
       listener: (context, state) => _advance(reason: AdvanceReason.timeExpired),
-      child: PrimaryButton(label: AppStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 240),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.taskAdvanceWarningIcon,
+                  size: AppDimensions.taskAdvanceWarningIconSize,
+                ),
+                const SizedBox(width: AppDimensions.spacingMedium / 4),
+                Flexible(
+                  child: Text(
+                    AppStrings.taskAdvanceUnansweredNote,
+                    textAlign: TextAlign.start,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.onPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppDimensions.spacingMedium),
+          PrimaryButton(label: AppStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
+        ],
+      ),
     );
   }
 }

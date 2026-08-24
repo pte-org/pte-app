@@ -10,56 +10,80 @@ import '../../../../core/constants/app_dimensions.dart';
 /// chrome, never a replacement for `ExamAppBar`'s timer/phase/force-submit
 /// row.
 class ReadingTaskHeaderBanner extends StatelessWidget {
-  const ReadingTaskHeaderBanner({super.key, required this.title, this.instruction});
+  const ReadingTaskHeaderBanner({
+    super.key,
+    required this.title,
+    this.instruction,
+  });
 
   final String title;
   final String? instruction;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: AppDimensions.readingHeaderBannerPaddingVertical,
-        horizontal: AppDimensions.readingHeaderBannerPaddingHorizontal,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.readingContentCardMargin,
+        AppDimensions.readingContentCardMargin,
+        AppDimensions.readingContentCardMargin,
+        0,
       ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.readingHeaderGradientStart, AppColors.readingHeaderGradientEnd],
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          vertical: AppDimensions.readingHeaderBannerPaddingVertical,
+          horizontal: AppDimensions.readingHeaderBannerPaddingHorizontal,
         ),
-        borderRadius: BorderRadius.circular(AppDimensions.readingHeaderBannerRadius),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.star, color: AppColors.onPrimary, size: AppDimensions.readingHeaderStarIconSize),
-          const SizedBox(width: AppDimensions.spacingMedium),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.onPrimary,
-                    fontSize: AppDimensions.readingHeaderTitleFontSize,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (instruction != null && instruction!.isNotEmpty) ...[
-                  const SizedBox(height: AppDimensions.readingHeaderInstructionSpacing),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              AppColors.readingHeaderGradientStart,
+              AppColors.readingHeaderGradientEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(
+            AppDimensions.readingHeaderBannerRadius,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.star,
+              color: AppColors.onPrimary,
+              size: AppDimensions.readingHeaderStarIconSize,
+            ),
+            const SizedBox(width: AppDimensions.spacingMedium),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    instruction!,
+                    title,
                     style: const TextStyle(
                       color: AppColors.onPrimary,
-                      fontSize: AppDimensions.readingHeaderInstructionFontSize,
+                      fontSize: AppDimensions.readingHeaderTitleFontSize,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (instruction != null && instruction!.isNotEmpty) ...[
+                    const SizedBox(
+                      height: AppDimensions.readingHeaderInstructionSpacing,
+                    ),
+                    Text(
+                      instruction!,
+                      style: const TextStyle(
+                        color: AppColors.onPrimary,
+                        fontSize:
+                            AppDimensions.readingHeaderInstructionFontSize,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
