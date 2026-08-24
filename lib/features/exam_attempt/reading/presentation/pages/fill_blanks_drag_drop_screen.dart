@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/blank_prompt_parser.dart';
@@ -8,6 +9,7 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_drag_drop_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_drag_drop_body.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_content_card.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
@@ -42,11 +44,17 @@ class FillBlanksDragDropScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
-              Expanded(child: FillBlanksDragDropBody(task: task)),
-            ],
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ExamTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
+                ),
+                Expanded(child: ReadingContentCard(child: FillBlanksDragDropBody(task: task))),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<FillBlanksDragDropCubit>(),

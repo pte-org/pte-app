@@ -280,6 +280,112 @@ void main() {
     },
   );
 
+  group('AdvanceReason / AttemptCompleted.timeExpired (auto time\'s-up)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a normal NextTaskRequested() (default reason) that completes the attempt emits AttemptCompleted(timeExpired: false)',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
+          (_) async => const AttemptTaskResponse(attemptPublicId: 'attempt-1', attemptStatus: 'COMPLETED', completed: true),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const NextTaskRequested());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptCompleted>()],
+      verify: (bloc) {
+        final completed = bloc.state as AttemptCompleted;
+        expect(completed.timeExpired, isFalse);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a NextTaskRequested(reason: timeExpired) that completes the attempt emits AttemptCompleted(timeExpired: true)',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
+          (_) async => const AttemptTaskResponse(attemptPublicId: 'attempt-1', attemptStatus: 'COMPLETED', completed: true),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const NextTaskRequested(reason: AdvanceReason.timeExpired));
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptCompleted>()],
+      verify: (bloc) {
+        final completed = bloc.state as AttemptCompleted;
+        expect(completed.timeExpired, isTrue);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'ForceSubmitRequested always emits AttemptCompleted(timeExpired: false), even right after a timeExpired advance '
+      'left the reason set (force-submit is always user-initiated)',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-1'),
+          ),
+        );
+        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-2'),
+          ),
+        );
+        when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {});
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        // A timeExpired advance that does NOT itself complete the attempt
+        // (there's a next task) — its reason must not leak into a later,
+        // unrelated ForceSubmitRequested completion.
+        bloc.add(const NextTaskRequested(reason: AdvanceReason.timeExpired));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptCompleted>(),
+      ],
+      verify: (bloc) {
+        final completed = bloc.state as AttemptCompleted;
+        expect(completed.timeExpired, isFalse);
+      },
+    );
+  });
+
   group('ForceSubmitRequested (Step 10)', () {
     blocTest<ExamAttemptBloc, ExamAttemptState>(
       'dispatched from AttemptInProgress transitions to AttemptCompleted on a successful forceSubmit(), '

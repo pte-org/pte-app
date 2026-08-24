@@ -41,9 +41,16 @@ class McReadingMultipleCubit extends TaskAnswerCubit<McReadingMultipleState> {
 
   @override
   Future<void> flushPendingEdit() async {
-    // Selection already writes immediately on every toggle — nothing left
-    // to flush. Implemented as a no-op (not omitted) so the shared advance
-    // button can call every task-type cubit uniformly through
-    // `FlushableAnswerCubit` regardless of whether it debounces.
+    // Every toggle already writes immediately, but if the student never
+    // touches this task at all (skips straight to Next), no outbox row
+    // exists yet — write the current state (possibly still empty)
+    // unconditionally so `SyncEngine.flushOne` always has a row to submit,
+    // matching real PTE's "leave it blank, it's just scored wrong" rather
+    // than leaving the advance button stuck with nothing to flush.
+    await _outboxDao.upsertAnswer(
+      attemptPublicId: attemptPublicId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: _sortedPayload(state.selectedOrderIndexes),
+    );
   }
 }

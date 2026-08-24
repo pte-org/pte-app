@@ -67,6 +67,13 @@ class ApiClient {
     }
   }
 
+  /// The real gateway wraps every response body in `pte-common`'s
+  /// `ApiResponse<T>` envelope (`{success, data, message}`) — every
+  /// `fromJson()` call site in this app is written against the inner
+  /// `data` payload directly, so unwrap it here once instead of at every
+  /// call site. Guarded on all three envelope keys so a body that doesn't
+  /// look like the envelope (e.g. a test double stubbed with flat data)
+  /// passes through untouched.
   Response<T> _asTypedResponse<T>(Response<dynamic> response) {
     final body = response.data;
     final payload =

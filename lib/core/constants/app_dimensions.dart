@@ -15,6 +15,8 @@ class AppDimensions {
   static const double examHeaderBannerPaddingHorizontal = 16.0;
   static const double examHeaderStarIconSize = 20.0;
   static const double examHeaderTitleFontSize = 16.0;
+  static const double examHeaderInstructionSpacing = 4.0;
+  static const double examHeaderInstructionFontSize = 13.0;
   static const double devPreviewBackButtonOffset = 8.0;
   static const double readingPassageLayoutBreakpoint = 720.0;
   static const double fillBlanksGapMinWidth = 72.0;
@@ -22,7 +24,14 @@ class AppDimensions {
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
 
-// Writing task — text editor + countdown affordances.
+  static const double readingContentCardMargin = 12.0;
+  static const double readingContentCardRadius = 12.0;
+  static const double taskAdvanceWarningIconSize = 16.0;
+
+  static const double statusBannerIconBadgeSize = 72.0;
+  static const double statusBannerIconSize = 36.0;
+
+  // Writing task — text editor + countdown affordances.
   static const double editorToolbarIconSize = 22.0;
   static const double editorToolbarButtonSize = 36.0;
   static const double countdownTimerFontSize = 14.0;

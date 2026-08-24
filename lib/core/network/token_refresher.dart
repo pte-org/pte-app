@@ -31,7 +31,12 @@ class TokenRefresher {
       refreshEndpoint,
       data: {'refreshToken': refreshToken},
     );
-    final data = response.data!;
+    final body = response.data!;
+    // Same `ApiResponse<T>` envelope `ApiClient._unwrapEnvelope` strips —
+    // duplicated inline rather than shared, since refreshDio deliberately
+    // carries zero interceptors (see class doc) and bypasses `ApiClient`
+    // entirely.
+    final data = body.containsKey('success') ? body['data'] as Map<String, dynamic> : body;
     final newAccessToken = data['accessToken'] as String;
     final newRefreshToken = data['refreshToken'] as String;
     final expiresInSeconds = data['expiresInSeconds'] as int;

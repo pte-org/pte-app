@@ -16,10 +16,15 @@ import 'package:pte_app/features/report/constants/report_strings.dart';
 /// initial [ReportRequested] in `initState` and closing the bloc in
 /// `dispose` — same lifecycle shape as Phase 6's `ReadAloudScreen`.
 class ReportScreen extends StatefulWidget {
-  const ReportScreen({super.key, required this.attemptPublicId, required this.repository});
+  const ReportScreen({super.key, required this.attemptPublicId, required this.repository, this.onBack});
 
   final String attemptPublicId;
   final ReportRepository repository;
+
+  /// Dev-testing affordance to reset the attempt and return to session
+  /// entry. Rendered as the `AppBar`'s own `leading` slot (not a floating
+  /// widget overlaid on top) so it never covers the title text.
+  final VoidCallback? onBack;
 
   @override
   State<ReportScreen> createState() => _ReportScreenState();
@@ -45,7 +50,12 @@ class _ReportScreenState extends State<ReportScreen> {
     return BlocProvider.value(
       value: _bloc,
       child: Scaffold(
-        appBar: AppBar(title: const Text(ReportStrings.reportScreenTitle)),
+        appBar: AppBar(
+          title: const Text(ReportStrings.reportScreenTitle),
+          leading: widget.onBack == null
+              ? null
+              : IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
+        ),
         body: BlocBuilder<ReportBloc, ReportState>(
           builder: (context, state) {
             return switch (state) {
@@ -65,6 +75,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   icon: Icons.error_outline,
                   title: ReportStrings.reportErrorTitle,
                   message: ReportStrings.reportErrorMessage,
+                  isError: true,
                 ),
               ),
             };

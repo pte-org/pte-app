@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/network/friendly_error_message.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -34,18 +35,13 @@ class _LoginPageState extends State<LoginPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppDimensions.spacingMedium),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppDimensions.loginFormMaxWidth,
-            ),
+            constraints: const BoxConstraints(maxWidth: AppDimensions.loginFormMaxWidth),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    AppStrings.loginTitle,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
+                  Text(AppStrings.loginTitle, style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: AppDimensions.spacingMedium),
                   _buildEmailField(),
                   const SizedBox(height: AppDimensions.spacingMedium),
@@ -67,9 +63,7 @@ class _LoginPageState extends State<LoginPage> {
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
       decoration: const InputDecoration(labelText: AppStrings.loginEmailLabel),
-      validator: (value) => value == null || value.trim().isEmpty
-          ? AppStrings.loginEmailRequired
-          : null,
+      validator: (value) => value == null || value.trim().isEmpty ? AppStrings.loginEmailRequired : null,
     );
   }
 
@@ -77,22 +71,21 @@ class _LoginPageState extends State<LoginPage> {
     return TextFormField(
       controller: _passwordController,
       obscureText: true,
-      decoration: const InputDecoration(
-        labelText: AppStrings.loginPasswordLabel,
-      ),
-      validator: (value) => value == null || value.isEmpty
-          ? AppStrings.loginPasswordRequired
-          : null,
+      decoration: const InputDecoration(labelText: AppStrings.loginPasswordLabel),
+      validator: (value) => value == null || value.isEmpty ? AppStrings.loginPasswordRequired : null,
     );
   }
 
+  /// Uses [friendlyErrorMessage] rather than the generic
+  /// [AppStrings.loginFailure] so a rate-limit/network/validation failure
+  /// reads as what actually happened, not just "sign-in failed."
   Widget _buildFailureMessage() {
-    return BlocSelector<AuthBloc, AuthState, bool>(
-      selector: (state) => state is AuthError,
-      builder: (context, hasError) {
-        return hasError
-            ? const Text(AppStrings.loginFailure)
-            : const SizedBox.shrink();
+    return BlocSelector<AuthBloc, AuthState, AuthError?>(
+      selector: (state) => state is AuthError ? state : null,
+      builder: (context, errorState) {
+        return errorState == null
+            ? const SizedBox.shrink()
+            : Text(friendlyErrorMessage(errorState.error));
       },
     );
   }
@@ -101,11 +94,7 @@ class _LoginPageState extends State<LoginPage> {
     return BlocSelector<AuthBloc, AuthState, bool>(
       selector: (state) => state is AuthAuthenticating,
       builder: (context, isLoading) {
-        return PrimaryButton(
-          label: AppStrings.loginSubmit,
-          isLoading: isLoading,
-          onPressed: _submit,
-        );
+        return PrimaryButton(label: AppStrings.loginSubmit, isLoading: isLoading, onPressed: _submit);
       },
     );
   }
@@ -115,10 +104,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     context.read<AuthBloc>().add(
-      LoginRequested(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ),
+      LoginRequested(email: _emailController.text.trim(), password: _passwordController.text),
     );
   }
 }

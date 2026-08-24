@@ -16,6 +16,9 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:pte_app/features/auth/presentation/pages/login_page.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/host_console/presentation/pages/host_console_page.dart';
 import 'package:pte_app/features/live_proctor/presentation/pages/proctor_workspace_page.dart';
 import 'package:pte_app/features/live_proctor/domain/live_proctor_types.dart';
@@ -24,6 +27,9 @@ import 'package:pte_app/features/live_proctor/presentation/bloc/assigned_session
 
 class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
     implements AuthBloc {}
+
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _FakeLiveProctorRepository implements LiveProctorRepository {
   @override
@@ -40,9 +46,21 @@ void main() {
     GetIt.instance.registerFactory<AssignedSessionsBloc>(
       () => AssignedSessionsBloc(repository: _FakeLiveProctorRepository()),
     );
+    // StudentExamGate resolves an ExamAttemptBloc from GetIt eagerly (its
+    // State's field initializer) — this gate-routing test only cares which
+    // page class the router lands on, not the exam flow's own behavior, so
+    // a bare stubbed mock (idle state, no events expected) is enough.
+    GetIt.instance.registerFactory<ExamAttemptBloc>(() {
+      final bloc = _MockExamAttemptBloc();
+      whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: const AttemptIdle());
+      return bloc;
+    });
   });
 
-  tearDownAll(() => GetIt.instance.unregister<AssignedSessionsBloc>());
+  tearDownAll(() {
+    GetIt.instance.unregister<AssignedSessionsBloc>();
+    GetIt.instance.unregister<ExamAttemptBloc>();
+  });
 
   Widget buildSubject(AuthState state, {required _MockAuthBloc bloc}) {
     whenListen(bloc, const Stream<AuthState>.empty(), initialState: state);
@@ -96,7 +114,7 @@ void main() {
     });
   }
 
-  testWidgets('non-Host claims keep the existing student workspace', (
+  testWidgets('non-Host claims enter the real student exam gate', (
     tester,
   ) async {
     final bloc = _MockAuthBloc();
@@ -112,7 +130,7 @@ void main() {
     );
 
     expect(find.byType(HostConsolePage), findsNothing);
-    expect(find.text(AppStrings.studentWorkspacePlaceholder), findsOneWidget);
+    expect(find.byType(StudentExamGate), findsOneWidget);
   });
 
   testWidgets('PROCTOR enters the assigned-session workspace', (tester) async {

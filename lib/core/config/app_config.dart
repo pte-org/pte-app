@@ -7,7 +7,7 @@ class AppConfig {
   /// No `/api` suffix — every call site passes the full gateway-relative
   /// path (e.g. `/api/iam/auth/login`), so concatenation never
   /// double-prefixes it. See phase-01 Design Constraints.
-  static const String gatewayBaseUrl = 'http://localhost:8080';
+  static const String gatewayBaseUrl = 'http://localhost:8081';
 
   /// Every gateway `Dio` instance must set these — an unbounded call can
   /// otherwise strand a caller (e.g. `AuthBloc` stuck in

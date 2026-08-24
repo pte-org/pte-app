@@ -125,8 +125,9 @@ void main() {
     });
   });
 
-  group('flushPendingEdit — intentional no-op (single discrete selection needs no debounce flush)', () {
-    test('does not throw and does not trigger an extra upsertAnswer call', () async {
+  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+      'must still leave a submittable row)', () {
+    test('with no prior selection, writes an empty-payload row so skipping without answering still submits', () async {
       final cubit = McReadingSingleCubit(
         outboxDao: outboxDao,
         attemptPublicId: 'attempt-1',
@@ -135,13 +136,26 @@ void main() {
 
       await cubit.flushPendingEdit();
 
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
+      verify(
+        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: ''),
+      ).called(1);
+
+      await cubit.close();
+    });
+
+    test('with a prior selection, re-writes the same payload rather than skipping the call', () async {
+      final cubit = McReadingSingleCubit(
+        outboxDao: outboxDao,
+        attemptPublicId: 'attempt-1',
+        pinnedItemPublicId: 'item-1',
       );
+
+      await cubit.selectOption('2');
+      await cubit.flushPendingEdit();
+
+      verify(
+        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: '2'),
+      ).called(2);
 
       await cubit.close();
     });

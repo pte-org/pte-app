@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
@@ -16,6 +21,12 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 /// in-flight debounce window and background flush never races this call.
 /// Shared across every task-type screen (Phase 5/6) rather than
 /// reimplemented per type.
+///
+/// Also self-triggers the identical sequence when the current task's
+/// countdown reaches zero — the same "server is timing authority, client
+/// timer is UX only" deadline this button already flushes against, so no
+/// separate expiry check is needed. `_isAdvancing` guards both the tap
+/// handler and the auto-trigger from firing twice for the same task.
 class TaskAdvanceButton extends StatefulWidget {
   const TaskAdvanceButton({super.key, required this.cubit, required this.pinnedItemPublicId, required this.syncEngine});
 
@@ -30,17 +41,61 @@ class TaskAdvanceButton extends StatefulWidget {
 class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   bool _isAdvancing = false;
 
-  Future<void> _advance() async {
+  Future<void> _advance({AdvanceReason reason = AdvanceReason.manual}) async {
     if (_isAdvancing) return;
     setState(() => _isAdvancing = true);
     await widget.cubit.flushPendingEdit();
     await widget.syncEngine.flushOne(widget.pinnedItemPublicId);
     if (!mounted) return;
-    context.read<ExamAttemptBloc>().add(const NextTaskRequested());
+    context.read<ExamAttemptBloc>().add(NextTaskRequested(reason: reason));
+  }
+
+  bool _isExpired(ExamAttemptState state) {
+    return state is AttemptInProgress &&
+        state.timerSnapshot.phase == TimerPhase.response &&
+        state.timerSnapshot.remaining == Duration.zero;
   }
 
   @override
   Widget build(BuildContext context) {
-    return PrimaryButton(label: ExamAttemptStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing);
+    return BlocListener<ExamAttemptBloc, ExamAttemptState>(
+      listenWhen: (previous, current) => !_isExpired(previous) && _isExpired(current),
+      listener: (context, state) => _advance(reason: AdvanceReason.timeExpired),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 240),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.taskAdvanceWarningIcon,
+                  size: AppDimensions.taskAdvanceWarningIconSize,
+                ),
+                const SizedBox(width: AppDimensions.spacingMedium / 4),
+                Flexible(
+                  child: Text(
+                    AppStrings.taskAdvanceUnansweredNote,
+                    textAlign: TextAlign.start,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.onPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppDimensions.spacingMedium),
+          PrimaryButton(label: ExamAttemptStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
+        ],
+      ),
+    );
   }
 }
