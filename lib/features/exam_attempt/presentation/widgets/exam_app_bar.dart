@@ -35,16 +35,16 @@ class ExamAppBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
-              const Spacer(),
-              Text(
-                _formatRemaining(snapshot.remaining),
-                style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: AppDimensions.spacingMedium),
               Text(
                 '${snapshot.currentOrderIndex}${AppStrings.examTaskCounterOf}$totalTasks',
                 style: const TextStyle(color: AppColors.onPrimary),
+              ),
+              const Spacer(),
+              Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
+              const SizedBox(width: AppDimensions.spacingMedium),
+              Text(
+                _formatRemaining(snapshot.remaining),
+                style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
               IconButton(
