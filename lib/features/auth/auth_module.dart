@@ -2,16 +2,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 
-import '../../core/config/app_config.dart';
-import '../../core/network/api_client.dart';
-import '../../core/network/interceptors/auth_header_interceptor.dart';
-import '../../core/network/interceptors/token_refresh_interceptor.dart';
-import '../../core/network/proactive_refresh_scheduler.dart';
-import '../../core/network/token_refresher.dart';
-import '../../core/storage/token_store.dart';
-import 'data/repositories/auth_repository_impl.dart';
-import 'domain/repositories/auth_repository.dart';
-import 'presentation/bloc/auth_bloc.dart';
+import 'package:pte_app/core/config/app_config.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/interceptors/auth_header_interceptor.dart';
+import 'package:pte_app/core/network/interceptors/token_refresh_interceptor.dart';
+import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
+import 'package:pte_app/core/network/token_refresher.dart';
+import 'package:pte_app/core/storage/token_store.dart';
+import 'package:pte_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 /// GetIt registration for auth + the shared networking primitives every
 /// later feature module depends on (`ApiClient`, `TokenStore`). Real-module

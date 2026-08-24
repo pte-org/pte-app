@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pte_app/core/constants/app_strings.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/reading_task_header_labels.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 
 void main() {
   group('readingTaskInstruction', () {

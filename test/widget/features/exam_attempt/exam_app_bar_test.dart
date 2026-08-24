@@ -35,8 +35,18 @@ void main() {
   late _MockExamAttemptBloc bloc;
   late StreamController<ExamAttemptState> stateController;
 
-  const snapshotA = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 30), currentOrderIndex: 1);
-  const snapshotB = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 12), currentOrderIndex: 1);
+  const snapshotA = TimerSnapshot(
+    phase: TimerPhase.prep,
+    remaining: Duration(seconds: 30),
+    currentOrderIndex: 1,
+    examRemaining: Duration(hours: 1, minutes: 15, seconds: 30),
+  );
+  const snapshotB = TimerSnapshot(
+    phase: TimerPhase.response,
+    remaining: Duration(seconds: 12),
+    currentOrderIndex: 1,
+    examRemaining: Duration(hours: 1, minutes: 15, seconds: 12),
+  );
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
@@ -58,24 +68,27 @@ void main() {
     );
   }
 
-  /// The countdown `Text` is the third `Text` in `ExamAppBar`'s row (task
-  /// counter, phase label, countdown) — its widget-object identity only
-  /// changes when `BlocSelector`'s `builder` closure actually re-runs, i.e.
-  /// only when the selected `TimerSnapshot` slice itself changed
-  /// (`flutter_bloc`'s `_BlocBuilderBaseState.build` only calls `builder`
-  /// again after a `setState` triggered by `buildWhen` returning true — see
+  /// Its widget-object identity only changes when `BlocSelector`'s
+  /// `builder` closure actually re-runs, i.e. only when the selected
+  /// `TimerSnapshot` slice itself changed (`flutter_bloc`'s
+  /// `_BlocBuilderBaseState.build` only calls `builder` again after a
+  /// `setState` triggered by `buildWhen` returning true — see
   /// `BlocSelector`'s `listenWhen` gate). Comparing `identical()` across
   /// pumps is therefore a faithful proxy for "did the countdown widget
   /// rebuild", satisfying Step 12's "must be an executed test" requirement
   /// without needing to modify production code to inject a counter.
-  Text countdownTextWidget(WidgetTester tester) => tester.widgetList<Text>(find.byType(Text)).elementAt(2);
+  Text countdownTextWidget(WidgetTester tester) =>
+      tester.widget<Text>(find.byKey(const ValueKey('examAppBarCountdown')));
 
   testWidgets(
     'an unrelated state change (task changes, TimerSnapshot slice unchanged) does not rebuild the countdown widget',
     (tester) async {
       await tester.pumpWidget(buildSubject());
       final beforeText = countdownTextWidget(tester);
-      expect((beforeText.data), '00:30');
+      // ExamAppBar's countdown shows the task-level snapshot.remaining as
+      // mm:ss (not the whole-exam examRemaining as hh:mm:ss) — snapshotA's
+      // remaining is 30 seconds.
+      expect(beforeText.data, '00:30');
 
       // Unrelated change: a different task, but the exact same
       // TimerSnapshot instance/value — mirrors what ExamAttemptBloc emits
@@ -102,6 +115,7 @@ void main() {
     final afterText = countdownTextWidget(tester);
     expect(identical(beforeText, afterText), isFalse,
         reason: 'BlocSelector must rebuild the countdown widget when the TimerSnapshot slice changes');
+    // snapshotB's remaining is 12 seconds.
     expect(afterText.data, '00:12');
   });
 }

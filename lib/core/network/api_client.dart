@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'api_exceptions.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
 /// the **full** gateway-relative path (e.g. `/api/iam/auth/login`) — the
@@ -13,16 +13,21 @@ class ApiClient {
 
   final Dio _dio;
 
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
-    return _run(() => _dio.get<T>(path, queryParameters: queryParameters));
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return _run<T>(
+      () => _dio.get<dynamic>(path, queryParameters: queryParameters),
+    );
   }
 
   Future<Response<T>> post<T>(String path, {Object? data}) {
-    return _run(() => _dio.post<T>(path, data: data));
+    return _run<T>(() => _dio.post<dynamic>(path, data: data));
   }
 
   Future<Response<T>> put<T>(String path, {Object? data}) {
-    return _run(() => _dio.put<T>(path, data: data));
+    return _run<T>(() => _dio.put<dynamic>(path, data: data));
   }
 
   /// Submits one buffered answer. **Only `SyncEngine._flushOne` may call
@@ -54,10 +59,9 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
+  Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {
     try {
-      final response = await call();
-      return _unwrapEnvelope(response);
+      return _asTypedResponse<T>(await call());
     } on DioException catch (e) {
       throw _mapError(e);
     }
@@ -67,15 +71,29 @@ class ApiClient {
   /// `ApiResponse<T>` envelope (`{success, data, message}`) — every
   /// `fromJson()` call site in this app is written against the inner
   /// `data` payload directly, so unwrap it here once instead of at every
-  /// call site. Guarded on the `success` key so a body that doesn't look
-  /// like the envelope (e.g. a test double stubbed with flat data) passes
-  /// through untouched.
-  Response<T> _unwrapEnvelope<T>(Response<T> response) {
+  /// call site. Guarded on all three envelope keys so a body that doesn't
+  /// look like the envelope (e.g. a test double stubbed with flat data)
+  /// passes through untouched.
+  Response<T> _asTypedResponse<T>(Response<dynamic> response) {
     final body = response.data;
-    if (body is Map<String, dynamic> && body.containsKey('success')) {
-      response.data = body['data'] as T;
-    }
-    return response;
+    final payload =
+        body is Map<String, dynamic> &&
+            body.containsKey('success') &&
+            body.containsKey('data') &&
+            body.containsKey('message')
+        ? body['data']
+        : body;
+
+    return Response<T>(
+      data: payload as T?,
+      headers: response.headers,
+      requestOptions: response.requestOptions,
+      isRedirect: response.isRedirect,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      extra: response.extra,
+      redirects: response.redirects,
+    );
   }
 
   ApiException _mapError(DioException e) {
@@ -84,11 +102,15 @@ class ApiClient {
       return NetworkException(e.message ?? 'Network error');
     }
     return switch (statusCode) {
-      401 || 403 => AuthException('Authentication failed ($statusCode)'),
+      401 => const AuthException('Authentication failed (401)'),
+      403 => const ForbiddenException('Permission denied (403)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
       404 => NotFoundException(_serverMessage(e) ?? 'Not found ($statusCode)'),
       409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
-      429 => RateLimitException('Rate limited ($statusCode)', retryAfter: _retryAfter(e)),
+      429 => RateLimitException(
+        'Rate limited ($statusCode)',
+        retryAfter: _retryAfter(e),
+      ),
       _ => UnknownApiException('Unexpected response ($statusCode)'),
     };
   }

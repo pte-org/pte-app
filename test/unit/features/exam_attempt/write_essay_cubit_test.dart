@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/write_essay_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/write_essay_cubit.dart';
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 

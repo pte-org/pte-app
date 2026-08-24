@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pte_app/core/constants/app_strings.dart';
-import 'package:pte_app/features/exam_attempt/presentation/pages/section_completed_screen.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/pages/section_completed_screen.dart';
 
 void main() {
   Widget buildSubject({required bool timeExpired, VoidCallback? onContinue}) {

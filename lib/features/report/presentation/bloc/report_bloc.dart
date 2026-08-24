@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/network/api_exceptions.dart';
-import '../../domain/repositories/report_repository.dart';
-import 'report_event.dart';
-import 'report_state.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/features/report/domain/repositories/report_repository.dart';
+import 'package:pte_app/features/report/presentation/bloc/report_event.dart';
+import 'package:pte_app/features/report/presentation/bloc/report_state.dart';
 
 /// Read-only — no dependency on Phase 2's `AnswerOutboxDao`/`SyncEngine`,
 /// structurally simpler than every prior phase's `Bloc` (phase-08 Design

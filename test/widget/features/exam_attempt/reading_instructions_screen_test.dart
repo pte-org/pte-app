@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pte_app/core/constants/app_strings.dart';
-import 'package:pte_app/features/exam_attempt/presentation/pages/reading_instructions_screen.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/pages/reading_instructions_screen.dart';
 
 void main() {
   Widget buildSubject(VoidCallback onContinue) {

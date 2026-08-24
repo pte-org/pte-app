@@ -1,7 +1,7 @@
-import '../../../../core/network/api_client.dart';
-import '../../../../core/network/api_exceptions.dart';
-import '../../domain/report_response.dart';
-import '../../domain/repositories/report_repository.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/features/report/domain/report_response.dart';
+import 'package:pte_app/features/report/domain/repositories/report_repository.dart';
 
 class ReportRepositoryImpl implements ReportRepository {
   ReportRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;

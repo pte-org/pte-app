@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../storage/token_store.dart';
+import 'package:pte_app/core/storage/token_store.dart';
 
 /// Single-flight token refresh, shared by [TokenRefreshInterceptor]
 /// (reactive, 401-triggered) and `ProactiveRefreshScheduler` (proactive,

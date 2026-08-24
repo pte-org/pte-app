@@ -12,12 +12,18 @@ sealed class ApiException implements Exception {
   String toString() => '$runtimeType: $message';
 }
 
-/// 401/403 — authentication itself failed (bad credentials, revoked
+/// 401 — authentication itself failed (bad credentials, revoked
 /// session). Distinct from a token needing refresh, which the
 /// `TokenRefreshInterceptor` handles transparently before this is ever
 /// thrown to a caller.
 final class AuthException extends ApiException {
   const AuthException(super.message);
+}
+
+/// The caller is authenticated but lacks permission for this operation.
+/// Keeping 403 separate prevents role gates from becoming false logouts.
+final class ForbiddenException extends ApiException {
+  const ForbiddenException(super.message);
 }
 
 /// 400/422 — request payload rejected by the server.

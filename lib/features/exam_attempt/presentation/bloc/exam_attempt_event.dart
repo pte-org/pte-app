@@ -1,4 +1,4 @@
-import '../../domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 sealed class ExamAttemptEvent {
   const ExamAttemptEvent();

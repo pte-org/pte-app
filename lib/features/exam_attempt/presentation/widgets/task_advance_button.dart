@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/sync/sync_engine.dart';
-import '../../../../core/widgets/primary_button.dart';
-import '../../domain/timer_phase.dart';
-import '../bloc/exam_attempt_bloc.dart';
-import '../bloc/exam_attempt_event.dart';
-import '../bloc/exam_attempt_state.dart';
-import '../cubit/task_answer_cubit.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
 /// The one explicit trigger allowed to submit the active task's answer
 /// over the network (phase-05 Design Constraints): flushes whichever
@@ -92,7 +93,7 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
             ),
           ),
           const SizedBox(width: AppDimensions.spacingMedium),
-          PrimaryButton(label: AppStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
+          PrimaryButton(label: ExamAttemptStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
         ],
       ),
     );

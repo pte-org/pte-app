@@ -1,5 +1,5 @@
-import '../../domain/task_view.dart';
-import '../../domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 /// Separate immutable classes, no boolean-flag shape — `AttemptCompleted`
 /// is its own first-class terminal state, never inferred by checking

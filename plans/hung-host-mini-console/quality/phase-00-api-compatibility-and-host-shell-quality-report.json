@@ -1,0 +1,33 @@
+{
+  "mode": "gate",
+  "target": "phase-00-api-compatibility-and-host-shell",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-07-28",
+  "reviewer": "independent-code-review-agent",
+  "summary": {
+    "critical": 0,
+    "important_open": 0,
+    "minor_open": 0,
+    "resolved": 2
+  },
+  "findings": [
+    {
+      "id": "HUNG-QUAL-001",
+      "severity": "IMPORTANT",
+      "status": "RESOLVED",
+      "location": "lib/app.dart",
+      "evidence": "A protected authoring route could remain above the root login gate after authentication was lost.",
+      "resolution": "AppAuthGate now removes all pushed routes on idle, unauthenticated, or error transitions; a widget regression test proves the protected route is removed."
+    },
+    {
+      "id": "HUNG-QUAL-002",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "location": "lib/features/auth/presentation/bloc/auth_bloc.dart",
+      "evidence": "Two LoginRequested events could start duplicate repository calls before the loading UI rebuilt.",
+      "resolution": "AuthBloc now ignores login events while authentication is in flight; its unit test verifies one repository call."
+    }
+  ],
+  "open_blocking_findings": 0,
+  "report_path": "plans/hung-host-mini-console/quality/phase-00-api-compatibility-and-host-shell-quality-report.json"
+}

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/loading_view.dart';
-import '../../../../core/widgets/status_banner.dart';
-import '../../domain/report_response.dart';
-import '../../domain/repositories/report_repository.dart';
-import '../bloc/report_bloc.dart';
-import '../bloc/report_event.dart';
-import '../bloc/report_state.dart';
-import '../widgets/skill_score_row.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/widgets/loading_view.dart';
+import 'package:pte_app/core/widgets/status_banner.dart';
+import 'package:pte_app/features/report/domain/report_response.dart';
+import 'package:pte_app/features/report/domain/repositories/report_repository.dart';
+import 'package:pte_app/features/report/presentation/bloc/report_bloc.dart';
+import 'package:pte_app/features/report/presentation/bloc/report_event.dart';
+import 'package:pte_app/features/report/presentation/bloc/report_state.dart';
+import 'package:pte_app/features/report/presentation/widgets/skill_score_row.dart';
+import 'package:pte_app/features/report/constants/report_strings.dart';
 
 /// Creates and owns a [ReportBloc] for [attemptPublicId], dispatching the
 /// initial [ReportRequested] in `initState` and closing the bloc in
@@ -51,7 +51,7 @@ class _ReportScreenState extends State<ReportScreen> {
       value: _bloc,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(AppStrings.reportScreenTitle),
+          title: const Text(ReportStrings.reportScreenTitle),
           leading: widget.onBack == null
               ? null
               : IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
@@ -64,8 +64,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 context,
                 const StatusBanner(
                   icon: Icons.hourglass_empty,
-                  title: AppStrings.reportNotPublishedTitle,
-                  message: AppStrings.reportNotPublishedMessage,
+                  title: ReportStrings.reportNotPublishedTitle,
+                  message: ReportStrings.reportNotPublishedMessage,
                 ),
               ),
               ReportReady(:final report) => _refreshable(context, _ReportReadyView(report: report)),
@@ -73,8 +73,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 context,
                 const StatusBanner(
                   icon: Icons.error_outline,
-                  title: AppStrings.reportErrorTitle,
-                  message: AppStrings.reportErrorMessage,
+                  title: ReportStrings.reportErrorTitle,
+                  message: ReportStrings.reportErrorMessage,
                   isError: true,
                 ),
               ),
@@ -105,13 +105,13 @@ class _ReportReadyView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppStrings.reportOverallSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Text(ReportStrings.reportOverallSectionTitle, style: Theme.of(context).textTheme.titleMedium),
         SkillScoreRow(skillScore: report.overall),
         const SizedBox(height: AppDimensions.spacingMedium),
-        Text(AppStrings.reportCommunicativeSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Text(ReportStrings.reportCommunicativeSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
         for (final skill in report.communicativeSkills) SkillScoreRow(skillScore: skill),
         const SizedBox(height: AppDimensions.spacingMedium),
-        Text(AppStrings.reportEnablingSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Text(ReportStrings.reportEnablingSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
         for (final skill in report.enablingSkills) SkillScoreRow(skillScore: skill),
       ],
     );

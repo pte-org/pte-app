@@ -3,7 +3,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/presentation/cubit/re_order_paragraphs_cubit.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_cubit.dart';
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
@@ -58,7 +58,9 @@ void main() {
         initialOrder: _shuffledParagraphs(),
       );
 
-      // onReorderItem's newIndex is already adjusted for the removed item.
+      // newIndex is already adjusted for the removed item (the widget's
+      // ReorderableListView.onReorder handler does that adjustment before
+      // calling this cubit — see ReOrderParagraphsList).
       await cubit.reorder(0, 3);
 
       final captured = verify(

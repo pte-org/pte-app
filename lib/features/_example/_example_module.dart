@@ -1,8 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 
-import '_example_repository.dart';
-import '_example_repository_impl.dart';
+import 'package:pte_app/features/_example/_example_repository.dart';
+import 'package:pte_app/features/_example/_example_repository_impl.dart';
 
 /// GetIt registration convention demonstrated by Phase 0 — every real
 /// feature module (Phase 1 onward) follows this same `{feature}_module.dart`

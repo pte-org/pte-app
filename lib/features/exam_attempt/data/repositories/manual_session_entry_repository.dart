@@ -1,4 +1,4 @@
-import '../../domain/repositories/session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 
 /// Placeholder implementation: `rawInput` is exactly what the student
 /// typed into the manual text-entry field, passed straight through from

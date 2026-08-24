@@ -1,0 +1,31 @@
+{
+  "target": "phase-03-blueprint-and-snapshot",
+  "tested_at": "2026-07-28",
+  "status": "PASSED_WITH_RUNTIME_CHECK_PENDING",
+  "commands": [
+    {
+      "command": "flutter test test/unit/features/authoring test/widget/features/authoring --reporter compact",
+      "exit_code": 0,
+      "tests_passed": 56
+    },
+    {
+      "command": "dart format --output none --set-exit-if-changed lib/features/authoring lib/features/host_console/presentation/pages/host_console_page.dart test/unit/features/authoring test/widget/features/authoring",
+      "exit_code": 0,
+      "files_changed": 0
+    },
+    {
+      "command": "flutter analyze",
+      "exit_code": 0,
+      "result": "No issues found"
+    },
+    {
+      "command": "flutter test --reporter compact",
+      "exit_code": 0,
+      "tests_passed": 266
+    }
+  ],
+  "runtime_gateway_check": {
+    "status": "NOT_RUN",
+    "reason": "Requires authenticated Host data plus the running gateway, IAM, authoring service, database, Kafka, and outbox dependencies."
+  }
+}

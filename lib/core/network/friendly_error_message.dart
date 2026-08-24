@@ -17,6 +17,7 @@ String friendlyErrorMessage(Object error) {
     NotCurrentTaskException() => "That task isn't current anymore — refreshing to your actual current task.",
     ConflictException() => 'That action conflicts with the current state. Please try again.',
     AuthException() => 'Your session has expired or your credentials are invalid. Please log in again.',
+    ForbiddenException() => "You don't have permission to do that.",
     ValidationException(:final message) => message,
     RateLimitException() => 'Too many requests — please wait a moment and try again.',
     NotFoundException() => "That wasn't found. Please double-check and try again.",

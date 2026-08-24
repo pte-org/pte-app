@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/network/api_exceptions.dart';
-import '../../../../core/sync/media_upload_coordinator.dart';
-import '../../../../core/sync/sync_engine.dart';
-import '../../domain/repositories/exam_attempt_repository.dart';
-import '../../domain/repositories/session_entry_repository.dart';
-import '../../domain/task_view.dart';
-import '../../domain/timer_service.dart';
-import '../../domain/timer_snapshot.dart';
-import 'exam_attempt_event.dart';
-import 'exam_attempt_state.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/sync/media_upload_coordinator.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 
 /// No `BuildContext` here — navigation/side effects are driven by the UI
 /// listening to this bloc's state changes, matching Phase 1's `AuthBloc`

@@ -20,6 +20,14 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Impeller produces a black screen (engine attaches, no frame
+                 ever paints, zero Dart-side errors) on some Android emulator
+                 x86_64-image/host-GPU-driver combinations. Falling back to
+                 Skia until this environment's Impeller support is verified. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.EnableImpeller"
+              android:value="false"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

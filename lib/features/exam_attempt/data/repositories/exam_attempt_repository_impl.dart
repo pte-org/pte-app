@@ -1,6 +1,6 @@
-import '../../../../core/network/api_client.dart';
-import '../../domain/repositories/exam_attempt_repository.dart';
-import '../../domain/task_view.dart';
+import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   ExamAttemptRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;

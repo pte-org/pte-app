@@ -20,7 +20,107 @@ void main() {
     apiClient = ApiClient(dio: dio);
   });
 
-  DioException errorWithStatus(int? statusCode, {DioExceptionType type = DioExceptionType.badResponse}) {
+  test(
+    'get unwraps a standard list envelope and preserves response metadata',
+    () async {
+      final requestOptions = RequestOptions(path: '/api/authoring/questions');
+      final headers = Headers.fromMap({
+        'content-type': ['application/json'],
+      });
+      when(
+        () => dio.get<dynamic>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async => Response<dynamic>(
+          requestOptions: requestOptions,
+          data: {
+            'success': true,
+            'data': <dynamic>[
+              {'publicId': 'question-1'},
+            ],
+            'message': null,
+          },
+          statusCode: 200,
+          statusMessage: 'OK',
+          headers: headers,
+          extra: const {'traceId': 'trace-1'},
+        ),
+      );
+
+      final result = await apiClient.get<List<dynamic>>(
+        '/api/authoring/questions',
+      );
+
+      expect(result.data, <dynamic>[
+        {'publicId': 'question-1'},
+      ]);
+      expect(result.statusCode, 200);
+      expect(result.statusMessage, 'OK');
+      expect(result.headers, same(headers));
+      expect(result.extra, {'traceId': 'trace-1'});
+      expect(result.requestOptions, same(requestOptions));
+    },
+  );
+
+  test('post unwraps a standard map envelope', () async {
+    final requestOptions = RequestOptions(path: '/api/authoring/questions');
+    when(() => dio.post<dynamic>(any(), data: any(named: 'data'))).thenAnswer(
+      (_) async => Response<dynamic>(
+        requestOptions: requestOptions,
+        data: {
+          'success': true,
+          'data': {'publicId': 'question-1'},
+          'message': 'Question created',
+        },
+      ),
+    );
+
+    final result = await apiClient.post<Map<String, dynamic>>(
+      '/api/authoring/questions',
+      data: {'title': 'Main idea'},
+    );
+
+    expect(result.data, {'publicId': 'question-1'});
+  });
+
+  test('post keeps an already-unwrapped payload compatible', () async {
+    final requestOptions = RequestOptions(path: '/api/legacy');
+    when(() => dio.post<dynamic>(any(), data: any(named: 'data'))).thenAnswer(
+      (_) async => Response<dynamic>(
+        requestOptions: requestOptions,
+        data: {'publicId': 'legacy-1'},
+      ),
+    );
+
+    final result = await apiClient.post<Map<String, dynamic>>('/api/legacy');
+
+    expect(result.data, {'publicId': 'legacy-1'});
+  });
+
+  test('post supports a standard envelope whose inner data is null', () async {
+    final requestOptions = RequestOptions(path: '/api/iam/auth/logout');
+    when(() => dio.post<dynamic>(any(), data: any(named: 'data'))).thenAnswer(
+      (_) async => Response<dynamic>(
+        requestOptions: requestOptions,
+        data: {'success': true, 'data': null, 'message': 'Logged out'},
+        statusCode: 200,
+      ),
+    );
+
+    final result = await apiClient.post<void>(
+      '/api/iam/auth/logout',
+      data: {'refreshToken': 'refresh-token'},
+    );
+
+    expect(result.statusCode, 200);
+  });
+
+  DioException errorWithStatus(
+    int? statusCode, {
+    DioExceptionType type = DioExceptionType.badResponse,
+  }) {
     final requestOptions = RequestOptions(path: '/api/whatever');
     return DioException(
       requestOptions: requestOptions,
@@ -37,17 +137,22 @@ void main() {
       data: {'ok': true},
       statusCode: 200,
     );
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenAnswer((_) async => response);
+    when(
+      () => dio.post<dynamic>(any(), data: any(named: 'data')),
+    ).thenAnswer((_) async => response);
 
-    final result = await apiClient.post<Map<String, dynamic>>('/api/x', data: {'a': 1});
+    final result = await apiClient.post<Map<String, dynamic>>(
+      '/api/x',
+      data: {'a': 1},
+    );
 
     expect(result.data, {'ok': true});
   });
 
   test('401 response maps to AuthException', () async {
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenThrow(errorWithStatus(401));
+    when(
+      () => dio.post<dynamic>(any(), data: any(named: 'data')),
+    ).thenThrow(errorWithStatus(401));
 
     expect(
       () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
@@ -55,9 +160,33 @@ void main() {
     );
   });
 
+  test(
+    '403 response maps to ForbiddenException, never AuthException',
+    () async {
+      when(
+        () => dio.post<dynamic>(any(), data: any(named: 'data')),
+      ).thenThrow(errorWithStatus(403));
+
+      expect(
+        () => apiClient.post<Map<String, dynamic>>(
+          '/api/authoring/questions',
+          data: {},
+        ),
+        throwsA(
+          isA<ForbiddenException>().having(
+            (error) => error,
+            'not an authentication failure',
+            isNot(isA<AuthException>()),
+          ),
+        ),
+      );
+    },
+  );
+
   test('400 response maps to ValidationException', () async {
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenThrow(errorWithStatus(400));
+    when(
+      () => dio.post<dynamic>(any(), data: any(named: 'data')),
+    ).thenThrow(errorWithStatus(400));
 
     expect(
       () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
@@ -65,19 +194,24 @@ void main() {
     );
   });
 
-  test('429 response maps to RateLimitException, never AuthException/ValidationException', () async {
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenThrow(errorWithStatus(429));
+  test(
+    '429 response maps to RateLimitException, never AuthException/ValidationException',
+    () async {
+      when(
+        () => dio.post<dynamic>(any(), data: any(named: 'data')),
+      ).thenThrow(errorWithStatus(429));
 
-    expect(
-      () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
-      throwsA(isA<RateLimitException>()),
-    );
-  });
+      expect(
+        () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
+        throwsA(isA<RateLimitException>()),
+      );
+    },
+  );
 
   test('connection error (no response) maps to NetworkException', () async {
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenThrow(errorWithStatus(null, type: DioExceptionType.connectionError));
+    when(
+      () => dio.post<dynamic>(any(), data: any(named: 'data')),
+    ).thenThrow(errorWithStatus(null, type: DioExceptionType.connectionError));
 
     expect(
       () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
@@ -85,49 +219,82 @@ void main() {
     );
   });
 
-  test('unrecognized 500 maps to UnknownApiException, not silently swallowed', () async {
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-        .thenThrow(errorWithStatus(500));
+  test(
+    'unrecognized 500 maps to UnknownApiException, not silently swallowed',
+    () async {
+      when(
+        () => dio.post<dynamic>(any(), data: any(named: 'data')),
+      ).thenThrow(errorWithStatus(500));
 
-    expect(
-      () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
-      throwsA(isA<UnknownApiException>()),
-    );
-  });
+      expect(
+        () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
+        throwsA(isA<UnknownApiException>()),
+      );
+    },
+  );
 
-  test('409 response maps to ConflictException carrying the response body message', () async {
-    final requestOptions = RequestOptions(path: '/api/x');
-    when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data'))).thenThrow(
-      DioException(
-        requestOptions: requestOptions,
-        type: DioExceptionType.badResponse,
-        response: Response(
+  test(
+    '409 response maps to ConflictException carrying the response body message',
+    () async {
+      final requestOptions = RequestOptions(path: '/api/x');
+      when(() => dio.post<dynamic>(any(), data: any(named: 'data'))).thenThrow(
+        DioException(
           requestOptions: requestOptions,
-          statusCode: 409,
-          data: {'success': false, 'data': null, 'message': 'NOT_CURRENT_TASK'},
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: requestOptions,
+            statusCode: 409,
+            data: {
+              'success': false,
+              'data': null,
+              'message': 'NOT_CURRENT_TASK',
+            },
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(
-      () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
-      throwsA(isA<ConflictException>().having((e) => e.message, 'message', 'NOT_CURRENT_TASK')),
-    );
-  });
+      expect(
+        () => apiClient.post<Map<String, dynamic>>('/api/x', data: {}),
+        throwsA(
+          isA<ConflictException>().having(
+            (e) => e.message,
+            'message',
+            'NOT_CURRENT_TASK',
+          ),
+        ),
+      );
+    },
+  );
 
-  test('submitAnswer() posts to the attempt answers endpoint with pinnedItemPublicId and payload', () async {
-    final response = Response<void>(requestOptions: RequestOptions(path: '/api/x'), statusCode: 200);
-    when(() => dio.post<void>(any(), data: any(named: 'data'))).thenAnswer((_) async => response);
+  test(
+    'submitAnswer() posts to the attempt answers endpoint with pinnedItemPublicId and payload',
+    () async {
+      final response = Response<void>(
+        requestOptions: RequestOptions(path: '/api/x'),
+        statusCode: 200,
+      );
+      when(
+        () => dio.post<dynamic>(any(), data: any(named: 'data')),
+      ).thenAnswer((_) async => response);
 
-    await apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello');
+      await apiClient.submitAnswer(
+        attemptPublicId: 'attempt-1',
+        pinnedItemPublicId: 'item-1',
+        payload: 'hello',
+      );
 
-    final captured = verify(() => dio.post<void>(captureAny(), data: captureAny(named: 'data'))).captured;
-    expect(captured[0], '/api/exam-delivery/attempts/attempt-1/answers');
-    expect(captured[1], {'pinnedItemPublicId': 'item-1', 'payload': 'hello'});
-  });
+      final captured = verify(
+        () => dio.post<dynamic>(captureAny(), data: captureAny(named: 'data')),
+      ).captured;
+      expect(captured[0], '/api/exam-delivery/attempts/attempt-1/answers');
+      expect(captured[1], {'pinnedItemPublicId': 'item-1', 'payload': 'hello'});
+    },
+  );
 
   DioException conflictWithMessage(String message) {
-    final requestOptions = RequestOptions(path: '/api/exam-delivery/attempts/attempt-1/answers');
+    final requestOptions = RequestOptions(
+      path: '/api/exam-delivery/attempts/attempt-1/answers',
+    );
     return DioException(
       requestOptions: requestOptions,
       type: DioExceptionType.badResponse,
@@ -140,80 +307,145 @@ void main() {
   }
 
   group('submitAnswer() typed-409 dispatch (Step 8)', () {
-    test('a 409 with message "NOT_CURRENT_TASK" produces NotCurrentTaskException, not the generic ConflictException', () async {
-      when(() => dio.post<void>(any(), data: any(named: 'data'))).thenThrow(conflictWithMessage('NOT_CURRENT_TASK'));
+    test(
+      'a 409 with message "NOT_CURRENT_TASK" produces NotCurrentTaskException, not the generic ConflictException',
+      () async {
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(conflictWithMessage('NOT_CURRENT_TASK'));
 
-      await expectLater(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
-        throwsA(
-          isA<NotCurrentTaskException>()
-              .having((e) => e.message, 'message', 'NOT_CURRENT_TASK')
-              .having((e) => e, 'exact runtime type', isNot(isA<ResponseWindowExpiredException>())),
-        ),
-      );
-    });
+        await expectLater(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: 'hello',
+          ),
+          throwsA(
+            isA<NotCurrentTaskException>()
+                .having((e) => e.message, 'message', 'NOT_CURRENT_TASK')
+                .having(
+                  (e) => e,
+                  'exact runtime type',
+                  isNot(isA<ResponseWindowExpiredException>()),
+                ),
+          ),
+        );
+      },
+    );
 
-    test('a 409 with message "RESPONSE_WINDOW_EXPIRED" produces ResponseWindowExpiredException, not the generic ConflictException', () async {
-      when(
-        () => dio.post<void>(any(), data: any(named: 'data')),
-      ).thenThrow(conflictWithMessage('RESPONSE_WINDOW_EXPIRED'));
+    test(
+      'a 409 with message "RESPONSE_WINDOW_EXPIRED" produces ResponseWindowExpiredException, not the generic ConflictException',
+      () async {
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(conflictWithMessage('RESPONSE_WINDOW_EXPIRED'));
 
-      await expectLater(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
-        throwsA(
-          isA<ResponseWindowExpiredException>()
-              .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED')
-              .having((e) => e, 'exact runtime type', isNot(isA<NotCurrentTaskException>())),
-        ),
-      );
-    });
+        await expectLater(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: 'hello',
+          ),
+          throwsA(
+            isA<ResponseWindowExpiredException>()
+                .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED')
+                .having(
+                  (e) => e,
+                  'exact runtime type',
+                  isNot(isA<NotCurrentTaskException>()),
+                ),
+          ),
+        );
+      },
+    );
 
-    test('a 409 with message "ANSWER_ALREADY_SUBMITTED" falls back to the generic ConflictException, not a crash', () async {
-      when(
-        () => dio.post<void>(any(), data: any(named: 'data')),
-      ).thenThrow(conflictWithMessage('ANSWER_ALREADY_SUBMITTED'));
+    test(
+      'a 409 with message "ANSWER_ALREADY_SUBMITTED" falls back to the generic ConflictException, not a crash',
+      () async {
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(conflictWithMessage('ANSWER_ALREADY_SUBMITTED'));
 
-      await expectLater(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
-        throwsA(
-          isA<ConflictException>()
-              .having((e) => e.message, 'message', 'ANSWER_ALREADY_SUBMITTED')
-              .having((e) => e, 'not a typed subclass', isNot(isA<NotCurrentTaskException>()))
-              .having((e) => e, 'not a typed subclass', isNot(isA<ResponseWindowExpiredException>())),
-        ),
-      );
-    });
+        await expectLater(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: 'hello',
+          ),
+          throwsA(
+            isA<ConflictException>()
+                .having((e) => e.message, 'message', 'ANSWER_ALREADY_SUBMITTED')
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<NotCurrentTaskException>()),
+                )
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<ResponseWindowExpiredException>()),
+                ),
+          ),
+        );
+      },
+    );
 
-    test('a 409 with an unrecognized message falls back to the generic ConflictException, not a crash or unhandled type', () async {
-      when(
-        () => dio.post<void>(any(), data: any(named: 'data')),
-      ).thenThrow(conflictWithMessage('SOME_FUTURE_UNKNOWN_CODE'));
+    test(
+      'a 409 with an unrecognized message falls back to the generic ConflictException, not a crash or unhandled type',
+      () async {
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(conflictWithMessage('SOME_FUTURE_UNKNOWN_CODE'));
 
-      await expectLater(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
-        throwsA(
-          isA<ConflictException>()
-              .having((e) => e.message, 'message', 'SOME_FUTURE_UNKNOWN_CODE')
-              .having((e) => e, 'not a typed subclass', isNot(isA<NotCurrentTaskException>()))
-              .having((e) => e, 'not a typed subclass', isNot(isA<ResponseWindowExpiredException>())),
-        ),
-      );
-    });
+        await expectLater(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: 'hello',
+          ),
+          throwsA(
+            isA<ConflictException>()
+                .having((e) => e.message, 'message', 'SOME_FUTURE_UNKNOWN_CODE')
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<NotCurrentTaskException>()),
+                )
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<ResponseWindowExpiredException>()),
+                ),
+          ),
+        );
+      },
+    );
 
-    test('a 409 on this endpoint with no recognized message field still falls back to generic ConflictException', () async {
-      final requestOptions = RequestOptions(path: '/api/exam-delivery/attempts/attempt-1/answers');
-      when(() => dio.post<void>(any(), data: any(named: 'data'))).thenThrow(
-        DioException(
-          requestOptions: requestOptions,
-          type: DioExceptionType.badResponse,
-          response: Response(requestOptions: requestOptions, statusCode: 409),
-        ),
-      );
+    test(
+      'a 409 on this endpoint with no recognized message field still falls back to generic ConflictException',
+      () async {
+        final requestOptions = RequestOptions(
+          path: '/api/exam-delivery/attempts/attempt-1/answers',
+        );
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(
+          DioException(
+            requestOptions: requestOptions,
+            type: DioExceptionType.badResponse,
+            response: Response(requestOptions: requestOptions, statusCode: 409),
+          ),
+        );
 
-      await expectLater(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: 'hello'),
-        throwsA(isA<ConflictException>()),
-      );
-    });
+        await expectLater(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: 'hello',
+          ),
+          throwsA(isA<ConflictException>()),
+        );
+      },
+    );
   });
 }
