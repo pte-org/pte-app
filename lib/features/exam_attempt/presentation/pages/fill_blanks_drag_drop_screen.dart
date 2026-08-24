@@ -44,7 +44,10 @@ class FillBlanksDragDropScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: Column(
             children: [
-              ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
+              ReadingTaskHeaderBanner(
+                title: readingTaskHeaderTitle(task.taskType),
+                instruction: readingTaskInstruction(task.taskType),
+              ),
               Expanded(child: FillBlanksDragDropBody(task: task)),
             ],
           ),

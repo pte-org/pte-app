@@ -41,7 +41,10 @@ class McReadingMultipleScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: Column(
             children: [
-              ReadingTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
+              ReadingTaskHeaderBanner(
+                title: readingTaskHeaderTitle(task.taskType),
+                instruction: readingTaskInstruction(task.taskType),
+              ),
               Expanded(
                 child: ReadingPassageLayout(
                   passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
