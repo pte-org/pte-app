@@ -56,10 +56,26 @@ class ApiClient {
 
   Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
     try {
-      return await call();
+      final response = await call();
+      return _unwrapEnvelope(response);
     } on DioException catch (e) {
       throw _mapError(e);
     }
+  }
+
+  /// The real gateway wraps every response body in `pte-common`'s
+  /// `ApiResponse<T>` envelope (`{success, data, message}`) — every
+  /// `fromJson()` call site in this app is written against the inner
+  /// `data` payload directly, so unwrap it here once instead of at every
+  /// call site. Guarded on the `success` key so a body that doesn't look
+  /// like the envelope (e.g. a test double stubbed with flat data) passes
+  /// through untouched.
+  Response<T> _unwrapEnvelope<T>(Response<T> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic> && body.containsKey('success')) {
+      response.data = body['data'] as T;
+    }
+    return response;
   }
 
   ApiException _mapError(DioException e) {

@@ -14,6 +14,8 @@ class AppDimensions {
   static const double readingHeaderBannerPaddingHorizontal = 16.0;
   static const double readingHeaderStarIconSize = 20.0;
   static const double readingHeaderTitleFontSize = 16.0;
+  static const double readingHeaderInstructionSpacing = 4.0;
+  static const double readingHeaderInstructionFontSize = 13.0;
   static const double readingPassageLayoutBreakpoint = 720.0;
   static const double fillBlanksGapMinWidth = 72.0;
   static const double fillBlanksGapPadding = 6.0;
