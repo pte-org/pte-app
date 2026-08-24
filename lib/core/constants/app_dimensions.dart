@@ -5,6 +5,7 @@ class AppDimensions {
 
   static const double spacingMedium = 16.0;
   static const double radiusMedium = 8.0;
+  static const double loginFormMaxWidth = 420.0;
   static const double examBottomBarHeight = 64.0;
   static const double advanceButtonSpinnerSize = 16.0;
   static const double advanceButtonSpinnerStrokeWidth = 2.0;
@@ -21,6 +22,16 @@ class AppDimensions {
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
 
+// Writing task — text editor + countdown affordances.
+  static const double editorToolbarIconSize = 22.0;
+  static const double editorToolbarButtonSize = 36.0;
+  static const double countdownTimerFontSize = 14.0;
+  static const double passagePanelMaxHeight = 240.0;
+  static const double passagePanelBorderWidth = 1.0;
+  static const double writingHeaderPaddingHorizontal = 16.0;
+  static const double writingHeaderPaddingVertical = 12.0;
+
+  // Speaking task — recording progress + audio meter affordances (from origin/dev).
   static const double recordingProgressBarHeight = 8.0;
   static const double recordingProgressBarRadius = 4.0;
 

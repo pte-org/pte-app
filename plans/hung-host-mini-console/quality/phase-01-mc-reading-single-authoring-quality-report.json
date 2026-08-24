@@ -1,0 +1,33 @@
+{
+  "mode": "gate",
+  "target": "phase-01-mc-reading-single-authoring",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-07-28",
+  "reviewer": "independent-code-review-agent",
+  "summary": {
+    "critical": 0,
+    "important_open": 0,
+    "minor_open": 0,
+    "resolved": 2
+  },
+  "findings": [
+    {
+      "id": "HUNG-QUAL-101",
+      "severity": "IMPORTANT",
+      "status": "RESOLVED",
+      "location": "lib/features/authoring/presentation/bloc/question_list_bloc.dart",
+      "evidence": "An older initial GET could finish after the post-create reload and overwrite its authoritative result.",
+      "resolution": "A monotonically increasing request version discards stale results and errors; a controlled two-request unit test covers the race."
+    },
+    {
+      "id": "HUNG-QUAL-102",
+      "severity": "IMPORTANT",
+      "status": "RESOLVED",
+      "location": "test/widget/features/authoring",
+      "evidence": "Initial widget coverage omitted option-removal selection shifts, in-flight disable, failure preservation, and success-to-reload lifecycle.",
+      "resolution": "Widget tests now cover removal before/at/after the selected answer, loading-disabled submit, preserved values, backend-created pop, and exactly one list reload."
+    }
+  ],
+  "open_blocking_findings": 0,
+  "report_path": "plans/hung-host-mini-console/quality/phase-01-mc-reading-single-authoring-quality-report.json"
+}

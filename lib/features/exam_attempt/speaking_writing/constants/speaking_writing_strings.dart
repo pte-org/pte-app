@@ -3,11 +3,20 @@
 class SpeakingWritingStrings {
   const SpeakingWritingStrings._();
 
+// Shared chrome labels for read-aloud / write-essay v1 (from HEAD).
+  static const String writeEssayTextFieldLabel = 'Your response';
+  static const String readAloudStartRecordingLabel = 'Start recording';
+  static const String readAloudStopRecordingLabel = 'Stop recording';
+  static const String readAloudRecordingIndicator = 'Recording…';
+  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
+  static const String readAloudStillUploadingLabel = 'Still uploading…';
+  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+
+  // Dev preview title (from origin/dev).
   static const String devSpeakingWritingPreviewTitle =
       'Speaking/Writing task preview';
 
-  static const String writeEssayTextFieldLabel = 'Your response';
-
+  // Read-aloud templated instruction (from origin/dev).
   static const String readAloudInstructionPrefix =
       'Look at the text below. In ';
   static const String readAloudInstructionMiddle =
@@ -17,7 +26,7 @@ class SpeakingWritingStrings {
 
   // Shared by every auto-record speaking task's status card (Read Aloud,
   // Repeat Sentence, Describe Image) — not Read-Aloud-specific despite
-  // historically living alongside those strings.
+  // historically living alongside those strings (from origin/dev).
   static const String recordingCurrentStatusLabel = 'Current Status:';
   static const String recordingBeginningInPrefix = 'Beginning in ';
   static const String recordingBeginningInSuffix = ' seconds';
@@ -27,6 +36,7 @@ class SpeakingWritingStrings {
   static const String recordingUploadReadyLabel =
       'Uploaded — ready to continue.';
 
+  // Describe-image instruction + image fallback labels (from origin/dev).
   static const String describeImageInstructionPrefix =
       'Look at the image below. In ';
   static const String describeImageInstructionMiddle =
@@ -37,6 +47,8 @@ class SpeakingWritingStrings {
   static const String taskImageMissingLabel =
       'No image available for this task.';
 
+  // Repeat sentence + answer short question + group discussion + situation
+  // instruction copy (from origin/dev).
   static const String repeatSentenceInstructionText =
       'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the sentence '
       'only once.';
@@ -49,10 +61,14 @@ class SpeakingWritingStrings {
   static const String respondToASituationInstructionText =
       'Read the situation below. You will then hear it described again. Please respond appropriately, as you '
       'would in the actual situation.';
+
+  // Listening audio meter copy (from origin/dev, lives here for proximity to
+  // speaking status-card chrome).
   static const String audioListeningVolumeLabel = 'Volume';
   static const String audioListeningPlayingPrefix = 'Playing ';
   static const String audioListeningPlayingSuffix = ' seconds left';
 
+  // Retell lecture instruction (from origin/dev).
   static const String retellLectureInstructionPrefix =
       'You will hear a lecture. After listening to the lecture, in ';
   static const String retellLectureInstructionMiddle =
@@ -61,6 +77,7 @@ class SpeakingWritingStrings {
   static const String retellLectureInstructionSuffix =
       ' seconds to give your response.';
 
+  // Personal introduction instruction (from origin/dev).
   static const String personalIntroductionInstructionPrefix =
       'Read the prompt below. In ';
   static const String personalIntroductionInstructionMiddle =

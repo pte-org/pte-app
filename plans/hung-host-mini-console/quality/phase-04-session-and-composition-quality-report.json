@@ -1,0 +1,39 @@
+{
+  "mode": "gate",
+  "target": "phase-04-session-and-composition",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-07-28",
+  "reviewer": "codex-architecture-and-contract-review",
+  "summary": {
+    "critical": 0,
+    "important_open": 0,
+    "minor_open": 0,
+    "resolved": 1
+  },
+  "contract_findings": [
+    {
+      "id": "HUNG-CONTRACT-401",
+      "status": "ALIGNED",
+      "evidence": "CreateSessionRequest has no sessionType field. Full mock versus practice is represented by selecting all versus a subset of snapshot task types in SetCompositionRequest.",
+      "resolution": "No client-only session type was introduced."
+    },
+    {
+      "id": "HUNG-CONTRACT-402",
+      "status": "RECORDED",
+      "evidence": "The current SessionService does not reject invalid open/close transitions.",
+      "resolution": "The client gates actions by authoritative status and implements typed 409 reload handling without changing pte-api."
+    }
+  ],
+  "findings": [
+    {
+      "id": "HUNG-QUAL-401",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "location": "test/widget/features/scheduling/session_pages_test.dart",
+      "evidence": "The initial widget test closed its BLoC while the submitted event was still completing, causing the test harness to wait indefinitely.",
+      "resolution": "Detached the widget and allowed the test-owned stream to terminate with the test; focused and full suites then completed."
+    }
+  ],
+  "open_blocking_findings": 0,
+  "report_path": "plans/hung-host-mini-console/quality/phase-04-session-and-composition-quality-report.json"
+}

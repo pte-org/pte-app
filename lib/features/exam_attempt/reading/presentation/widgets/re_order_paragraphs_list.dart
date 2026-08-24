@@ -17,17 +17,14 @@ class ReOrderParagraphsList extends StatelessWidget {
       builder: (context, state) {
         final paragraphs = state.currentOrder;
         return ReorderableListView(
-          // `ReorderableListView.onReorder` reports `newIndex` as the
-          // insertion point *before* the dragged item is removed from
-          // `oldIndex` — moving an item forward always overstates the final
-          // index by one, so the classic adjustment below is required (this
-          // is `onReorder`'s actual, only contract; there is no
-          // `onReorderItem` parameter in Flutter's `ReorderableListView`).
+          // `onReorderItem` reports `newIndex` already adjusted for the
+          // dragged item's removal at `oldIndex`, so no manual correction
+          // is required (new in Flutter 3.41+, replacing the deprecated
+          // `onReorder` which returned the pre-removal insertion index).
           // `ReOrderParagraphsCubit.reorder` expects the already-adjusted
           // final resting index.
-          onReorder: (oldIndex, newIndex) {
-            final adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
-            context.read<ReOrderParagraphsCubit>().reorder(oldIndex, adjustedNewIndex);
+          onReorderItem: (oldIndex, newIndex) {
+            context.read<ReOrderParagraphsCubit>().reorder(oldIndex, newIndex);
           },
           children: [
             for (var position = 0; position < paragraphs.length; position++)

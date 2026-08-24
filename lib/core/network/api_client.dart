@@ -13,16 +13,21 @@ class ApiClient {
 
   final Dio _dio;
 
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
-    return _run(() => _dio.get<T>(path, queryParameters: queryParameters));
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return _run<T>(
+      () => _dio.get<dynamic>(path, queryParameters: queryParameters),
+    );
   }
 
   Future<Response<T>> post<T>(String path, {Object? data}) {
-    return _run(() => _dio.post<T>(path, data: data));
+    return _run<T>(() => _dio.post<dynamic>(path, data: data));
   }
 
   Future<Response<T>> put<T>(String path, {Object? data}) {
-    return _run(() => _dio.put<T>(path, data: data));
+    return _run<T>(() => _dio.put<dynamic>(path, data: data));
   }
 
   /// Submits one buffered answer. **Only `SyncEngine._flushOne` may call
@@ -54,12 +59,34 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> _run<T>(Future<Response<T>> Function() call) async {
+  Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {
     try {
-      return await call();
+      return _asTypedResponse<T>(await call());
     } on DioException catch (e) {
       throw _mapError(e);
     }
+  }
+
+  Response<T> _asTypedResponse<T>(Response<dynamic> response) {
+    final body = response.data;
+    final payload =
+        body is Map<String, dynamic> &&
+            body.containsKey('success') &&
+            body.containsKey('data') &&
+            body.containsKey('message')
+        ? body['data']
+        : body;
+
+    return Response<T>(
+      data: payload as T?,
+      headers: response.headers,
+      requestOptions: response.requestOptions,
+      isRedirect: response.isRedirect,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      extra: response.extra,
+      redirects: response.redirects,
+    );
   }
 
   ApiException _mapError(DioException e) {
@@ -68,11 +95,15 @@ class ApiClient {
       return NetworkException(e.message ?? 'Network error');
     }
     return switch (statusCode) {
-      401 || 403 => AuthException('Authentication failed ($statusCode)'),
+      401 => const AuthException('Authentication failed (401)'),
+      403 => const ForbiddenException('Permission denied (403)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
       404 => NotFoundException(_serverMessage(e) ?? 'Not found ($statusCode)'),
       409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
-      429 => RateLimitException('Rate limited ($statusCode)', retryAfter: _retryAfter(e)),
+      429 => RateLimitException(
+        'Rate limited ($statusCode)',
+        retryAfter: _retryAfter(e),
+      ),
       _ => UnknownApiException('Unexpected response ($statusCode)'),
     };
   }

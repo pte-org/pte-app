@@ -1,0 +1,9 @@
+{
+  "target": "phase-03-blueprint-and-snapshot",
+  "verdict": "APPROVED",
+  "policy_version": "1.0.0",
+  "report_path": "plans/hung-host-mini-console/quality/phase-03-blueprint-and-snapshot-quality-report.json",
+  "source_fingerprint": "working-tree-after-2d53b4e",
+  "reviewed_at": "2026-07-28",
+  "open_blocking_findings": 0
+}

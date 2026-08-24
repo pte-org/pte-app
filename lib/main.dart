@@ -1,122 +1,29 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/constants/app_strings.dart';
-import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
-import 'package:pte_app/core/storage/storage_module.dart';
-import 'package:pte_app/core/sync/media_upload_coordinator.dart';
-import 'package:pte_app/core/sync/sync_engine.dart';
-import 'package:pte_app/features/auth/auth_module.dart';
-import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
-import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
-import 'package:pte_app/features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
-import 'package:pte_app/features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
-import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
-import 'package:pte_app/features/report/report_module.dart';
+import 'app.dart';
+import 'core/storage/storage_module.dart';
+import 'features/authoring/authoring_module.dart';
+import 'features/auth/auth_module.dart';
+import 'features/exam_attempt/exam_attempt_module.dart';
+import 'features/host_console/host_console_module.dart';
+import 'features/host_audit/host_audit_module.dart';
+import 'features/host_users/host_users_module.dart';
+import 'features/live_proctor/live_proctor_module.dart';
+import 'features/report/report_module.dart';
+import 'features/scoring_review/scoring_review_module.dart';
+import 'features/scheduling/scheduling_module.dart';
 
 void main() {
   setupAuthModule();
   setupStorageModule();
   setupExamAttemptModule();
   setupReportModule();
+  setupHostConsoleModule();
+  setupHostAuditModule();
+  setupHostUsersModule();
+  setupLiveProctorModule();
+  setupAuthoringModule();
+  setupSchedulingModule();
+  setupScoringReviewModule();
   runApp(const PteApp());
-}
-
-class PteApp extends StatelessWidget {
-  const PteApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppStrings.appTitle,
-      home: Scaffold(
-        body: Center(child: Text(AppStrings.appTitle)),
-        floatingActionButton: kDebugMode
-            ? Builder(
-                builder: (context) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FloatingActionButton(
-                      heroTag: 'dev-reading-preview',
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed('/dev/reading-preview'),
-                      child: const Icon(Icons.menu_book),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMedium),
-                    FloatingActionButton(
-                      heroTag: 'dev-listening-preview',
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed('/dev/listening-preview'),
-                      child: const Icon(Icons.headphones),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMedium),
-                    FloatingActionButton(
-                      heroTag: 'dev-speaking-writing-preview',
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed('/dev/speaking-writing-preview'),
-                      child: const Icon(Icons.mic),
-                    ),
-                  ],
-                ),
-              )
-            : null,
-      ),
-      routes: kDebugMode
-          ? {
-              '/dev/reading-preview': (_) => _buildReadingTaskPreviewScreen(),
-              '/dev/listening-preview': (_) =>
-                  _buildListeningTaskPreviewScreen(),
-              '/dev/speaking-writing-preview': (_) =>
-                  _buildSpeakingWritingTaskPreviewScreen(),
-            }
-          : const {},
-    );
-  }
-
-  static Widget _buildReadingTaskPreviewScreen() {
-    final getIt = GetIt.instance;
-    return ReadingTaskPreviewScreen(
-      outboxDao: getIt<AnswerOutboxDao>(),
-      syncEngine: getIt<SyncEngine>(),
-      audioRecorderService: getIt<AudioRecorderService>(),
-      mediaDao: getIt<PendingMediaUploadDao>(),
-      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
-      audioPlayerService: getIt<AudioPlayerService>(),
-      examAttemptBloc: getIt<ExamAttemptBloc>(),
-    );
-  }
-
-  static Widget _buildListeningTaskPreviewScreen() {
-    final getIt = GetIt.instance;
-    return ListeningTaskPreviewScreen(
-      outboxDao: getIt<AnswerOutboxDao>(),
-      syncEngine: getIt<SyncEngine>(),
-      audioRecorderService: getIt<AudioRecorderService>(),
-      mediaDao: getIt<PendingMediaUploadDao>(),
-      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
-      audioPlayerService: getIt<AudioPlayerService>(),
-      examAttemptBloc: getIt<ExamAttemptBloc>(),
-    );
-  }
-
-  static Widget _buildSpeakingWritingTaskPreviewScreen() {
-    final getIt = GetIt.instance;
-    return SpeakingWritingTaskPreviewScreen(
-      outboxDao: getIt<AnswerOutboxDao>(),
-      syncEngine: getIt<SyncEngine>(),
-      audioRecorderService: getIt<AudioRecorderService>(),
-      mediaDao: getIt<PendingMediaUploadDao>(),
-      mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
-      audioPlayerService: getIt<AudioPlayerService>(),
-      examAttemptBloc: getIt<ExamAttemptBloc>(),
-    );
-  }
 }

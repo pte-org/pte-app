@@ -18,6 +18,13 @@ class AppColors {
   static const Color dragChipBackground = Color(0xFFECEFF1);
   static const Color dragTargetHoverBackground = Color(0xFFBBDEFB);
 
+  // Writing task surfaces.
+  static const Color passagePanelBorder = Color(0xFFE0E0E0);
+  static const Color passagePanelBackground = Color(0xFFF5F5F5);
+  static const Color editorToolbarBackground = Color(0xFFEEEEEE);
+  static const Color countdownTextColor = Color(0xFF212121);
+
+  // Listening task surfaces — word-selection highlight states.
   static const Color wordSelectedBackground = Color(0xFFFFCDD2);
   static const Color wordUnselectedBackground = Color(0x00000000);
 }
