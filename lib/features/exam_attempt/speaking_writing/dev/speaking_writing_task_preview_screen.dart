@@ -9,6 +9,7 @@ import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_serv
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/dev_preview_back_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/speaking_writing_task_fixtures.dart';
@@ -56,6 +57,17 @@ class _SpeakingWritingTaskPreviewScreenState
     extends State<SpeakingWritingTaskPreviewScreen> {
   TaskView? _selected;
 
+  /// Seeds `ExamAttemptBloc` into `AttemptInProgress` for [task] (see
+  /// `DevPreviewAttemptSeeded`'s doc) so `AutoRecordTimerBridgeMixin`'s live
+  /// countdown actually ticks in this fixture-driven preview, then shows the
+  /// task — without this, every speaking screen's "Beginning in…"/"Recording…"
+  /// label stays frozen forever, since the bloc never otherwise leaves its
+  /// initial state here.
+  void _select(TaskView task) {
+    widget.examAttemptBloc.add(DevPreviewAttemptSeeded(task));
+    setState(() => _selected = task);
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _selected;
@@ -92,12 +104,12 @@ class _SpeakingWritingTaskPreviewScreenState
           for (final task in SpeakingWritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
-              onTap: () => setState(() => _selected = task),
+              onTap: () => _select(task),
             ),
           for (final task in WritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
-              onTap: () => setState(() => _selected = task),
+              onTap: () => _select(task),
             ),
         ],
       ),

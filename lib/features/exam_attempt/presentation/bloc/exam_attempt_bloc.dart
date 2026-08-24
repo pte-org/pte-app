@@ -41,6 +41,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
     on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
     on<ForceSubmitRequested>(_onForceSubmitRequested);
+    on<DevPreviewAttemptSeeded>(_onDevPreviewAttemptSeeded);
     _timerTicksSubscription = _timerService.ticks.listen((snapshot) => add(TimerSnapshotUpdated(snapshot)));
     _taskAdvancedSubscription = _timerService.taskAdvancedExternally.listen(
       (_) => add(const TimerTaskAdvancedExternally()),
@@ -193,6 +194,24 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _timerService.seedFromTask(task);
     _timerService.startPolling(response.attemptPublicId);
     emit(AttemptInProgress(response.attemptPublicId, task, _timerService.currentSnapshot));
+  }
+
+  /// `kDebugMode`-only path (see [DevPreviewAttemptSeeded]'s doc) — same
+  /// seeding [_emitFromResponse] does for a real in-progress response, minus
+  /// the `completed`/`task == null` branches a fixture never needs.
+  /// `startPolling`'s network poll will fail against the fake
+  /// `dev-preview-attempt` ID (no such attempt exists server-side), but that
+  /// failure is swallowed and silently retried by `TimerService._poll` —
+  /// the local sub-second tick loop it also starts is what actually drives
+  /// the countdown and is unaffected by the poll's outcome.
+  void _onDevPreviewAttemptSeeded(DevPreviewAttemptSeeded event, Emitter<ExamAttemptState> emit) {
+    const attemptPublicId = 'dev-preview-attempt';
+    _attemptPublicId = attemptPublicId;
+    _syncEngine.setActiveTask(event.task.pinnedItemPublicId);
+    _mediaUploadCoordinator.start();
+    _timerService.seedFromTask(event.task);
+    _timerService.startPolling(attemptPublicId);
+    emit(AttemptInProgress(attemptPublicId, event.task, _timerService.currentSnapshot));
   }
 
   @override
