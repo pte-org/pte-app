@@ -21,4 +21,11 @@ class AppDimensions {
   static const double fillBlanksGapPadding = 6.0;
   static const double dragChipPadding = 8.0;
   static const double dragChipSpacing = 8.0;
+
+  static const double readingContentCardMargin = 12.0;
+  static const double readingContentCardRadius = 12.0;
+  static const double taskAdvanceWarningIconSize = 16.0;
+
+  static const double statusBannerIconBadgeSize = 72.0;
+  static const double statusBannerIconSize = 36.0;
 }

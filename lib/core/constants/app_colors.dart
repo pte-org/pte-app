@@ -18,4 +18,13 @@ class AppColors {
   static const Color fillBlanksGapFilledBackground = Color(0xFFE3F2FD);
   static const Color dragChipBackground = Color(0xFFECEFF1);
   static const Color dragTargetHoverBackground = Color(0xFFBBDEFB);
+
+  static const Color readingPageBackground = Color(0xFFF2F4F7);
+  static const Color readingContentCardBorder = Color(0xFFE0E0E0);
+  static const Color readingContentCardShadow = Color(0x14000000);
+  static const Color taskAdvanceWarningIcon = Color(0xFFFFB300);
+
+  static const Color textSecondary = Color(0xFF757575);
+  static const Color statusBannerIconBackground = Color(0xFFE3F2FD);
+  static const Color statusBannerErrorIconBackground = Color(0xFFFFEBEE);
 }

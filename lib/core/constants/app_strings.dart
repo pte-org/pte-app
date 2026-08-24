@@ -20,6 +20,7 @@ class AppStrings {
   static const String examTaskCounterOf = ' / ';
 
   static const String taskAdvanceButtonLabel = 'Next';
+  static const String taskAdvanceUnansweredNote = 'Leaving this blank and clicking Next will be scored as incorrect.';
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String wordCountSuffix = ' words';
   static const String wordCountBoundsOpen = ' (';

@@ -38,6 +38,7 @@ class PteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appTitle,
+      debugShowCheckedModeBanner: false,
       home: BlocProvider.value(value: GetIt.instance<AuthBloc>(), child: const _AuthGate()),
     );
   }
@@ -122,24 +123,10 @@ class _ExamGateState extends State<_ExamGate> {
                 onContinue: () => setState(() => _reportRevealed = true),
               );
             }
-            return Stack(
-              children: [
-                ReportScreen(attemptPublicId: state.attemptPublicId, repository: getIt<ReportRepository>()),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FloatingActionButton.small(
-                        heroTag: 'report-back-to-session-entry',
-                        onPressed: _resetToSessionEntry,
-                        child: const Icon(Icons.arrow_back),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            return ReportScreen(
+              attemptPublicId: state.attemptPublicId,
+              repository: getIt<ReportRepository>(),
+              onBack: _resetToSessionEntry,
             );
           }
           return const SessionEntryPage();
