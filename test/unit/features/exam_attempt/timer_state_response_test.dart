@@ -8,7 +8,6 @@ Map<String, dynamic> _json({
   int currentOrderIndex = 1,
 }) {
   return {
-    'attemptPublicId': 'attempt-1',
     'phase': phase,
     'currentOrderIndex': currentOrderIndex,
     'prepDeadline': '2026-01-01T00:00:30.000Z',
@@ -22,7 +21,6 @@ void main() {
     final response = TimerStateResponse.fromJson(_json(phase: 'PREP'));
 
     expect(response.phase, TimerPhase.prep);
-    expect(response.attemptPublicId, 'attempt-1');
     expect(response.currentOrderIndex, 1);
     expect(response.prepDeadline, DateTime.parse('2026-01-01T00:00:30.000Z'));
     expect(response.responseDeadline, DateTime.parse('2026-01-01T00:01:30.000Z'));
