@@ -54,7 +54,6 @@ class DevAttemptClock {
     final prepDeadline = startedAt.add(Duration(seconds: task.prepSeconds));
     final responseDeadline = prepDeadline.add(Duration(seconds: task.responseSeconds));
     return TimerStateResponse(
-      attemptPublicId: attemptPublicId,
       phase: now.isBefore(prepDeadline) ? TimerPhase.prep : TimerPhase.response,
       currentOrderIndex: task.orderIndex,
       prepDeadline: prepDeadline,

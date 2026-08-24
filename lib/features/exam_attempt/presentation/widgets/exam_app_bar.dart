@@ -37,17 +37,20 @@ class ExamAppBar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
+              Text(
+                // currentOrderIndex is 0-based (server/domain convention);
+                // display is 1-based ("Question 1 of N"), matching the real
+                // exam's counter, not the internal index.
+                '${snapshot.currentOrderIndex + 1}${ExamAttemptStrings.examTaskCounterOf}$totalTasks',
+                style: const TextStyle(color: AppColors.onPrimary),
+              ),
               const Spacer(),
+              Text(_phaseLabel(snapshot.phase), style: const TextStyle(color: AppColors.onPrimary)),
+              const SizedBox(width: AppDimensions.spacingMedium),
               Text(
                 _formatRemaining(snapshot.remaining),
                 key: const ValueKey('examAppBarCountdown'),
                 style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: AppDimensions.spacingMedium),
-              Text(
-                '${snapshot.currentOrderIndex}${ExamAttemptStrings.examTaskCounterOf}$totalTasks',
-                style: const TextStyle(color: AppColors.onPrimary),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
               IconButton(

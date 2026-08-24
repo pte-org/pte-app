@@ -21,10 +21,14 @@ class _CountingAdapter implements HttpClientAdapter {
     callCount++;
     await Future<void>.delayed(const Duration(milliseconds: 10));
     final body = jsonEncode({
-      'accessToken': 'new-token-$callCount',
-      'refreshToken': 'rotated-refresh-$callCount',
-      'tokenType': 'Bearer',
-      'expiresInSeconds': 900,
+      'success': true,
+      'data': {
+        'accessToken': 'new-token-$callCount',
+        'refreshToken': 'rotated-refresh-$callCount',
+        'tokenType': 'Bearer',
+        'expiresInSeconds': 900,
+      },
+      'message': null,
     });
     return ResponseBody.fromString(body, 200, headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/mc_option_list.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_content_card.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_passage_layout.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
@@ -42,16 +44,24 @@ class McReadingSingleScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
-              Expanded(
-                child: ReadingPassageLayout(
-                  passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
-                  interactive: McOptionList(options: task.options ?? const []),
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ExamTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: ReadingContentCard(
+                    child: ReadingPassageLayout(
+                      passage: SingleChildScrollView(child: Text(task.promptText ?? '')),
+                      interactive: McOptionList(options: task.options ?? const []),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<McReadingSingleCubit>(),

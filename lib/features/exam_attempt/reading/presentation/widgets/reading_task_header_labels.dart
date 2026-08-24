@@ -1,3 +1,4 @@
+import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/features/exam_attempt/reading/constants/reading_strings.dart';
 
 /// Maps a reading `TaskView.taskType` to its `ExamTaskHeaderBanner` title.
@@ -10,6 +11,26 @@ String readingTaskHeaderTitle(String taskType) {
     'RE_ORDER_PARAGRAPHS' => ReadingStrings.readingHeaderTitleReorderParagraphs,
     'FILL_BLANKS_READING' => ReadingStrings.readingHeaderTitleFillBlanksDragDrop,
     'FILL_BLANKS_READING_WRITING' => ReadingStrings.readingHeaderTitleFillBlanksDropdown,
+    _ => '',
+  };
+}
+
+/// Maps a reading `TaskView.taskType` to the short English how-to-answer
+/// instruction shown under its `ExamTaskHeaderBanner` title — same wording
+/// pattern as the real PTE exam's per-task instructions, so a first-time
+/// test-taker isn't left guessing the interaction. Unknown/non-reading
+/// types return an empty string, same convention as [readingTaskHeaderTitle].
+///
+/// Still sourced from the not-yet-migrated `AppStrings` (see that file's
+/// header comment) rather than [ReadingStrings] — move it over once the
+/// rest of that migration lands.
+String readingTaskInstruction(String taskType) {
+  return switch (taskType) {
+    'MC_READING_SINGLE' => AppStrings.readingInstructionMcSingle,
+    'MC_READING_MULTIPLE' => AppStrings.readingInstructionMcMultiple,
+    'RE_ORDER_PARAGRAPHS' => AppStrings.readingInstructionReorderParagraphs,
+    'FILL_BLANKS_READING' => AppStrings.readingInstructionFillBlanksDragDrop,
+    'FILL_BLANKS_READING_WRITING' => AppStrings.readingInstructionFillBlanksDropdown,
     _ => '',
   };
 }

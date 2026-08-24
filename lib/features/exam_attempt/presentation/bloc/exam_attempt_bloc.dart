@@ -64,6 +64,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// completion (or before any attempt started) is a no-op, not a crash.
   String? _attemptPublicId;
 
+  /// The `reason` of the most recently handled `NextTaskRequested` — read
+  /// by `_completeAttempt` so `AttemptCompleted.timeExpired` reflects
+  /// whether this completion was reached via the auto time's-up advance or
+  /// a normal one. Never read for `ForceSubmitRequested`'s own completion
+  /// path (force-submit is always user-initiated, never time-triggered).
+  AdvanceReason _lastAdvanceReason = AdvanceReason.manual;
+
   Future<void> _onSessionResolutionRequested(
     SessionResolutionRequested event,
     Emitter<ExamAttemptState> emit,
@@ -102,6 +109,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   Future<void> _onNextTaskRequested(NextTaskRequested event, Emitter<ExamAttemptState> emit) async {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null) return;
+    _lastAdvanceReason = event.reason;
     try {
       final response = await _repository.fetchNextTask(attemptPublicId);
       _emitFromResponse(response, emit);
@@ -143,6 +151,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   Future<void> _onForceSubmitRequested(ForceSubmitRequested event, Emitter<ExamAttemptState> emit) async {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null) return;
+    _lastAdvanceReason = AdvanceReason.manual;
     try {
       await _repository.forceSubmit(attemptPublicId);
       // Same terminal outcome as the natural end-of-tasks path in
@@ -165,7 +174,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _syncEngine.stopSync();
     _timerService.stop();
     _mediaUploadCoordinator.stop();
-    emit(AttemptCompleted(attemptPublicId));
+    final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
+    _lastAdvanceReason = AdvanceReason.manual;
+    emit(AttemptCompleted(attemptPublicId, timeExpired: timeExpired));
   }
 
   void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {

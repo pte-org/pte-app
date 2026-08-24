@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/widgets/status_banner.dart';
@@ -8,6 +9,7 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_cubit.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_dropdown_body.dart';
+import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_content_card.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/reading_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
@@ -50,19 +52,27 @@ class FillBlanksDropdownScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: Column(
-            children: [
-              ExamTaskHeaderBanner(title: readingTaskHeaderTitle(task.taskType)),
-              Expanded(
-                child: contentAvailable
-                    ? FillBlanksDropdownBody(task: task)
-                    : const StatusBanner(
-                        icon: Icons.hourglass_empty,
-                        title: ReadingStrings.fillBlanksContentUnavailableTitle,
-                        message: ReadingStrings.fillBlanksContentUnavailableMessage,
-                      ),
-              ),
-            ],
+          body: Container(
+            color: AppColors.readingPageBackground,
+            child: Column(
+              children: [
+                ExamTaskHeaderBanner(
+                  title: readingTaskHeaderTitle(task.taskType),
+                  instruction: readingTaskInstruction(task.taskType),
+                ),
+                Expanded(
+                  child: ReadingContentCard(
+                    child: contentAvailable
+                        ? FillBlanksDropdownBody(task: task)
+                        : const StatusBanner(
+                            icon: Icons.hourglass_empty,
+                            title: ReadingStrings.fillBlanksContentUnavailableTitle,
+                            message: ReadingStrings.fillBlanksContentUnavailableMessage,
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<FillBlanksDropdownCubit>(),

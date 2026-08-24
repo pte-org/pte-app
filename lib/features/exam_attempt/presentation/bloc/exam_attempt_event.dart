@@ -5,6 +5,12 @@ sealed class ExamAttemptEvent {
   const ExamAttemptEvent();
 }
 
+/// Why a task advanced — carried through to [AttemptCompleted] so the UI can
+/// show "Time is up" instead of the normal completion message when the
+/// section ended because its shared countdown hit zero, not because the
+/// student answered the last task (phase-08 auto time's-up).
+enum AdvanceReason { manual, timeExpired }
+
 /// Resolves [rawInput] into a session ID via `SessionEntryRepository`,
 /// then starts or resumes the attempt for it. `rawInput`'s meaning is
 /// entirely owned by whichever `SessionEntryRepository` is registered
@@ -20,7 +26,20 @@ final class SessionResolutionRequested extends ExamAttemptEvent {
 /// (not a crash) if dispatched with no attempt running — e.g. a stray
 /// event arriving after `AttemptCompleted` (phase-03 Design Constraints).
 final class NextTaskRequested extends ExamAttemptEvent {
-  const NextTaskRequested();
+  const NextTaskRequested({this.reason = AdvanceReason.manual});
+
+  final AdvanceReason reason;
+
+  // Value equality (rather than the default identity) so a `NextTaskRequested`
+  // built at runtime with an explicit `reason:` (as `TaskAdvanceButton._advance`
+  // always does, including for the default reason) compares equal to a
+  // `const NextTaskRequested()` literal with the same reason — mocktail's
+  // `verify` and bloc_test's `expectLater(bloc, emits(...))` both rely on `==`.
+  @override
+  bool operator ==(Object other) => other is NextTaskRequested && other.reason == reason;
+
+  @override
+  int get hashCode => reason.hashCode;
 }
 
 /// Dispatched internally by the `TimerService.ticks` subscription — not

@@ -7,6 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -40,6 +43,12 @@ void main() {
     syncEngine = _MockSyncEngine();
     cubit = _FakeFlushableAnswerCubit();
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    // TaskAdvanceButton wraps itself in a BlocListener (auto-advance on
+    // timer expiry), which reads bloc.state on mount — give the mock a
+    // real initial state so that read doesn't throw. AttemptIdle rather
+    // than AttemptInProgress: these tests exercise the manual tap path
+    // only, and must never trigger the auto-expiry listener themselves.
+    whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: const AttemptIdle());
   });
 
   Widget buildSubject() {
@@ -103,6 +112,84 @@ void main() {
       expect(cubit.calls, ['flushPendingEdit']);
       verify(() => syncEngine.flushOne('item-1')).called(1);
       verify(() => bloc.add(const NextTaskRequested())).called(1);
+    });
+  });
+
+  group('TaskAdvanceButton — auto-advance on timer expiry (Screen 7 Trigger 1)', () {
+    TaskView task() {
+      return TaskView(
+        pinnedItemPublicId: 'item-1',
+        orderIndex: 1,
+        totalTasks: 5,
+        section: 'READING',
+        taskType: 'MC_READING_SINGLE',
+        title: 'Task title',
+        prepSeconds: 0,
+        responseSeconds: 60,
+        prepDeadline: DateTime(2026, 1, 1),
+        responseDeadline: DateTime(2026, 1, 1, 0, 1),
+        serverNow: DateTime(2026, 1, 1),
+      );
+    }
+
+    const runningSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 5), currentOrderIndex: 1);
+    const expiredSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1);
+
+    late StreamController<ExamAttemptState> stateController;
+
+    setUp(() {
+      stateController = StreamController<ExamAttemptState>.broadcast();
+      whenListen(
+        bloc,
+        stateController.stream,
+        initialState: AttemptInProgress('attempt-1', task(), runningSnapshot),
+      );
+    });
+
+    tearDown(() async {
+      await stateController.close();
+    });
+
+    testWidgets('remaining hits zero (phase: response) auto-fires the same advance sequence, tagged timeExpired', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject());
+
+      stateController.add(AttemptInProgress('attempt-1', task(), expiredSnapshot));
+      await tester.pump();
+
+      expect(cubit.calls, ['flushPendingEdit']);
+      verify(() => syncEngine.flushOne('item-1')).called(1);
+      verify(() => bloc.add(const NextTaskRequested(reason: AdvanceReason.timeExpired))).called(1);
+    });
+
+    testWidgets('a second state update that is still expired does not re-fire the auto-advance', (tester) async {
+      await tester.pumpWidget(buildSubject());
+
+      stateController.add(AttemptInProgress('attempt-1', task(), expiredSnapshot));
+      await tester.pump();
+      // e.g. an unrelated rebuild while the fetch triggered above is still
+      // in flight — the old task's AttemptInProgress/expiredSnapshot is
+      // still what's displayed.
+      stateController.add(AttemptInProgress('attempt-1', task(), expiredSnapshot));
+      await tester.pump();
+
+      verify(() => bloc.add(const NextTaskRequested(reason: AdvanceReason.timeExpired))).called(1);
+    });
+
+    testWidgets('remaining above zero never triggers the auto-advance', (tester) async {
+      await tester.pumpWidget(buildSubject());
+
+      stateController.add(
+        AttemptInProgress(
+          'attempt-1',
+          task(),
+          const TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 1), currentOrderIndex: 1),
+        ),
+      );
+      await tester.pump();
+
+      verifyNever(() => bloc.add(any()));
     });
   });
 }

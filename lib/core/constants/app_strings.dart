@@ -185,6 +185,7 @@ class AppStrings {
   static const String examTaskCounterOf = ' / ';
 
   static const String taskAdvanceButtonLabel = 'Next';
+  static const String taskAdvanceUnansweredNote = 'Leaving this blank and clicking Next will be scored as incorrect.';
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String wordCountSuffix = ' words';
   static const String wordCountBoundsOpen = ' (';
@@ -228,6 +229,16 @@ class AppStrings {
   static const String readingHeaderTitleReorderParagraphs = 'Reading: Re-order Paragraphs';
   static const String readingHeaderTitleFillBlanksDragDrop = 'Reading: Fill in the Blanks';
   static const String readingHeaderTitleFillBlanksDropdown = 'Reading & Writing: Fill in the Blanks';
+
+  static const String readingInstructionMcSingle = 'Read the text and answer the question by selecting the one correct response.';
+  static const String readingInstructionMcMultiple =
+      'Read the text and answer the question by selecting all the correct responses. More than one response may be correct.';
+  static const String readingInstructionReorderParagraphs =
+      'The paragraphs below are not in the correct order. Drag and drop them up or down to restore the original, logical order.';
+  static const String readingInstructionFillBlanksDragDrop =
+      'Some words are missing from the text below. Drag words from the box below to the appropriate blank. Drag a word back to the box to undo it.';
+  static const String readingInstructionFillBlanksDropdown =
+      'Click on each blank in the text below. A list of choices will appear — select the word that best completes the text.';
   static const String fillBlanksWordBankSectionLabel = 'Word bank';
   static const String fillBlanksGapPlaceholder = '_____';
   static const String reorderParagraphsHintLabel = 'Drag to reorder';
@@ -238,6 +249,21 @@ class AppStrings {
   static const String devReadingPreviewTitle = 'Reading task preview';
   static const String devReadingPreviewBlankGroupsUnavailableLabel =
       'FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+
+  static const String readingInstructionsTitle = 'Reading';
+  static const String readingInstructionsBody =
+      'You will have approximately 29-30 minutes to complete 13-18 reading '
+      'items. The countdown timer applies to the whole Reading section, not '
+      'to each individual question — once it starts, you cannot go back to '
+      'a previous question after moving on.';
+  static const String readingInstructionsButtonLabel = 'Next';
+
+  static const String sectionCompletedTimeUpTitle = 'Time is up';
+  static const String sectionCompletedTimeUpMessage =
+      'The time allowed for this section has ended. Your answers so far have been saved.';
+  static const String sectionCompletedNaturalTitle = 'Reading Section Completed';
+  static const String sectionCompletedNaturalMessage = 'You have answered every question in this section.';
+  static const String sectionCompletedContinueButton = 'Continue';
 
   // Writing task — text-editor toolbar tooltips.
   static const String editorCutTooltip = 'Cut';

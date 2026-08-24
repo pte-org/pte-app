@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/network/friendly_error_message.dart';
 import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
 import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
@@ -99,18 +100,19 @@ void main() {
   testWidgets(
     'authentication failure keeps the form visible and shows feedback',
     (tester) async {
+      const error = AuthException('bad credentials');
       final bloc = _MockAuthBloc();
       whenListen(
         bloc,
         const Stream<AuthState>.empty(),
-        initialState: const AuthError(AuthException('bad credentials')),
+        initialState: const AuthError(error),
       );
       addTearDown(bloc.close);
 
       await tester.pumpWidget(buildSubject(bloc: bloc));
 
       expect(find.byType(LoginPage), findsOneWidget);
-      expect(find.text(AppStrings.loginFailure), findsOneWidget);
+      expect(find.text(friendlyErrorMessage(error)), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
     },
   );

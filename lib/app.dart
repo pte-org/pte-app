@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
-import 'core/constants/app_dimensions.dart';
 import 'core/constants/app_strings.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
@@ -16,13 +15,19 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
+import 'features/exam_attempt/reading/presentation/pages/section_completed_screen.dart';
+import 'features/exam_attempt/presentation/pages/session_entry_page.dart';
+import 'features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
 import 'features/live_proctor/domain/live_proctor_access_policy.dart';
 import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
+import 'features/report/domain/repositories/report_repository.dart';
+import 'features/report/presentation/pages/report_screen.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -31,6 +36,7 @@ class PteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appTitle,
+      debugShowCheckedModeBanner: false,
       home: kIsDevSkipAuth
           ? const _DevStandaloneMenu()
           : BlocProvider<AuthBloc>.value(
@@ -128,7 +134,7 @@ class AppAuthGate extends StatelessWidget {
             AuthAuthenticated(:final claims)
                 when LiveProctorAccessPolicy.canControl(claims) =>
               const ProctorWorkspacePage(),
-            AuthAuthenticated() => _StudentWorkspaceWithDevFab(),
+            AuthAuthenticated() => const StudentExamGate(),
           };
         },
       ),
@@ -136,50 +142,74 @@ class AppAuthGate extends StatelessWidget {
   }
 }
 
-/// Wraps the student placeholder with a debug-only FAB column for the three
-/// dev preview screens. Hidden in release builds.
-class _StudentWorkspaceWithDevFab extends StatelessWidget {
-  const _StudentWorkspaceWithDevFab();
+/// The real student flow once authenticated: idle/starting/no attempt shows
+/// [SessionEntryPage]; [AttemptInProgress] shows the live task via
+/// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
+/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
+/// then hands off to [ReportScreen], with a back button (wired through
+/// `ReportScreen.onBack`, not a floating overlay — see that class's own
+/// doc) to reset [ExamAttemptBloc] and return to [SessionEntryPage] for
+/// another session.
+class StudentExamGate extends StatefulWidget {
+  const StudentExamGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: const Center(child: Text(AppStrings.studentWorkspacePlaceholder)),
-      floatingActionButton: kDebugMode
-          ? _DevFabColumn(onNavigate: (route) => Navigator.of(context).pushNamed(route))
-          : null,
-    );
-  }
+  State<StudentExamGate> createState() => StudentExamGateState();
 }
 
-class _DevFabColumn extends StatelessWidget {
-  const _DevFabColumn({required this.onNavigate});
+class StudentExamGateState extends State<StudentExamGate> {
+  late ExamAttemptBloc _bloc = GetIt.instance<ExamAttemptBloc>();
 
-  final void Function(String route) onNavigate;
+  /// Gates `ReportScreen` behind `SectionCompletedScreen` (Screen 7) once
+  /// per `AttemptCompleted` — reset alongside `_bloc` on
+  /// `_resetToSessionEntry` so the next attempt's completion shows the
+  /// interstitial again instead of skipping straight to its report.
+  bool _reportRevealed = false;
+
+  void _resetToSessionEntry() {
+    final getIt = GetIt.instance;
+    getIt.resetLazySingleton<ExamAttemptBloc>(disposingFunction: (bloc) => bloc.close());
+    setState(() {
+      _bloc = getIt<ExamAttemptBloc>();
+      _reportRevealed = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton(
-          heroTag: 'dev-reading-preview',
-          onPressed: () => onNavigate('/dev/reading-preview'),
-          child: const Icon(Icons.menu_book),
-        ),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        FloatingActionButton(
-          heroTag: 'dev-listening-preview',
-          onPressed: () => onNavigate('/dev/listening-preview'),
-          child: const Icon(Icons.headphones),
-        ),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        FloatingActionButton(
-          heroTag: 'dev-speaking-writing-preview',
-          onPressed: () => onNavigate('/dev/speaking-writing-preview'),
-          child: const Icon(Icons.mic),
-        ),
-      ],
+    final getIt = GetIt.instance;
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocBuilder<ExamAttemptBloc, ExamAttemptState>(
+        builder: (context, state) {
+          if (state is AttemptInProgress) {
+            return TaskTypeDispatcher(
+              task: state.task,
+              attemptPublicId: state.attemptPublicId,
+              outboxDao: getIt<AnswerOutboxDao>(),
+              syncEngine: getIt<SyncEngine>(),
+              audioRecorderService: getIt<AudioRecorderService>(),
+              mediaDao: getIt<PendingMediaUploadDao>(),
+              mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+              audioPlayerService: getIt<AudioPlayerService>(),
+            );
+          }
+          if (state is AttemptCompleted) {
+            if (!_reportRevealed) {
+              return SectionCompletedScreen(
+                timeExpired: state.timeExpired,
+                onContinue: () => setState(() => _reportRevealed = true),
+              );
+            }
+            return ReportScreen(
+              attemptPublicId: state.attemptPublicId,
+              repository: getIt<ReportRepository>(),
+              onBack: _resetToSessionEntry,
+            );
+          }
+          return const SessionEntryPage();
+        },
+      ),
     );
   }
 }

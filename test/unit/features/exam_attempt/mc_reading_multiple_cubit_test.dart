@@ -129,8 +129,9 @@ void main() {
     });
   });
 
-  group('flushPendingEdit — intentional no-op (discrete toggle needs no debounce flush)', () {
-    test('does not throw and does not trigger an extra upsertAnswer call', () async {
+  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+      'must still leave a submittable row)', () {
+    test('with no prior toggle, writes an empty-payload row so skipping without answering still submits', () async {
       final cubit = McReadingMultipleCubit(
         outboxDao: outboxDao,
         attemptPublicId: 'attempt-1',
@@ -139,13 +140,9 @@ void main() {
 
       await cubit.flushPendingEdit();
 
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
-      );
+      verify(
+        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: ''),
+      ).called(1);
 
       await cubit.close();
     });

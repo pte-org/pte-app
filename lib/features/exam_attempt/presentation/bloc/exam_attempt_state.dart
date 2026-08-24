@@ -25,9 +25,16 @@ final class AttemptInProgress extends ExamAttemptState {
 }
 
 final class AttemptCompleted extends ExamAttemptState {
-  const AttemptCompleted(this.attemptPublicId);
+  const AttemptCompleted(this.attemptPublicId, {this.timeExpired = false});
 
   final String attemptPublicId;
+
+  /// True when this attempt ended because a section's shared countdown hit
+  /// zero (`AdvanceReason.timeExpired`), false for a normal
+  /// answered-the-last-task completion — client-derived, not
+  /// server-confirmed (only affects which message `SectionCompletedScreen`
+  /// shows, never scoring).
+  final bool timeExpired;
 }
 
 /// Carries either a Phase 1 [ApiException] (attempt-lifecycle call
