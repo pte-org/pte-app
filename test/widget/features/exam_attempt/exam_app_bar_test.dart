@@ -58,8 +58,8 @@ void main() {
     );
   }
 
-  /// The countdown `Text` is the second `Text` in `ExamAppBar`'s row (phase
-  /// label, countdown, task counter) — its widget-object identity only
+  /// The countdown `Text` is the third `Text` in `ExamAppBar`'s row (task
+  /// counter, phase label, countdown) — its widget-object identity only
   /// changes when `BlocSelector`'s `builder` closure actually re-runs, i.e.
   /// only when the selected `TimerSnapshot` slice itself changed
   /// (`flutter_bloc`'s `_BlocBuilderBaseState.build` only calls `builder`
@@ -68,7 +68,7 @@ void main() {
   /// pumps is therefore a faithful proxy for "did the countdown widget
   /// rebuild", satisfying Step 12's "must be an executed test" requirement
   /// without needing to modify production code to inject a counter.
-  Text countdownTextWidget(WidgetTester tester) => tester.widgetList<Text>(find.byType(Text)).elementAt(1);
+  Text countdownTextWidget(WidgetTester tester) => tester.widgetList<Text>(find.byType(Text)).elementAt(2);
 
   testWidgets(
     'an unrelated state change (task changes, TimerSnapshot slice unchanged) does not rebuild the countdown widget',
