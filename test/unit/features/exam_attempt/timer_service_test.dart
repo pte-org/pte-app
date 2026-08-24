@@ -57,7 +57,6 @@ TimerStateResponse _serverState({
   required DateTime serverNow,
 }) {
   return TimerStateResponse(
-    attemptPublicId: 'attempt-1',
     phase: phase,
     currentOrderIndex: currentOrderIndex,
     prepDeadline: prepDeadline ?? DateTime(2026, 1, 1, 0, 0, 30),

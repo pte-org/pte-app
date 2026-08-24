@@ -23,7 +23,6 @@ void main() {
         requestOptions: RequestOptions(path: '/api/exam-delivery/attempts/attempt-1/timer'),
         statusCode: 200,
         data: {
-          'attemptPublicId': 'attempt-1',
           'phase': 'RESPONSE',
           'currentOrderIndex': 2,
           'prepDeadline': '2026-01-01T00:00:30.000Z',
@@ -35,7 +34,6 @@ void main() {
 
     final response = await repository.fetchTimerState('attempt-1');
 
-    expect(response.attemptPublicId, 'attempt-1');
     expect(response.phase, TimerPhase.response);
     expect(response.currentOrderIndex, 2);
     verify(() => apiClient.get<Map<String, dynamic>>('/api/exam-delivery/attempts/attempt-1/timer')).called(1);
