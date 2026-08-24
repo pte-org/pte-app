@@ -36,7 +36,10 @@ class ExamAppBar extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                '${snapshot.currentOrderIndex}${AppStrings.examTaskCounterOf}$totalTasks',
+                // currentOrderIndex is 0-based (server/domain convention);
+                // display is 1-based ("Question 1 of N"), matching the real
+                // exam's counter, not the internal index.
+                '${snapshot.currentOrderIndex + 1}${AppStrings.examTaskCounterOf}$totalTasks',
                 style: const TextStyle(color: AppColors.onPrimary),
               ),
               const Spacer(),
