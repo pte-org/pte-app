@@ -13,6 +13,7 @@ class TimerStateResponse {
     required this.prepDeadline,
     required this.responseDeadline,
     required this.serverNow,
+    this.examEndTime,
   });
 
   final TimerPhase phase;
@@ -21,6 +22,10 @@ class TimerStateResponse {
   final DateTime responseDeadline;
   final DateTime serverNow;
 
+  /// Whole-attempt deadline — see `TaskView.examEndTime`. Null only for an
+  /// attempt created before the backend started populating this field.
+  final DateTime? examEndTime;
+
   factory TimerStateResponse.fromJson(Map<String, dynamic> json) {
     return TimerStateResponse(
       phase: _phaseFromWire(json['phase'] as String),
@@ -28,6 +33,7 @@ class TimerStateResponse {
       prepDeadline: DateTime.parse(json['prepDeadline'] as String),
       responseDeadline: DateTime.parse(json['responseDeadline'] as String),
       serverNow: DateTime.parse(json['serverNow'] as String),
+      examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
     );
   }
 
