@@ -41,7 +41,7 @@ Các bước để verify PR này hoạt động đúng.
 - [ ] Không có string hardcode trong widget (kiểm tra `lib/core/constants/app_strings.dart`)
 - [ ] Không có file nào > 300 dòng code logic
 
-## Code Review Checklist — aptis-app (Flutter / Dart)
+## Code Review Checklist — pte-app (Flutter / Dart)
 
 - [ ] Không hardcode string trong widget (`❌ Text('Exam not found')` → `✅ Text(AppStrings.examNotFound)`)
 - [ ] Không hardcode color (`❌ Color(0xFF1E88E5)` → `✅ AppColors.primary`)
