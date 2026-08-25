@@ -27,40 +27,31 @@ class TimerService {
   TimerService({
     required TimerRepository timerRepository,
     Stopwatch? stopwatch,
-    Stopwatch? examStopwatch,
     TimerScheduler? scheduler,
     Logger? logger,
   }) : _timerRepository = timerRepository,
        _stopwatch = stopwatch ?? Stopwatch(),
-       _examStopwatch = examStopwatch ?? Stopwatch(),
        _scheduler = scheduler ?? Timer.new,
        _logger = logger ?? Logger();
-
-  /// **Mock** total exam duration — no API response this app consumes
-  /// exposes `ExamAttempt.startedAt` or a real total-exam-duration field
-  /// yet, so [TimerSnapshot.examRemaining] is computed against this
-  /// hardcoded constant instead of a server-provided deadline. Replace
-  /// this (and [_examStopwatch]'s first-seed anchor below) once the
-  /// backend exposes real data.
-  static const Duration mockExamTotalDuration = Duration(minutes: 135);
 
   final TimerRepository _timerRepository;
   final Stopwatch _stopwatch;
   final TimerScheduler _scheduler;
   final Logger _logger;
 
-  /// Started once, on the very first [seedFromTask] call this instance
-  /// ever handles — never reset by later task transitions (unlike
-  /// [_stopwatch], which reseeds per task) — so [TimerSnapshot.examRemaining]
-  /// keeps counting down across the whole attempt.
-  final Stopwatch _examStopwatch;
-  bool _examStopwatchStarted = false;
+  /// Server-provided whole-attempt deadline (`TaskView.examEndTime`/
+  /// `TimerStateResponse.examEndTime`) — fixed for the life of the attempt,
+  /// so it's carried forward across every [_seed] call rather than re-read
+  /// per task. Null only before the first seed/reconciliation, or for an
+  /// attempt predating the backend field.
+  DateTime? _examEndTime;
 
   final StreamController<TimerSnapshot> _ticksController = StreamController<TimerSnapshot>.broadcast();
   final StreamController<void> _taskAdvancedController = StreamController<void>.broadcast();
 
   TimerPhase _phase = TimerPhase.prep;
   Duration _targetRemaining = Duration.zero;
+  Duration _examTargetRemaining = Duration.zero;
   int _currentOrderIndex = 0;
 
   Timer? _pollTimer;
@@ -89,7 +80,7 @@ class TimerService {
       phase: _phase,
       remaining: _nonNegative(_targetRemaining - _stopwatch.elapsed),
       currentOrderIndex: _currentOrderIndex,
-      examRemaining: _nonNegative(mockExamTotalDuration - _examStopwatch.elapsed),
+      examRemaining: _nonNegative(_examTargetRemaining - _stopwatch.elapsed),
     );
   }
 
@@ -101,10 +92,6 @@ class TimerService {
   /// deadlines at fetch time seeds a zero/expired snapshot immediately
   /// rather than a negative countdown.
   void seedFromTask(TaskView task) {
-    if (!_examStopwatchStarted) {
-      _examStopwatchStarted = true;
-      _examStopwatch.start();
-    }
     final DateTime deadline;
     if (task.serverNow.isBefore(task.prepDeadline)) {
       _phase = TimerPhase.prep;
@@ -114,7 +101,7 @@ class TimerService {
       deadline = task.responseDeadline;
     }
     _currentOrderIndex = task.orderIndex;
-    _seed(deadline.difference(task.serverNow));
+    _seed(deadline.difference(task.serverNow), serverNow: task.serverNow, examEndTime: task.examEndTime);
   }
 
   /// Resets the countdown to the server's authoritative state and adopts
@@ -125,15 +112,25 @@ class TimerService {
 
     _phase = response.phase;
     _currentOrderIndex = response.currentOrderIndex;
-    _seed(deadline.difference(response.serverNow));
+    _seed(deadline.difference(response.serverNow), serverNow: response.serverNow, examEndTime: response.examEndTime);
 
     if (orderIndexChanged) {
       _taskAdvancedController.add(null);
     }
   }
 
-  void _seed(Duration remaining) {
+  /// [examEndTime] is fixed for the whole attempt but re-supplied on every
+  /// seed/reconciliation, so a null value here (an attempt predating the
+  /// backend field) never overwrites an already-known one. [_examTargetRemaining]
+  /// is recomputed against [serverNow] every call — same self-correcting
+  /// pattern as [_targetRemaining] — rather than free-running off a single
+  /// first-seed anchor.
+  void _seed(Duration remaining, {required DateTime serverNow, DateTime? examEndTime}) {
     _targetRemaining = _nonNegative(remaining);
+    _examEndTime ??= examEndTime;
+    if (_examEndTime != null) {
+      _examTargetRemaining = _nonNegative(_examEndTime!.difference(serverNow));
+    }
     _stopwatch
       ..reset()
       ..start();

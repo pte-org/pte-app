@@ -33,6 +33,7 @@ TaskView _task({
   DateTime? prepDeadline,
   DateTime? responseDeadline,
   int orderIndex = 1,
+  DateTime? examEndTime,
 }) {
   return TaskView(
     pinnedItemPublicId: 'item-1',
@@ -46,6 +47,7 @@ TaskView _task({
     prepDeadline: prepDeadline ?? DateTime(2026, 1, 1, 0, 0, 30),
     responseDeadline: responseDeadline ?? DateTime(2026, 1, 1, 0, 1, 30),
     serverNow: serverNow,
+    examEndTime: examEndTime,
   );
 }
 
@@ -55,6 +57,7 @@ TimerStateResponse _serverState({
   DateTime? prepDeadline,
   DateTime? responseDeadline,
   required DateTime serverNow,
+  DateTime? examEndTime,
 }) {
   return TimerStateResponse(
     phase: phase,
@@ -62,6 +65,7 @@ TimerStateResponse _serverState({
     prepDeadline: prepDeadline ?? DateTime(2026, 1, 1, 0, 0, 30),
     responseDeadline: responseDeadline ?? DateTime(2026, 1, 1, 0, 1, 30),
     serverNow: serverNow,
+    examEndTime: examEndTime,
   );
 }
 
@@ -217,6 +221,62 @@ void main() {
 
       expect(advancedCount, 2);
       await sub.cancel();
+    });
+  });
+
+  group('examRemaining — derived from server-provided examEndTime, not a hardcoded constant', () {
+    test('seedFromTask with no examEndTime leaves examRemaining at zero', () {
+      final service = TimerService(timerRepository: repository);
+      service.seedFromTask(_task(serverNow: DateTime(2026, 1, 1, 0, 0, 10)));
+
+      expect(service.currentSnapshot.examRemaining, Duration.zero);
+    });
+
+    test('seedFromTask computes examRemaining as examEndTime minus serverNow', () {
+      final service = TimerService(timerRepository: repository);
+      service.seedFromTask(
+        _task(
+          serverNow: DateTime(2026, 1, 1, 0, 0, 10),
+          examEndTime: DateTime(2026, 1, 1, 1, 0, 10),
+        ),
+      );
+
+      expect(service.currentSnapshot.examRemaining, lessThanOrEqualTo(const Duration(hours: 1)));
+      expect(service.currentSnapshot.examRemaining, greaterThan(const Duration(minutes: 59, seconds: 59)));
+    });
+
+    test('a later reconciliation without examEndTime keeps the previously-known deadline, not resetting to zero', () {
+      final service = TimerService(timerRepository: repository);
+      service.seedFromTask(
+        _task(
+          serverNow: DateTime(2026, 1, 1, 0, 0, 10),
+          examEndTime: DateTime(2026, 1, 1, 1, 0, 10),
+        ),
+      );
+
+      service.reconcileFromServer(
+        _serverState(
+          phase: TimerPhase.response,
+          currentOrderIndex: 1,
+          serverNow: DateTime(2026, 1, 1, 0, 0, 40),
+          // examEndTime omitted — mirrors a stale/older backend payload.
+        ),
+      );
+
+      expect(service.currentSnapshot.examRemaining, lessThanOrEqualTo(const Duration(minutes: 59, seconds: 30)));
+      expect(service.currentSnapshot.examRemaining, greaterThan(const Duration(minutes: 59, seconds: 20)));
+    });
+
+    test('already past examEndTime renders zero, never negative', () {
+      final service = TimerService(timerRepository: repository);
+      service.seedFromTask(
+        _task(
+          serverNow: DateTime(2026, 1, 1, 1, 30, 0),
+          examEndTime: DateTime(2026, 1, 1, 1, 0, 10),
+        ),
+      );
+
+      expect(service.currentSnapshot.examRemaining, Duration.zero);
     });
   });
 
