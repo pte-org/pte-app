@@ -88,3 +88,13 @@ final class DevPreviewAttemptSeeded extends ExamAttemptEvent {
 
   final TaskView task;
 }
+
+/// Dispatched by `ExamScaffold`'s `WidgetsBindingObserver` when the app
+/// transitions back to `AppLifecycleState.resumed` — forces an immediate
+/// timer re-poll rather than waiting up to the normal poll interval, since
+/// the OS may have suspended/throttled the app (and its `Stopwatch`-driven
+/// local countdown) for an unknown stretch while backgrounded. A no-op if no
+/// attempt is running.
+final class AppResumed extends ExamAttemptEvent {
+  const AppResumed();
+}

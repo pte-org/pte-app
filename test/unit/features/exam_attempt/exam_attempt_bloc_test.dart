@@ -458,6 +458,43 @@ void main() {
     );
   });
 
+  group('AppResumed (background/foreground resync)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'with an attempt running, re-arms TimerService.startPolling for the current attempt without emitting a new state',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const AppResumed());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => timerService.startPolling('attempt-1')).called(2); // once on start, once on resume
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'with no attempt running (e.g. before any SessionResolutionRequested) is a no-op, not a crash',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const AppResumed()),
+      expect: () => [],
+      verify: (_) {
+        verifyNever(() => timerService.startPolling(any()));
+      },
+    );
+  });
+
   group('SyncTaskRejectedExternally regression (Step 8/9 wiring)', () {
     blocTest<ExamAttemptBloc, ExamAttemptState>(
       'when SyncEngine.taskRejectedExternally emits, the bloc re-fetches next-task the same way '

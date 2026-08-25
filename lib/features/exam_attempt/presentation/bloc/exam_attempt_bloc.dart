@@ -42,6 +42,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
     on<ForceSubmitRequested>(_onForceSubmitRequested);
     on<DevPreviewAttemptSeeded>(_onDevPreviewAttemptSeeded);
+    on<AppResumed>(_onAppResumed);
     _timerTicksSubscription = _timerService.ticks.listen((snapshot) => add(TimerSnapshotUpdated(snapshot)));
     _taskAdvancedSubscription = _timerService.taskAdvancedExternally.listen(
       (_) => add(const TimerTaskAdvancedExternally()),
@@ -162,6 +163,18 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
     }
+  }
+
+  /// Re-arms `TimerService`'s poll+tick chain immediately instead of
+  /// waiting up to the normal poll interval — `startPolling` already calls
+  /// `stop()` first internally, so this safely supersedes whatever chain
+  /// was running, exactly as a task transition would. A no-op if no
+  /// attempt is currently running (e.g. resumed while on the session-entry
+  /// or report screen).
+  void _onAppResumed(AppResumed event, Emitter<ExamAttemptState> emit) {
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    _timerService.startPolling(attemptPublicId);
   }
 
   /// Shared terminal teardown for both the natural end-of-tasks path
