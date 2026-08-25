@@ -12,6 +12,8 @@ import 'core/widgets/loading_view.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/device_check/data/device_check_audio_player_impl.dart';
+import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
@@ -50,6 +52,7 @@ class PteApp extends StatelessWidget {
                   _buildListeningTaskPreviewScreen(),
               '/dev/speaking-writing-preview': (_) =>
                   _buildSpeakingWritingTaskPreviewScreen(),
+              '/dev/device-check-preview': (_) => _buildTestMicAndSoundScreen(),
               if (kIsDevSkipAuth) ..._devStandaloneRoutes,
             }
           : const {},
@@ -66,6 +69,7 @@ class PteApp extends StatelessWidget {
     '/dev/standalone/listening': (_) => _buildListeningTaskPreviewScreen(),
     '/dev/standalone/speaking-writing': (_) =>
         _buildSpeakingWritingTaskPreviewScreen(),
+    '/dev/standalone/device-check': (_) => _buildTestMicAndSoundScreen(),
   };
 
   static Widget _buildReadingTaskPreviewScreen() {
@@ -104,6 +108,15 @@ class PteApp extends StatelessWidget {
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
       examAttemptBloc: getIt<ExamAttemptBloc>(),
+    );
+  }
+
+  static Widget _buildTestMicAndSoundScreen() {
+    return TestMicAndSoundScreen(
+      recorder: GetIt.instance<AudioRecorderService>(),
+      // Not GetIt-registered — single-screen, dev-only feature with no
+      // second call site (see TestMicAndSoundScreen's own doc comment).
+      player: DeviceCheckAudioPlayerImpl(),
     );
   }
 }
@@ -168,7 +181,9 @@ class StudentExamGateState extends State<StudentExamGate> {
 
   void _resetToSessionEntry() {
     final getIt = GetIt.instance;
-    getIt.resetLazySingleton<ExamAttemptBloc>(disposingFunction: (bloc) => bloc.close());
+    getIt.resetLazySingleton<ExamAttemptBloc>(
+      disposingFunction: (bloc) => bloc.close(),
+    );
     setState(() {
       _bloc = getIt<ExamAttemptBloc>();
       _reportRevealed = false;
@@ -253,8 +268,18 @@ class _DevStandaloneMenu extends StatelessWidget {
             subtitle: const Text(
               'Render every speaking/writing task type from local fixtures',
             ),
-            onTap: () => Navigator.of(context)
-                .pushNamed('/dev/standalone/speaking-writing'),
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed('/dev/standalone/speaking-writing'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_voice),
+            title: const Text('Test Mic and Sound'),
+            subtitle: const Text(
+              'Record + play back your voice, and play a test sound clip',
+            ),
+            onTap: () =>
+                Navigator.of(context).pushNamed('/dev/standalone/device-check'),
           ),
         ],
       ),

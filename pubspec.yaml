@@ -48,6 +48,8 @@ dependencies:
   just_audio: ^0.10.6
   flutter_secure_storage: ^9.2.4
   stomp_dart_client: ^3.0.1
+  just_audio_media_kit: ^2.1.0
+  media_kit_libs_windows_audio: ^1.0.9
 
 dev_dependencies:
   flutter_test:

@@ -12,6 +12,11 @@ never lost**, even offline, even if the app is killed mid-exam.
 ## Setup
 
 - Dart SDK `^3.11.5` (matches `pubspec.yaml` `environment.sdk`).
+- **Windows only:** Enable Windows Developer Mode before running the app on Windows.
+  This is required whenever a new native Windows plugin is added (e.g. `just_audio_media_kit`,
+  `media_kit_libs_windows_audio`). Without it, `flutter run -d windows` or `flutter build windows`
+  fails with "Building with plugins requires symlink support." Enable via
+  Settings → Privacy & Security → Developer Settings → Developer Mode (or `ms-settings:developers`).
 - `flutter pub get` to install dependencies.
 - After any change to a Drift table/schema (`lib/core/storage/`), regenerate
   code:
@@ -62,14 +67,23 @@ aptis-app/
 │   │       ├── sync_engine.dart            # SyncEngine — startSync/stopSync, flush-on-canary-event
 │   │       └── sync_module.dart              # registerSyncModule(GetIt)
 │   └── features/
-│       └── exam_delivery/              # First (and so far only) feature. See its own README.md.
-│           ├── domain/entities/           # ExamAttemptState — sealed, no framework imports
-│           ├── data/repositories/           # ExamAttemptRepository (interface) + impl over ApiClient/DAO
-│           ├── exam_delivery_module.dart    # registerExamDeliveryModule(GetIt)
+│       ├── exam_delivery/              # Main exam delivery feature. See its own README.md.
+│       │   ├── domain/entities/           # ExamAttemptState — sealed, no framework imports
+│       │   ├── data/repositories/           # ExamAttemptRepository (interface) + impl over ApiClient/DAO
+│       │   ├── exam_delivery_module.dart    # registerExamDeliveryModule(GetIt)
+│       │   └── presentation/
+│       │       ├── bloc/                      # ExamAttemptEvent (sealed) + ExamAttemptBloc
+│       │       ├── pages/                      # ExamDeliveryPage — placeholder Scaffold
+│       │       └── widgets/                    # ExamAppBar, ExamBottomBar, WordMatchingGrid
+│       └── device_check/              # Dev-only device check (mic/sound test). Not wired into production
+│           │                           # exam flow; accessible via `/dev/device-check-preview` (debug route)
+│           │                           # or `/dev/standalone/device-check` when compiled with DEV_SKIP_AUTH.
+│           ├── domain/entities/
+│           ├── data/repositories/
+│           ├── device_check_module.dart    # registerDeviceCheckModule(GetIt) — currently unused
 │           └── presentation/
-│               ├── bloc/                      # ExamAttemptEvent (sealed) + ExamAttemptBloc
-│               ├── pages/                      # ExamDeliveryPage — placeholder Scaffold
-│               └── widgets/                    # ExamAppBar, ExamBottomBar, WordMatchingGrid
+│               ├── cubit/
+│               └── pages/
 ├── test/unit/                # Mirrors lib/ — one test dir per core/ subfolder + per feature
 ├── plans/aptis-app-architecture/   # (in the aptis workspace repo) — plan.md + 6 phase-XX-*.md files,
 │                                   # spec.md, and the ADRs/decisions behind this structure
@@ -101,9 +115,11 @@ Three invariants the whole sync story rests on — don't break these:
 
 ### `lib/features/<name>/` — one folder per `aptis-be` bounded context
 
-Today only `exam_delivery` exists. Future features (`auth`,
-`exam_operations`, `results` — see `aptis-be`'s bounded contexts) get their
-own folder, each with the same three-layer shape:
+Today only `exam_delivery` is a production feature tied to an `aptis-be`
+bounded context. Additionally, `device_check` exists as a dev-only feature
+for microphone/sound testing, not wired into production flows. Future features
+(`auth`, `exam_operations`, `results` — see `aptis-be`'s bounded contexts) get
+their own folder, each with the same three-layer shape:
 
 ```
 features/<name>/
