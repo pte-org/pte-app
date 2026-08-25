@@ -4,7 +4,7 @@
 
 WARN=0
 
-echo "=== aptis-app Coding Standards Check ==="
+echo "=== pte-app Coding Standards Check ==="
 echo ""
 
 # Check hardcoded color values
