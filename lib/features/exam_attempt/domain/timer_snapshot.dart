@@ -19,12 +19,11 @@ class TimerSnapshot extends Equatable {
   final int currentOrderIndex;
 
   /// Countdown for the whole exam, shown in `ExamAppBar`'s "Time Remaining".
-  /// **Mock** — `TimerService.mockExamTotalDuration` is a hardcoded
-  /// constant anchored to whenever this `TimerService` instance first
-  /// started seeding a task, not a real backend value: no API response
-  /// this app consumes exposes `ExamAttempt.startedAt` or a total-exam-
-  /// duration field yet. Defaults to `Duration.zero` so every `TimerSnapshot`
-  /// built before this field existed (most tests) keeps compiling unchanged.
+  /// Derived from the server-provided `TaskView.examEndTime`/
+  /// `TimerStateResponse.examEndTime` (`ExamAttempt.startedAt` plus the
+  /// pinned snapshot's total `prepSeconds + responseSeconds`), recomputed on
+  /// every seed/reconciliation. Defaults to `Duration.zero` before the first
+  /// one, or for an attempt predating the backend field.
   final Duration examRemaining;
 
   @override

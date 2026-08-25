@@ -73,6 +73,7 @@ class TaskView {
     required this.prepDeadline,
     required this.responseDeadline,
     required this.serverNow,
+    this.examEndTime,
   });
 
   final String pinnedItemPublicId;
@@ -93,6 +94,13 @@ class TaskView {
   final DateTime prepDeadline;
   final DateTime responseDeadline;
   final DateTime serverNow;
+
+  /// Whole-attempt deadline (`ExamAttempt.startedAt` + every pinned item's
+  /// `prepSeconds + responseSeconds`) — distinct from [prepDeadline]/
+  /// [responseDeadline], which govern only the current task/section. Null
+  /// only for an attempt created before the backend started populating this
+  /// field.
+  final DateTime? examEndTime;
 
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
@@ -118,6 +126,7 @@ class TaskView {
       prepDeadline: DateTime.parse(json['prepDeadline'] as String),
       responseDeadline: DateTime.parse(json['responseDeadline'] as String),
       serverNow: DateTime.parse(json['serverNow'] as String),
+      examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
     );
   }
 }
