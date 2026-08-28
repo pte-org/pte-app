@@ -465,6 +465,140 @@ void main() {
     });
   });
 
+  group('Encryption support (Phase 3)', () {
+    test(
+      'startSync with a non-null encryptionPublicKey causes _flushOne to call submitEncryptedAnswer instead of submitAnswer',
+      () async {
+        when(() => dao.queryPendingByAttempt('attempt-1'))
+            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            wrappedKey: any(named: 'wrappedKey'),
+            iv: any(named: 'iv'),
+            ciphertext: any(named: 'ciphertext'),
+          ),
+        ).thenAnswer((_) async => _okResponse());
+        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+
+        const encryptionPublicKey =
+            'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmkRv1ibV6X9T/mPzAkvP68kJ7v+nhkV99yPj3EMYdGtrS4t8+41k6UJFKNKFe4ea7AfGQnl68XFgwQsezrOqEe5D2ildsNi6t8+MGfxbYFmN2QH4F/u2eTPjCH31RNeeuY0p0pjlL7nD2hX9GhGjRzz1juhu0Mvc5qPIVEsJKMjPpY/vhpccmPLtDU240hq5roEOV/NObL8HywJjiP8i9NUimPvDq8aA5f5lMdBj0ui3skCaF1J4lBVOST5KRjDBmAEGMloMbZstN2Q5LiVZWk1AQzL18zHQ9sNp0FzxlyD/iVXsYJEYCzYB4KoGttreCDyhzIeYnqZnyZia70jCwQIDAQAB';
+
+        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        engine.startSync('attempt-1', encryptionPublicKey: encryptionPublicKey);
+        canaryController.add(null);
+        await Future<void>.delayed(Duration.zero);
+
+        // submitEncryptedAnswer should be called instead of submitAnswer
+        verify(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            wrappedKey: any(named: 'wrappedKey'),
+            iv: any(named: 'iv'),
+            ciphertext: any(named: 'ciphertext'),
+          ),
+        ).called(1);
+
+        // Verify the row is marked synced
+        verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+      },
+    );
+
+    test(
+      'startSync without encryptionPublicKey (null) keeps calling submitAnswer for STANDARD attempts',
+      () async {
+        when(() => dao.queryPendingByAttempt('attempt-1'))
+            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => apiClient.submitAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async => _okResponse());
+        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+
+        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        // No encryptionPublicKey provided
+        engine.startSync('attempt-1');
+        canaryController.add(null);
+        await Future<void>.delayed(Duration.zero);
+
+        // submitAnswer should still be called for STANDARD attempts
+        verify(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            payload: 'payload',
+          ),
+        ).called(1);
+
+        verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+      },
+    );
+
+    test(
+      'startSync with explicit null encryptionPublicKey keeps the STANDARD submission path',
+      () async {
+        when(() => dao.queryPendingByAttempt('attempt-1'))
+            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => apiClient.submitAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async => _okResponse());
+        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+
+        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        engine.startSync('attempt-1', encryptionPublicKey: null);
+        canaryController.add(null);
+        await Future<void>.delayed(Duration.zero);
+
+        verify(
+          () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+        ).called(1);
+      },
+    );
+
+    test(
+      'submitEncryptedAnswer() 409 NOT_CURRENT_TASK during encrypted submission marks terminal-rejected',
+      () async {
+        when(() => dao.queryPendingByAttempt('attempt-1'))
+            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            wrappedKey: any(named: 'wrappedKey'),
+            iv: any(named: 'iv'),
+            ciphertext: any(named: 'ciphertext'),
+          ),
+        ).thenThrow(const NotCurrentTaskException('NOT_CURRENT_TASK'));
+        when(() => dao.markTerminalRejected(any(), any(), any()))
+            .thenAnswer((_) async {});
+
+        const encryptionPublicKey =
+            'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmkRv1ibV6X9T/mPzAkvP68kJ7v+nhkV99yPj3EMYdGtrS4t8+41k6UJFKNKFe4ea7AfGQnl68XFgwQsezrOqEe5D2ildsNi6t8+MGfxbYFmN2QH4F/u2eTPjCH31RNeeuY0p0pjlL7nD2hX9GhGjRzz1juhu0Mvc5qPIVEsJKMjPpY/vhpccmPLtDU240hq5roEOV/NObL8HywJjiP8i9NUimPvDq8aA5f5lMdBj0ui3skCaF1J4lBVOST5KRjDBmAEGMloMbZstN2Q5LiVZWk1AQzL18zHQ9sNp0FzxlyD/iVXsYJEYCzYB4KoGttreCDyhzIeYnqZnyZia70jCwQIDAQAB';
+
+        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        var rejectedCount = 0;
+        final sub = engine.taskRejectedExternally.listen((_) => rejectedCount++);
+        addTearDown(sub.cancel);
+
+        engine.startSync('attempt-1', encryptionPublicKey: encryptionPublicKey);
+        canaryController.add(null);
+        await Future<void>.delayed(Duration.zero);
+
+        verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK')).called(1);
+        expect(rejectedCount, 1);
+      },
+    );
+  });
+
   test('a canary event and a periodic tick firing at effectively the same instant never overlap', () async {
     void Function(Timer)? periodicCallback;
     Timer fakePeriodicTimer(Duration period, void Function(Timer) callback) {
