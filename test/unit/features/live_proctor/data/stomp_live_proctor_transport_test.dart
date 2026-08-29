@@ -52,7 +52,7 @@ void main() {
       config.onConnect(StompFrame(command: 'CONNECTED'));
       await Future<void>.delayed(Duration.zero);
 
-      expect(config.url, 'ws://localhost:8081/api/proctor/ws');
+      expect(config.url, 'ws://localhost:8080/api/proctor/ws');
       expect(config.stompConnectHeaders?['Authorization'], 'Bearer jwt');
       verify(
         () => client.subscribe(
