@@ -92,7 +92,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         // or periodic tick (phase-03 Design Constraints). startSync alone
         // only arms future triggers; flushNow is what makes the attempt
         // actually immediate.
-        _syncEngine.startSync(response.attemptPublicId);
+        _syncEngine.startSync(response.attemptPublicId, encryptionPublicKey: response.encryptionPublicKey);
         await _syncEngine.flushNow(response.attemptPublicId);
       }
       _emitFromResponse(response, emit);

@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:logger/logger.dart';
 
+import 'package:pointycastle/asymmetric/api.dart' show RSAPublicKey;
+
+import 'package:pte_app/core/crypto/encryption_helper.dart';
 import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/network/network_canary.dart';
@@ -34,13 +37,15 @@ class SyncEngine {
     PeriodicTimerFactory? createPeriodicTimer,
     Logger? logger,
     RateLimitBackoff? backoff,
+    EncryptionHelper? encryptionHelper,
   })  : _outboxDao = outboxDao,
         _apiClient = apiClient,
         _canary = canary,
         _periodicInterval = periodicInterval,
         _createPeriodicTimer = createPeriodicTimer ?? Timer.periodic,
         _logger = logger ?? Logger(),
-        _backoff = backoff ?? RateLimitBackoff();
+        _backoff = backoff ?? RateLimitBackoff(),
+        _encryptionHelper = encryptionHelper ?? EncryptionHelper();
 
   final AnswerOutboxDao _outboxDao;
   final ApiClient _apiClient;
@@ -49,9 +54,15 @@ class SyncEngine {
   final PeriodicTimerFactory _createPeriodicTimer;
   final Logger _logger;
   final RateLimitBackoff _backoff;
+  final EncryptionHelper _encryptionHelper;
 
   String? _runningAttemptId;
   String? _activeTaskId;
+
+  /// Parsed once per [startSync] call, non-null only for a STRICT-pinned
+  /// attempt — its presence is what routes [_flushOne] to the encrypted
+  /// submission path instead of the plain one.
+  RSAPublicKey? _encryptionPublicKey;
   StreamSubscription<void>? _canarySubscription;
   Timer? _periodicTimer;
   bool _isFlushing = false;
@@ -77,7 +88,12 @@ class SyncEngine {
   /// task is already known, so no window exists where a background trigger
   /// could flush that task's row before it's marked active (QUAL-202,
   /// Phase 2 quality gate).
-  void startSync(String attemptPublicId) {
+  /// [encryptionPublicKey] — Base64 X.509 SubjectPublicKeyInfo from the
+  /// `StartAttempt` response's `encryptionPublicKey` field, non-null only
+  /// for a STRICT-pinned attempt (task 20). Parsed once here and cached;
+  /// null (the default, STANDARD attempts) leaves every submission for this
+  /// run on the existing plain-`payload` path, unchanged.
+  void startSync(String attemptPublicId, {String? encryptionPublicKey}) {
     final running = _runningAttemptId;
     if (running != null) {
       if (running == attemptPublicId) return;
@@ -87,6 +103,8 @@ class SyncEngine {
       );
     }
     _runningAttemptId = attemptPublicId;
+    _encryptionPublicKey =
+        encryptionPublicKey == null ? null : _encryptionHelper.parsePublicKey(encryptionPublicKey);
     _canarySubscription = _canary.available.listen((_) => unawaited(_flush(attemptPublicId)));
     _periodicTimer = _createPeriodicTimer(_periodicInterval, (_) => unawaited(_flush(attemptPublicId)));
   }
@@ -98,6 +116,7 @@ class SyncEngine {
     _periodicTimer = null;
     _runningAttemptId = null;
     _activeTaskId = null;
+    _encryptionPublicKey = null;
   }
 
   /// Records the task currently displayed to the student, excluded from
@@ -159,11 +178,24 @@ class SyncEngine {
 
   Future<void> _flushOne(AnswerOutbox answer) async {
     try {
-      await _apiClient.submitAnswer(
-        attemptPublicId: answer.attemptPublicId,
-        pinnedItemPublicId: answer.pinnedItemPublicId,
-        payload: answer.payload,
-      );
+      final publicKey = _encryptionPublicKey;
+      if (publicKey != null) {
+        final encrypted = await _encryptAnswer(answer, publicKey);
+        if (encrypted == null) return;
+        await _apiClient.submitEncryptedAnswer(
+          attemptPublicId: answer.attemptPublicId,
+          pinnedItemPublicId: answer.pinnedItemPublicId,
+          wrappedKey: encrypted.wrappedKey,
+          iv: encrypted.iv,
+          ciphertext: encrypted.ciphertext,
+        );
+      } else {
+        await _apiClient.submitAnswer(
+          attemptPublicId: answer.attemptPublicId,
+          pinnedItemPublicId: answer.pinnedItemPublicId,
+          payload: answer.payload,
+        );
+      }
       await _outboxDao.markSynced(answer.attemptPublicId, answer.pinnedItemPublicId);
       _backoff.reset();
     } on NotCurrentTaskException catch (e) {
@@ -204,6 +236,28 @@ class SyncEngine {
       // one row wouldn't fix anything — it retries indefinitely until the
       // session recovers.
       _logger.w('Answer flush failed, left pending for next tick', error: e);
+    }
+  }
+
+  /// Isolates `EncryptionHelper.encrypt()`'s failure surface from the
+  /// network-error handling above — a crypto exception (not an
+  /// [ApiException]) here must never fall through [_flushOne]'s
+  /// `on ApiException` chain (it wouldn't match any clause and would
+  /// propagate uncaught, aborting [_flush]'s loop for every OTHER pending
+  /// row too, not just this one). Marked terminal-rejected rather than left
+  /// pending: encryption failure against an already-successfully-parsed
+  /// public key is a deterministic client bug, not a transient condition a
+  /// retry could resolve — matches this phase's Design Constraint that a
+  /// STRICT attempt must surface a clear error, never silently fall back to
+  /// the plain-payload path. Returns `null` (caller returns early) on
+  /// failure, the successful [EncryptedPayload] otherwise.
+  Future<EncryptedPayload?> _encryptAnswer(AnswerOutbox answer, RSAPublicKey publicKey) async {
+    try {
+      return _encryptionHelper.encrypt(answer.payload, publicKey);
+    } catch (e) {
+      _logger.e('Answer encryption failed, marking terminal-rejected', error: e);
+      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, 'ENCRYPTION_FAILED');
+      return null;
     }
   }
 
