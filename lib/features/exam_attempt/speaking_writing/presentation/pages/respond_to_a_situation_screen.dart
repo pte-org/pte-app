@@ -25,20 +25,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/instruction_text.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window. Unlike the
-/// other `AudioListeningPrepCard`/`RecordedAnswerPrepCard` consumers, this
-/// screen's `_preListenSeconds = 20` is itself a merge of two conceptually
-/// distinct real-PTE stages — 15s reading the situation text + 5s waiting
-/// for the audio to start — collapsed into one combined "Beginning in 20
-/// seconds" countdown per explicit user decision (no separate "Reading…"
-/// label; the situation text stays visible the whole time regardless of
-/// sub-stage, so nothing is lost by not visually distinguishing the two).
-/// `_preRecordSeconds = 10`; audio-playing duration is whatever remains:
-/// `prepSeconds - _preListenSeconds - _preRecordSeconds` (10s when
-/// `prepSeconds = 40`).
-const int _preListenSeconds = 20;
-const int _preRecordSeconds = 10;
-
 /// Renders inside the shared exam shell as its injected content region.
 /// The FIRST Speaking screen combining a persistent situation-text display
 /// (`task.promptText`, shown above the cards — unlike `ReadAloudScreen`'s
@@ -54,6 +40,17 @@ const int _preRecordSeconds = 10;
 /// identical to `AnswerShortQuestionScreen` (same [AutoRecordCubit]
 /// lifecycle, same [AutoRecordTimerBridgeMixin] bridge, same fully-
 /// automatic advance).
+///
+/// `task.preListenSeconds` (server-owned as of plans/phat-speaking-dynamic-
+/// prep-timing, still 20 for this task type) is itself a merge of two
+/// conceptually distinct real-PTE stages — 15s reading the situation text +
+/// 5s waiting for the audio to start — collapsed into one combined
+/// "Beginning in 20 seconds" countdown per explicit user decision (no
+/// separate "Reading…" label; the situation text stays visible the whole
+/// time regardless of sub-stage, so nothing is lost by not visually
+/// distinguishing the two). Only the *source* of this value changed
+/// (`task-timing.json` instead of a local Dart constant); its meaning and
+/// this screen's layout are unaffected.
 class RespondToASituationScreen extends StatefulWidget {
   const RespondToASituationScreen({
     super.key,
@@ -101,8 +98,11 @@ class _RespondToASituationScreenState extends State<RespondToASituationScreen>
       player: widget.audioPlayerService,
       task: widget.task,
       attemptPublicId: widget.attemptPublicId,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction (see RepeatSentenceScreen's identical
+      // comment).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
     );
     startAutoRecordBridge(
       task: widget.task,
@@ -177,15 +177,15 @@ class _RespondToASituationBody extends StatelessWidget {
                   AudioListeningPrepCard(
                     task: task,
                     snapshot: snapshot,
-                    preListenSeconds: _preListenSeconds,
-                    preRecordSeconds: _preRecordSeconds,
+                    preListenSeconds: task.preListenSeconds!,
+                    preRecordSeconds: task.preRecordSeconds!,
                   ),
                   const SizedBox(height: AppDimensions.spacingMedium),
                   RecordedAnswerPrepCard(
                     task: task,
                     recordingState: state,
                     snapshot: snapshot,
-                    preRecordSeconds: _preRecordSeconds,
+                    preRecordSeconds: task.preRecordSeconds!,
                   ),
                 ],
               );

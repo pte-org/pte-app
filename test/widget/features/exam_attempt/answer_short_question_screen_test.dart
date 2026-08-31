@@ -68,6 +68,10 @@ TaskView _answerShortQuestionTask({String pinnedItemPublicId = 'item-1'}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 14),
     responseDeadline: DateTime(2026, 1, 1, 0, 0, 24),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 3,
+    preRecordSeconds: 3,
   );
 }
 

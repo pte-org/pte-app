@@ -56,6 +56,15 @@ class TimerService {
 
   Timer? _pollTimer;
   Timer? _tickTimer;
+  Timer? _oneShotPollTimer;
+
+  /// Set by [startPolling], cleared by [stop] — doubles as the "polling is
+  /// currently active" flag [_scheduleOneShotPoll] checks, so a bare
+  /// [seedFromTask]/[reconcileFromServer] call made before the first
+  /// [startPolling] (or after [stop]) never schedules a stray one-shot poll
+  /// with nothing to reconcile against (plans/phat-speaking-dynamic-prep-timing).
+  String? _attemptPublicId;
+  Duration _pollInterval = _defaultPollInterval;
 
   /// Bumped by [stop] (and therefore by [startPolling], which calls it
   /// first) so a poll/tick callback scheduled by a now-superseded
@@ -113,6 +122,11 @@ class TimerService {
     _phase = response.phase;
     _currentOrderIndex = response.currentOrderIndex;
     _seed(deadline.difference(response.serverNow), serverNow: response.serverNow, examEndTime: response.examEndTime);
+    // Re-arm the one-shot poll against the freshly reconciled deadline —
+    // a no-op if polling isn't active (`_attemptPublicId` still null),
+    // which is exactly the case every reconcileFromServer-only unit test
+    // below exercises.
+    _scheduleOneShotPoll(_generation);
 
     if (orderIndexChanged) {
       _taskAdvancedController.add(null);
@@ -147,8 +161,11 @@ class TimerService {
   /// orphaned alongside the new one.
   void startPolling(String attemptPublicId, {Duration interval = _defaultPollInterval}) {
     stop();
+    _attemptPublicId = attemptPublicId;
+    _pollInterval = interval;
     final generation = _generation;
     _scheduleLocalTick(generation);
+    _scheduleOneShotPoll(generation);
     unawaited(_poll(attemptPublicId, interval, generation));
   }
 
@@ -157,6 +174,33 @@ class TimerService {
       if (generation != _generation) return;
       _ticksController.add(currentSnapshot);
       _scheduleLocalTick(generation);
+    });
+  }
+
+  /// Schedules a one-shot poll timed to fire exactly when the local
+  /// countdown ([currentSnapshot.remaining]) is expected to hit zero — so a
+  /// short-prep task type's phase transition is reconciled promptly instead
+  /// of waiting up to the full fixed [_pollInterval]
+  /// (plans/phat-speaking-dynamic-prep-timing). Re-armed by every fresh
+  /// reseed ([startPolling] and [reconcileFromServer]) so it always targets
+  /// the current deadline, never a stale one. A no-op whenever polling
+  /// isn't active ([_attemptPublicId] null) — [reconcileFromServer] calls
+  /// this unconditionally, so this guard is what keeps direct
+  /// reconcileFromServer-only unit tests (no [startPolling]) from
+  /// scheduling a stray real [Timer].
+  void _scheduleOneShotPoll(int generation) {
+    _oneShotPollTimer?.cancel();
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    _oneShotPollTimer = _scheduler(currentSnapshot.remaining, () {
+      if (generation != _generation) return;
+      // Cancel the still-pending periodic chain *before* reconciling, so
+      // the reconciliation below's own tail-end rescheduling in [_poll] is
+      // the only live periodic timer afterward — never two parallel
+      // chains (plan-reviewer HIGH finding).
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      unawaited(_poll(attemptPublicId, _pollInterval, generation));
     });
   }
 
@@ -175,6 +219,17 @@ class TimerService {
       _logger.w('Timer poll failed, retrying in $interval', error: e, stackTrace: stackTrace);
     }
     if (generation != _generation) return;
+    // Cancel any periodic timer already set before overwriting the field —
+    // symmetric with _scheduleOneShotPoll's own cancel-before-overwrite
+    // (plans/phat-speaking-dynamic-prep-timing Phase 4 code-review finding).
+    // Without this, two _poll calls racing concurrently (e.g. the one-shot
+    // firing and re-entering _poll while the *original* startPolling call's
+    // _poll is still awaiting a slow fetchTimerState — plausible exactly
+    // because the one-shot targets short prep windows) would have whichever
+    // resolves last silently clobber the other's _pollTimer reference with
+    // no cancellation, leaking the earlier one still armed and producing
+    // two independently-firing periodic chains.
+    _pollTimer?.cancel();
     _pollTimer = _scheduler(interval, () {
       if (generation != _generation) return;
       unawaited(_poll(attemptPublicId, interval, generation));
@@ -190,8 +245,11 @@ class TimerService {
     _generation++;
     _pollTimer?.cancel();
     _tickTimer?.cancel();
+    _oneShotPollTimer?.cancel();
     _pollTimer = null;
     _tickTimer = null;
+    _oneShotPollTimer = null;
+    _attemptPublicId = null;
   }
 
   /// Terminal teardown: stops both timers and closes both streams. Not

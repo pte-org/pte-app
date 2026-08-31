@@ -63,6 +63,10 @@ TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
     responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 3,
+    preRecordSeconds: 3,
   );
 }
 
@@ -96,6 +100,10 @@ TaskView _retellLectureTask({required String pinnedItemPublicId}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 1, 10),
     responseDeadline: DateTime(2026, 1, 1, 0, 1, 50),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 3,
+    preRecordSeconds: 10,
   );
 }
 
@@ -112,6 +120,10 @@ TaskView _answerShortQuestionTask({required String pinnedItemPublicId}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 14),
     responseDeadline: DateTime(2026, 1, 1, 0, 0, 24),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 3,
+    preRecordSeconds: 3,
   );
 }
 
@@ -128,6 +140,10 @@ TaskView _summarizeGroupDiscussionTask({required String pinnedItemPublicId}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 3, 20),
     responseDeadline: DateTime(2026, 1, 1, 0, 5, 20),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 5,
+    preRecordSeconds: 10,
   );
 }
 
@@ -145,6 +161,10 @@ TaskView _respondToASituationTask({required String pinnedItemPublicId}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 40),
     responseDeadline: DateTime(2026, 1, 1, 0, 1, 20),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 20,
+    preRecordSeconds: 10,
   );
 }
 

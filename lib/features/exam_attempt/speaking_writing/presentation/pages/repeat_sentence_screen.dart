@@ -19,15 +19,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window — real PTE
-/// varies these per question; this app has no per-stage data from the
-/// backend (or real audio playback) to derive them from, so both boundary
-/// durations are fixed regardless of the task's actual `prepSeconds`. The
-/// "audio playing" duration is whatever remains:
-/// `prepSeconds - preListenSeconds - preRecordSeconds`.
-const int _preListenSeconds = 3;
-const int _preRecordSeconds = 3;
-
 /// Renders inside the shared exam shell as its injected content region —
 /// builds no top/bottom chrome of its own. Structurally mirrors
 /// `ReadAloudScreen` exactly (same [AutoRecordCubit] lifecycle, same
@@ -83,8 +74,12 @@ class _RepeatSentenceScreenState extends State<RepeatSentenceScreen>
       player: widget.audioPlayerService,
       task: widget.task,
       attemptPublicId: widget.attemptPublicId,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction, since exam-delivery only ever pins a
+      // REPEAT_SENTENCE item with both populated (Phase 2's dynamic-prep
+      // branch requires them to compute prepSeconds in the first place).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
     );
     startAutoRecordBridge(
       task: widget.task,
@@ -133,8 +128,8 @@ class _RepeatSentenceBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AudioPromptRecordBody(
       task: task,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      preListenSeconds: task.preListenSeconds!,
+      preRecordSeconds: task.preRecordSeconds!,
       instructionText: SpeakingWritingStrings.repeatSentenceInstructionText,
     );
   }

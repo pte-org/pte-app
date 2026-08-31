@@ -19,17 +19,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window — same shape as
-/// `RetellLectureScreen`'s split: `_preListenSeconds = 5`, `_preRecordSeconds
-/// = 10`. Audio-playing duration is whatever remains: `prepSeconds -
-/// _preListenSeconds - _preRecordSeconds` (185s when `prepSeconds = 200`).
-/// 185s (not the literal ~180s discussed) is a deliberate rounding to land
-/// `prepSeconds` on the dev-preview `ExamAttemptBloc`'s 10-second poll
-/// boundary — same precedent as `RetellLectureScreen`'s 60s→57s rounding,
-/// user-confirmed.
-const int _preListenSeconds = 5;
-const int _preRecordSeconds = 10;
-
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `AnswerShortQuestionScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
@@ -85,8 +74,11 @@ class _SummarizeGroupDiscussionScreenState
       player: widget.audioPlayerService,
       task: widget.task,
       attemptPublicId: widget.attemptPublicId,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction (see RepeatSentenceScreen's identical
+      // comment).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
     );
     startAutoRecordBridge(
       task: widget.task,
@@ -135,8 +127,8 @@ class _SummarizeGroupDiscussionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AudioPromptRecordBody(
       task: task,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      preListenSeconds: task.preListenSeconds!,
+      preRecordSeconds: task.preRecordSeconds!,
       instructionText:
           SpeakingWritingStrings.summarizeGroupDiscussionInstructionText,
     );

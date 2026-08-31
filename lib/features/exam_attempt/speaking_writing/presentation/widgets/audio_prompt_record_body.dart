@@ -143,7 +143,16 @@ class AudioListeningPrepCard extends StatelessWidget {
     // The fill amount comes from AudioPromptCubit's real playback position
     // (plans/phat-speaking-audio-prompt-e2e, user's confirmed decision) —
     // only the countdown label text stays timer-driven, since the server
-    // reports no per-sub-stage timing of its own to label against.
+    // reports no per-sub-stage timing of its own to label against. Once the
+    // elapsed-time window has closed (audioRemaining <= 0, i.e. the label
+    // already reads "0 seconds left"), the bar is forced to 1.0 instead of
+    // trusting the cubit's still-possibly-catching-up real position —
+    // real playback start lags the theoretical window's start by however
+    // long the presigned-URL fetch/buffer takes, so the real player can
+    // still be short of `duration` for up to that same lag at the window's
+    // close (plans/phat-speaking-dynamic-prep-timing Phase 5 walkthrough
+    // finding: the bar visibly failed to reach 100% even though the label
+    // had already finished counting down).
     return BlocBuilder<AudioPromptCubit, AudioPromptPlaybackState>(
       builder: (context, playback) {
         return AudioListeningStatusCard(
@@ -151,7 +160,7 @@ class AudioListeningPrepCard extends StatelessWidget {
               ? playback.errorMessage!
               : '${SpeakingWritingStrings.audioListeningPlayingPrefix}$audioRemaining'
                     '${SpeakingWritingStrings.audioListeningPlayingSuffix}',
-          progress: playback.progress,
+          progress: audioRemaining <= 0 ? 1.0 : playback.progress,
         );
       },
     );

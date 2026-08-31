@@ -19,14 +19,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window (same shape as
-/// `RepeatSentenceScreen`'s split): `_preListenSeconds` (3s) is unchanged
-/// from Repeat Sentence, `_preRecordSeconds` is 10s (not 3s). Audio-playing
-/// duration is whatever remains: `prepSeconds - _preListenSeconds -
-/// _preRecordSeconds` (57s when `prepSeconds = 70`).
-const int _preListenSeconds = 3;
-const int _preRecordSeconds = 10;
-
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
@@ -78,8 +70,11 @@ class _RetellLectureScreenState extends State<RetellLectureScreen>
       player: widget.audioPlayerService,
       task: widget.task,
       attemptPublicId: widget.attemptPublicId,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction (see RepeatSentenceScreen's identical
+      // comment).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
     );
     startAutoRecordBridge(
       task: widget.task,
@@ -128,17 +123,17 @@ class _RetellLectureBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AudioPromptRecordBody(
       task: task,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
-      instructionText: _instructionText(task.responseSeconds),
+      preListenSeconds: task.preListenSeconds!,
+      preRecordSeconds: task.preRecordSeconds!,
+      instructionText: _instructionText(task.preRecordSeconds!, task.responseSeconds),
     );
   }
 
-  // Interpolates the local `_preRecordSeconds` sub-stage constant (10), not
+  // Interpolates the server-supplied preRecordSeconds (10), not
   // `task.prepSeconds` (70, the combined audio+prep total) — the mockup's
   // "in 10 seconds" refers to the pre-record "chuẩn bị" window alone.
-  String _instructionText(int responseSeconds) {
-    return '${SpeakingWritingStrings.retellLectureInstructionPrefix}$_preRecordSeconds'
+  String _instructionText(int preRecordSeconds, int responseSeconds) {
+    return '${SpeakingWritingStrings.retellLectureInstructionPrefix}$preRecordSeconds'
         '${SpeakingWritingStrings.retellLectureInstructionMiddle}$responseSeconds'
         '${SpeakingWritingStrings.retellLectureInstructionSuffix}';
   }

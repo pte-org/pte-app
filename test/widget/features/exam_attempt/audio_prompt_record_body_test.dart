@@ -134,6 +134,11 @@ void main() {
       await tester.pumpWidget(
         buildSubject(task: task, preListenSeconds: 3, preRecordSeconds: 5),
       );
+      // The Listening card's bar is now wrapped in a TweenAnimationBuilder
+      // (plans/phat-speaking-dynamic-prep-timing Phase 5 walkthrough
+      // follow-up) — its first frame renders the animation's `begin` (0.0),
+      // reaching the real target only once the 300ms tween settles.
+      await tester.pumpAndSettle();
 
       // The countdown label text stays real timer-driven arithmetic —
       // "Playing 0 seconds left" here is the still-relevant non-positive-
@@ -149,10 +154,68 @@ void main() {
         find.byType(LinearProgressIndicator),
       );
       // First bar belongs to the Listening card (declared before the
-      // Record card in AudioPromptRecordBody's Column) — its fill now
-      // comes verbatim from AudioPromptCubit's state, not from re-deriving
-      // audioSeconds locally, so it must match the stubbed 0.73 exactly.
-      expect(progressBars.first.value, 0.73);
+      // Record card in AudioPromptRecordBody's Column). Once the
+      // elapsed-time window has closed (audioRemaining <= 0 here), the bar
+      // is forced to 1.0 regardless of the cubit's real-playback progress
+      // — deliberately still stubbed at 0.73 to prove the clamp actually
+      // overrides it, not merely that it happens to already be 1.0
+      // (plans/phat-speaking-dynamic-prep-timing Phase 5 walkthrough
+      // finding: without this clamp, real playback's start latency could
+      // leave the bar visibly short of full even after the label already
+      // read "0 seconds left").
+      expect(progressBars.first.value, 1.0);
+    },
+  );
+
+  testWidgets(
+    'while the audio sub-stage window is still open (audioRemaining > 0), the bar tracks the cubit\'s real '
+    'playback progress verbatim, not the 1.0 clamp',
+    (tester) async {
+      // prepSeconds=12, preListenSeconds=3, preRecordSeconds=3 ->
+      // audioSeconds = 6; elapsed=5 -> audioElapsed=2, audioRemaining=4 (>0).
+      final task = TaskView(
+        pinnedItemPublicId: 'item-1',
+        orderIndex: 1,
+        totalTasks: 32,
+        section: 'SPEAKING',
+        taskType: 'ANSWER_SHORT_QUESTION',
+        title: 'Mid-playback task',
+        prepSeconds: 12,
+        responseSeconds: 10,
+        prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
+        responseDeadline: DateTime(2026, 1, 1, 0, 0, 22),
+        serverNow: DateTime(2026, 1, 1),
+      );
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 7),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(AttemptInProgress('attempt-1', task, snapshot));
+      when(() => audioPromptCubit.state).thenReturn(const AudioPromptPlaybackState(
+        phase: AudioPromptPlaybackPhase.playing,
+        progress: 0.42,
+      ));
+      whenListen(
+        audioPromptCubit,
+        const Stream<AudioPromptPlaybackState>.empty(),
+        initialState: const AudioPromptPlaybackState(
+          phase: AudioPromptPlaybackPhase.playing,
+          progress: 0.42,
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildSubject(task: task, preListenSeconds: 3, preRecordSeconds: 3),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Playing 4 seconds left'), findsOneWidget);
+
+      final progressBars = tester.widgetList<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progressBars.first.value, 0.42);
     },
   );
 }

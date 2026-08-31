@@ -71,6 +71,10 @@ TaskView _respondToASituationTask({String pinnedItemPublicId = 'item-1'}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 40),
     responseDeadline: DateTime(2026, 1, 1, 0, 1, 20),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 20,
+    preRecordSeconds: 10,
   );
 }
 

@@ -19,13 +19,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-/// Mock-only sub-stage split within the shared `prep` window — same shape as
-/// `RepeatSentenceScreen`'s split (`_preListenSeconds = 3`,
-/// `_preRecordSeconds = 3`), just a shorter audio stage: `prepSeconds - 3 -
-/// 3` (8s when `prepSeconds = 14`).
-const int _preListenSeconds = 3;
-const int _preRecordSeconds = 3;
-
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
@@ -80,8 +73,11 @@ class _AnswerShortQuestionScreenState extends State<AnswerShortQuestionScreen>
       player: widget.audioPlayerService,
       task: widget.task,
       attemptPublicId: widget.attemptPublicId,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction (see RepeatSentenceScreen's identical
+      // comment).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
     );
     startAutoRecordBridge(
       task: widget.task,
@@ -130,8 +126,8 @@ class _AnswerShortQuestionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AudioPromptRecordBody(
       task: task,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      preListenSeconds: task.preListenSeconds!,
+      preRecordSeconds: task.preRecordSeconds!,
       instructionText:
           SpeakingWritingStrings.answerShortQuestionInstructionText,
     );

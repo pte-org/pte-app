@@ -74,6 +74,8 @@ class TaskView {
     required this.responseDeadline,
     required this.serverNow,
     this.examEndTime,
+    this.preListenSeconds,
+    this.preRecordSeconds,
   });
 
   final String pinnedItemPublicId;
@@ -102,6 +104,17 @@ class TaskView {
   /// field.
   final DateTime? examEndTime;
 
+  /// Server-owned sub-stage lengths for the 5 audio-prompt Speaking task
+  /// types (Repeat Sentence, Retell Lecture, Answer Short Question,
+  /// Summarize Group Discussion, Respond to a Situation) — non-null ONLY
+  /// for those 5, `null` for every other task type (~20 others), which
+  /// never read either field. Deliberately nullable, not a hard non-null
+  /// cast the way [prepSeconds]/[responseSeconds] are parsed — those two
+  /// really are populated for every task type; these two are not
+  /// (plans/phat-speaking-dynamic-prep-timing).
+  final int? preListenSeconds;
+  final int? preRecordSeconds;
+
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
       pinnedItemPublicId: json['pinnedItemPublicId'] as String,
@@ -127,6 +140,8 @@ class TaskView {
       responseDeadline: DateTime.parse(json['responseDeadline'] as String),
       serverNow: DateTime.parse(json['serverNow'] as String),
       examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
+      preListenSeconds: json['preListenSeconds'] as int?,
+      preRecordSeconds: json['preRecordSeconds'] as int?,
     );
   }
 }
