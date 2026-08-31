@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 
 /// Shared timer-bridge boilerplate for every auto-record speaking screen
@@ -25,14 +26,23 @@ mixin AutoRecordTimerBridgeMixin<T extends StatefulWidget> on State<T> {
 
   /// Seeds from the bloc's current state immediately (covers resuming
   /// mid-task — don't wait for the next ~1s tick), then keeps forwarding
-  /// for the screen's lifetime.
+  /// for the screen's lifetime. [audioPromptCubit], when supplied, is
+  /// forwarded the same snapshot alongside [cubit] — the 5 Speaking screens
+  /// with an audio prompt own both an [AutoRecordCubit] (recording) and an
+  /// [AudioPromptCubit] (audio-prompt playback) side by side, driven off
+  /// the identical clock (plans/phat-speaking-audio-prompt-e2e).
   void startAutoRecordBridge({
     required TaskView task,
     required AutoRecordCubit cubit,
+    AudioPromptCubit? audioPromptCubit,
   }) {
     final bloc = context.read<ExamAttemptBloc>();
-    void forward(ExamAttemptState state) =>
-        _forwardIfCurrentTask(state, task: task, cubit: cubit);
+    void forward(ExamAttemptState state) => _forwardIfCurrentTask(
+      state,
+      task: task,
+      cubit: cubit,
+      audioPromptCubit: audioPromptCubit,
+    );
     forward(bloc.state);
     _timerBridgeSubscription = bloc.stream.listen(forward);
   }
@@ -51,10 +61,12 @@ mixin AutoRecordTimerBridgeMixin<T extends StatefulWidget> on State<T> {
     ExamAttemptState state, {
     required TaskView task,
     required AutoRecordCubit cubit,
+    AudioPromptCubit? audioPromptCubit,
   }) {
     if (state is! AttemptInProgress) return;
     if (state.task.pinnedItemPublicId != task.pinnedItemPublicId) return;
     cubit.onTimerSnapshot(state.timerSnapshot);
+    audioPromptCubit?.onTimerSnapshot(state.timerSnapshot);
   }
 
   void disposeAutoRecordBridge() {

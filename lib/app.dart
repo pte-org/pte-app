@@ -14,6 +14,7 @@ import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
 import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
+import 'features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
@@ -81,6 +82,7 @@ class PteApp extends StatelessWidget {
       mediaDao: getIt<PendingMediaUploadDao>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
+      audioPromptRepository: getIt<AudioPromptRepository>(),
       examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
@@ -94,6 +96,7 @@ class PteApp extends StatelessWidget {
       mediaDao: getIt<PendingMediaUploadDao>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
+      audioPromptRepository: getIt<AudioPromptRepository>(),
       examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
@@ -107,6 +110,7 @@ class PteApp extends StatelessWidget {
       mediaDao: getIt<PendingMediaUploadDao>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       audioPlayerService: getIt<AudioPlayerService>(),
+      audioPromptRepository: getIt<AudioPromptRepository>(),
       examAttemptBloc: getIt<ExamAttemptBloc>(),
     );
   }
@@ -207,6 +211,7 @@ class StudentExamGateState extends State<StudentExamGate> {
               mediaDao: getIt<PendingMediaUploadDao>(),
               mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
               audioPlayerService: getIt<AudioPlayerService>(),
+              audioPromptRepository: getIt<AudioPromptRepository>(),
             );
           }
           if (state is AttemptCompleted) {

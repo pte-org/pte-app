@@ -8,12 +8,15 @@ import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
@@ -60,6 +63,8 @@ class RespondToASituationScreen extends StatefulWidget {
     required this.mediaDao,
     required this.coordinator,
     required this.syncEngine,
+    required this.audioPlayerService,
+    required this.audioPromptRepository,
   });
 
   final TaskView task;
@@ -68,6 +73,8 @@ class RespondToASituationScreen extends StatefulWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator coordinator;
   final SyncEngine syncEngine;
+  final AudioPlayerService audioPlayerService;
+  final AudioPromptRepository audioPromptRepository;
 
   @override
   State<RespondToASituationScreen> createState() =>
@@ -77,6 +84,7 @@ class RespondToASituationScreen extends StatefulWidget {
 class _RespondToASituationScreenState extends State<RespondToASituationScreen>
     with AutoRecordTimerBridgeMixin<RespondToASituationScreen> {
   late final AutoRecordCubit _cubit;
+  late final AudioPromptCubit _audioPromptCubit;
 
   @override
   void initState() {
@@ -88,20 +96,36 @@ class _RespondToASituationScreenState extends State<RespondToASituationScreen>
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
     );
-    startAutoRecordBridge(task: widget.task, cubit: _cubit);
+    _audioPromptCubit = AudioPromptCubit(
+      repository: widget.audioPromptRepository,
+      player: widget.audioPlayerService,
+      task: widget.task,
+      attemptPublicId: widget.attemptPublicId,
+      preListenSeconds: _preListenSeconds,
+      preRecordSeconds: _preRecordSeconds,
+    );
+    startAutoRecordBridge(
+      task: widget.task,
+      cubit: _cubit,
+      audioPromptCubit: _audioPromptCubit,
+    );
   }
 
   @override
   void dispose() {
     disposeAutoRecordBridge();
     unawaited(_cubit.close());
+    unawaited(_audioPromptCubit.close());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _cubit),
+        BlocProvider.value(value: _audioPromptCubit),
+      ],
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _RespondToASituationBody(task: widget.task),

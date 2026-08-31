@@ -10,6 +10,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -166,6 +167,9 @@ TaskView _personalIntroductionTask({required String pinnedItemPublicId}) {
 
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
+class _MockAudioPromptRepository extends Mock
+    implements AudioPromptRepository {}
+
 TaskView _mcTask({required String pinnedItemPublicId}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
@@ -218,6 +222,7 @@ void main() {
   late _MockPendingMediaUploadDao mediaDao;
   late _MockMediaUploadCoordinator mediaUploadCoordinator;
   late _MockAudioPlayerService audioPlayerService;
+  late _MockAudioPromptRepository audioPromptRepository;
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
@@ -227,6 +232,21 @@ void main() {
     mediaDao = _MockPendingMediaUploadDao();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
     audioPlayerService = _MockAudioPlayerService();
+    audioPromptRepository = _MockAudioPromptRepository();
+    // AudioPromptCubit (constructed by every audio-prompt Speaking screen,
+    // e.g. RepeatSentenceScreen) subscribes to these in its constructor
+    // regardless of whether playback ever actually triggers.
+    when(() => audioPlayerService.position).thenAnswer((_) => const Stream<Duration>.empty());
+    when(() => audioPlayerService.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
+    when(() => audioPlayerService.close()).thenAnswer((_) async {});
+    when(
+      () => audioPromptRepository.playAudio(
+        attemptPublicId: any(named: 'attemptPublicId'),
+        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+        playRequestId: any(named: 'playRequestId'),
+      ),
+    ).thenAnswer((_) async => 'https://example.com/audio.mp3');
     when(
       () => outboxDao.upsertAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
@@ -269,6 +289,7 @@ void main() {
             mediaDao: mediaDao,
             mediaUploadCoordinator: mediaUploadCoordinator,
             audioPlayerService: audioPlayerService,
+            audioPromptRepository: audioPromptRepository,
           ),
         ),
       ),

@@ -11,11 +11,13 @@ import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/data/audio_player_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
+import 'package:pte_app/features/exam_attempt/data/repositories/audio_prompt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/manual_session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/timer_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
@@ -37,6 +39,10 @@ void setupExamAttemptModule() {
 
   getIt.registerLazySingleton<TimerRepository>(
     () => TimerRepositoryImpl(apiClient: getIt<ApiClient>()),
+  );
+
+  getIt.registerLazySingleton<AudioPromptRepository>(
+    () => AudioPromptRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
 
   getIt.registerLazySingleton<TimerService>(

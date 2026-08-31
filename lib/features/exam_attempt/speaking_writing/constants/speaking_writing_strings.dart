@@ -68,6 +68,16 @@ class SpeakingWritingStrings {
   static const String audioListeningPlayingPrefix = 'Playing ';
   static const String audioListeningPlayingSuffix = ' seconds left';
 
+  // AudioPromptCubit error-state copy (plans/phat-speaking-audio-prompt-e2e)
+  // — shown in place of the progress bar when the on-demand `/audio` call
+  // fails; never the raw exception text.
+  static const String audioPromptReplayLimitExceededMessage =
+      'No plays left for this audio.';
+  static const String audioPromptUrlExpiredMessage =
+      'This audio link expired — continue when the response window starts.';
+  static const String audioPromptGenericErrorMessage =
+      'Audio failed to load — continue when the response window starts.';
+
   // Retell lecture instruction (from origin/dev).
   static const String retellLectureInstructionPrefix =
       'You will hear a lecture. After listening to the lecture, in ';
