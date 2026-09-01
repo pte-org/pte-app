@@ -78,7 +78,9 @@ TaskView _describeImageTask({required String pinnedItemPublicId}) {
     section: 'SPEAKING',
     taskType: 'DESCRIBE_IMAGE',
     title: 'Task title',
-    imagePromptRef: 'https://example.com/img.png',
+    // imageUrl (server-resolved, plans/phat-describe-image-e2e) — not
+    // imagePromptRef, which is only ever a raw MediaObject UUID.
+    imageUrl: 'https://example.com/img.png',
     prepSeconds: 25,
     responseSeconds: 40,
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),

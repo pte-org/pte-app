@@ -76,6 +76,7 @@ class TaskView {
     this.examEndTime,
     this.preListenSeconds,
     this.preRecordSeconds,
+    this.imageUrl,
   });
 
   final String pinnedItemPublicId;
@@ -86,6 +87,11 @@ class TaskView {
   final String title;
   final String? promptText;
   final String? audioPromptRef;
+  /// The raw MediaObject public ID — never a directly-loadable URL. Kept
+  /// for parity with the backend DTO (`imagePromptRef` stays present there
+  /// too, unchanged), but no screen should read this to display an image;
+  /// use [imageUrl] instead, which the server resolves to a real presigned
+  /// URL at pin time (plans/phat-describe-image-e2e).
   final String? imagePromptRef;
   final int? minWordCount;
   final int? maxWordCount;
@@ -115,6 +121,14 @@ class TaskView {
   final int? preListenSeconds;
   final int? preRecordSeconds;
 
+  /// Resolved, directly-fetchable presigned URL for [imagePromptRef] — null
+  /// unless the server resolved one (mandatory for DESCRIBE_IMAGE, absent
+  /// for every other task type today). Unlike Speaking's audio prompts
+  /// (played on demand via a separate replay-limited endpoint), a static
+  /// image has no such concern, so it's embedded directly here
+  /// (plans/phat-describe-image-e2e).
+  final String? imageUrl;
+
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
       pinnedItemPublicId: json['pinnedItemPublicId'] as String,
@@ -142,6 +156,7 @@ class TaskView {
       examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 }

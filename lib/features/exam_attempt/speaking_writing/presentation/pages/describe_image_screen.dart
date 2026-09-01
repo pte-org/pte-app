@@ -118,7 +118,10 @@ class _DescribeImageBody extends StatelessWidget {
                   const SizedBox(height: AppDimensions.spacingMedium),
                   AutoRecordStatusCard(task: task, recordingState: state, snapshot: snapshot),
                   const SizedBox(height: AppDimensions.spacingMedium),
-                  Expanded(child: SingleChildScrollView(child: _ImageRegion(imageUrl: task.imagePromptRef))),
+                  // task.imageUrl (server-resolved, plans/phat-describe-image-e2e) —
+                  // not task.imagePromptRef, which is only the raw MediaObject
+                  // UUID and was never a loadable URL.
+                  Expanded(child: SingleChildScrollView(child: _ImageRegion(imageUrl: task.imageUrl))),
                 ],
               );
             },

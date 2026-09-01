@@ -1,5 +1,5 @@
 # Plan: Dynamic, Audio-Duration-Aware Prep Timing for Speaking Audio-Prompt Screens
-Status: 🟢 Complete — all 5 phases done, user-verified in live app
+Status: 🟢 CLOSED — all 5 phases done, 3/5 audio-prompt task types live-verified by user (Repeat Sentence, Answer Short Question, Respond to a Situation), 1 follow-up race-condition bug (code-reviewer) and 1 follow-up polling-after-complete bug both fixed+tested. Retell Lecture/Summarize Group Discussion remain code-complete + automated-test-covered but not individually live-walkthrough-verified — acceptable given all 5 share identical widget/service code. No further work planned under this plan.
 Date: 2026-08-31
 Mode: Hard
 
