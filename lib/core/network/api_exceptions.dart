@@ -74,6 +74,17 @@ final class ResponseWindowExpiredException extends ConflictException {
   const ResponseWindowExpiredException(super.message);
 }
 
+/// The attempt reached a terminal status before this poll — `pte-api`'s
+/// `AttemptAlreadyCompleteException` (`message: "ATTEMPT_ALREADY_COMPLETE"`),
+/// `AttemptService.getTimerState`'s only failure mode (confirmed by direct
+/// source read — no other 409 cause exists on that endpoint). Distinct from
+/// the generic [ConflictException] fallback so `TimerService._poll` can stop
+/// its whole poll/tick chain outright instead of retrying a call that can
+/// now never succeed (plans/phat-speaking-dynamic-prep-timing follow-up).
+final class AttemptAlreadyCompleteException extends ConflictException {
+  const AttemptAlreadyCompleteException(super.message);
+}
+
 /// `/audio`'s per-item play-count limit was already reached — `pte-api`'s
 /// `ReplayLimitExceededException` (403, `message: "REPLAY_LIMIT_EXCEEDED"`).
 /// Deliberately not a subtype of [ForbiddenException] (that type is `final`,

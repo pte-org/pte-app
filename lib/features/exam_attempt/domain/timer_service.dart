@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:logger/logger.dart';
 
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -209,6 +210,19 @@ class TimerService {
       final response = await _timerRepository.fetchTimerState(attemptPublicId);
       if (generation != _generation) return;
       reconcileFromServer(response);
+    } on AttemptAlreadyCompleteException {
+      // The attempt reached a terminal status through some path other than
+      // this bloc's own completion flow — retrying forever can never
+      // succeed once this specific, permanent cause is known, so stop the
+      // whole poll/tick/one-shot chain outright instead of logging a
+      // ConflictException every interval indefinitely
+      // (plans/phat-speaking-dynamic-prep-timing follow-up). Guarded the
+      // same way every other branch here is: a stale generation means a
+      // newer poll/tick chain is already active, which stop() must never
+      // cancel out from under.
+      if (generation != _generation) return;
+      stop();
+      return;
     } catch (e, stackTrace) {
       // Silent retry — connectivity state is the Bloc's concern, not this
       // loop's; never block on a single failed poll (mirrors the Phase 0

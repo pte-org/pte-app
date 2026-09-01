@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -626,4 +627,65 @@ void main() {
       },
     );
   });
+
+  group(
+    'AttemptAlreadyCompleteException — stops the whole poll/tick/one-shot chain outright, no retry-forever '
+    '(plans/phat-speaking-dynamic-prep-timing follow-up)',
+    () {
+      test(
+        'a 409 typed as AttemptAlreadyCompleteException calls stop() instead of scheduling a retry',
+        () async {
+          final scheduler = _CapturingScheduler();
+          final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+          when(() => repository.fetchTimerState(any())).thenAnswer(
+            (_) async => throw const AttemptAlreadyCompleteException('ATTEMPT_ALREADY_COMPLETE'),
+          );
+
+          service.seedFromTask(
+            _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+          );
+          service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+          await pumpEventQueue();
+
+          // stop() was called instead of the normal catch-all retry path —
+          // every callback captured so far (tick, one-shot) is now stale
+          // (generation bumped) and firing any of them must be a safe
+          // no-op, mirroring the dispose() test's convention.
+          final callbackCountAfterFailure = scheduler.callbacks.length;
+          for (final callback in List<void Function()>.from(scheduler.callbacks)) {
+            expect(callback, returnsNormally);
+          }
+          await pumpEventQueue();
+
+          // Nothing new was scheduled — no periodic retry timer, no
+          // re-armed one-shot. A generic (non-terminal) failure would have
+          // scheduled a new periodic Timer here instead.
+          expect(scheduler.callbacks.length, callbackCountAfterFailure);
+        },
+      );
+
+      test(
+        'an ordinary (non-terminal) fetch failure still retries as before — only AttemptAlreadyCompleteException '
+        'short-circuits to stop()',
+        () async {
+          final scheduler = _CapturingScheduler();
+          final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+          when(
+            () => repository.fetchTimerState(any()),
+          ).thenAnswer((_) async => throw Exception('connectivity blip'));
+
+          service.seedFromTask(
+            _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+          );
+          service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+          await pumpEventQueue();
+
+          // Unlike the terminal case above, a generic failure still
+          // schedules a fresh periodic retry Timer at _poll's tail.
+          final periodicTimer = scheduler.timers.last;
+          expect(periodicTimer.isActive, isTrue);
+        },
+      );
+    },
+  );
 }

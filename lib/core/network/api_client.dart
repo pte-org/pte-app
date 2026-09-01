@@ -97,6 +97,31 @@ class ApiClient {
     }
   }
 
+  /// The heartbeat poll behind `TimerService`'s countdown — `pte-api`'s
+  /// `/timer` endpoint. A 409 here always means the attempt already
+  /// reached a terminal status (`AttemptService.getTimerState`'s only
+  /// failure mode), remapped from the generic [ConflictException] to
+  /// [AttemptAlreadyCompleteException] so `TimerService` can stop polling
+  /// outright instead of retrying forever — same endpoint-specific-remap
+  /// pattern as [submitAnswer]/[playAudio]
+  /// (plans/phat-speaking-dynamic-prep-timing follow-up).
+  Future<Response<Map<String, dynamic>>> fetchTimerState(
+    String attemptPublicId,
+  ) async {
+    try {
+      return await get<Map<String, dynamic>>(
+        '/api/exam-delivery/attempts/$attemptPublicId/timer',
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'ATTEMPT_ALREADY_COMPLETE' => AttemptAlreadyCompleteException(
+          e.message,
+        ),
+        _ => e,
+      };
+    }
+  }
+
   Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {
     try {
       return _asTypedResponse<T>(await call());
