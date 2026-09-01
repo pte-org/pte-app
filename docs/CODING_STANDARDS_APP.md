@@ -1,4 +1,4 @@
-# Quy Tắc Viết Mã Aptis App (Flutter / Dart)
+# Quy Tắc Viết Mã PTE App (Flutter / Dart)
 
 **Ngày cập nhật:** 2026-06-24  
 **Đối tượng:** Nhóm phát triển Flutter/Dart, Mobile Team  
@@ -25,7 +25,7 @@
 
 ## Nguyên Tắc Cốt Lõi
 
-Aptis App tuân thủ các nguyên tắc toàn đội (áp dụng cho cả aptis-api, aptis-app, aptis-web):
+PTE App tuân thủ các nguyên tắc toàn đội (áp dụng cho cả pte-api, pte-app, pte-web):
 
 ### Nhóm 1 — Nguyên Tắc Thiết Kế (Beyond SOLID)
 
@@ -214,7 +214,7 @@ class ExamCard extends StatelessWidget {
 
 ### Cấu Trúc Feature (Feature-First)
 
-Aptis App sử dụng **cấu trúc feature-first** với Clean Architecture (Data → Domain → Presentation).
+PTE App sử dụng **cấu trúc feature-first** với Clean Architecture (Data → Domain → Presentation).
 
 ```
 features/{feature_name}/
@@ -354,7 +354,7 @@ void main() async {
   setupResultModule();
   // ...
   
-  runApp(const AptisApp());
+  runApp(const PteApp());
 }
 ```
 
@@ -1811,7 +1811,7 @@ ListView.builder(
 
 // ✓ Lazy load image
 Image.network(
-  'https://api.aptis.edu/images/exam-${examId}.png',
+  'https://api.pte.edu/images/exam-${examId}.png',
   fit: BoxFit.cover,
   placeholder: (context, url) => const Placeholder(),
   errorWidget: (context, url, error) => const Icon(Icons.error),
@@ -2285,7 +2285,7 @@ void setupExamModule() {
 
 ## Kết Luận
 
-Tài liệu này thiết lập baseline cho toàn bộ team Aptis App. Mục tiêu là:
+Tài liệu này thiết lập baseline cho toàn bộ team PTE App. Mục tiêu là:
 
 1. **Consistency** — Mọi developer code cùng phong cách.
 2. **Readability** — Người mới dễ hiểu code cũ.
@@ -2301,4 +2301,4 @@ Khi review PR, sử dụng [Danh Sách Kiểm Tra Code Review](#danh-sách-kiể
 
 **Phiên bản:** 1.0  
 **Ngày cập nhật:** 2026-06-24  
-**Liên hệ:** Mobile Team @ Aptis
+**Liên hệ:** Mobile Team @ PTE

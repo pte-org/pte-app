@@ -1,6 +1,6 @@
 @docs/CODING_STANDARDS_APP.md
 
-# aptis-app — AI Code Generation Rules
+# pte-app — AI Code Generation Rules
 
 ## Feature Structure
 

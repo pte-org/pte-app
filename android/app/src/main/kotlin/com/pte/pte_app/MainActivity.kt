@@ -1,4 +1,4 @@
-package aptis.com.aptis_app
+package com.pte.pte_app
 
 import io.flutter.embedding.android.FlutterActivity
 

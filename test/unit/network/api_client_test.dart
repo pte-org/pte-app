@@ -525,4 +525,171 @@ void main() {
       },
     );
   });
+
+  group('submitEncryptedAnswer() (Phase 3)', () {
+    test(
+      'submitEncryptedAnswer() posts to the encrypted answers endpoint with pinnedItemPublicId, wrappedKey, iv, and ciphertext',
+      () async {
+        final response = Response<void>(
+          requestOptions: RequestOptions(path: '/api/x'),
+          statusCode: 200,
+        );
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenAnswer((_) async => response);
+
+        await apiClient.submitEncryptedAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'item-1',
+          wrappedKey: 'wrapped-key-base64',
+          iv: 'iv-base64',
+          ciphertext: 'ciphertext-base64',
+        );
+
+        final captured = verify(
+          () => dio.post<dynamic>(captureAny(), data: captureAny(named: 'data')),
+        ).captured;
+        expect(
+          captured[0],
+          '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+        );
+        expect(captured[1], {
+          'pinnedItemPublicId': 'item-1',
+          'wrappedKey': 'wrapped-key-base64',
+          'iv': 'iv-base64',
+          'ciphertext': 'ciphertext-base64',
+        });
+      },
+    );
+
+    test(
+      'submitEncryptedAnswer() with 409 NOT_CURRENT_TASK maps to NotCurrentTaskException',
+      () async {
+        final requestOptions = RequestOptions(
+          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+        );
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(
+          DioException(
+            requestOptions: requestOptions,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: requestOptions,
+              statusCode: 409,
+              data: {
+                'success': false,
+                'data': null,
+                'message': 'NOT_CURRENT_TASK',
+              },
+            ),
+          ),
+        );
+
+        await expectLater(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            wrappedKey: 'wrapped-key',
+            iv: 'iv',
+            ciphertext: 'ciphertext',
+          ),
+          throwsA(
+            isA<NotCurrentTaskException>()
+                .having((e) => e.message, 'message', 'NOT_CURRENT_TASK'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'submitEncryptedAnswer() with 409 RESPONSE_WINDOW_EXPIRED maps to ResponseWindowExpiredException',
+      () async {
+        final requestOptions = RequestOptions(
+          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+        );
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(
+          DioException(
+            requestOptions: requestOptions,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: requestOptions,
+              statusCode: 409,
+              data: {
+                'success': false,
+                'data': null,
+                'message': 'RESPONSE_WINDOW_EXPIRED',
+              },
+            ),
+          ),
+        );
+
+        await expectLater(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            wrappedKey: 'wrapped-key',
+            iv: 'iv',
+            ciphertext: 'ciphertext',
+          ),
+          throwsA(
+            isA<ResponseWindowExpiredException>()
+                .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'submitEncryptedAnswer() with 409 unknown message falls back to generic ConflictException',
+      () async {
+        final requestOptions = RequestOptions(
+          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+        );
+        when(
+          () => dio.post<dynamic>(any(), data: any(named: 'data')),
+        ).thenThrow(
+          DioException(
+            requestOptions: requestOptions,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: requestOptions,
+              statusCode: 409,
+              data: {
+                'success': false,
+                'data': null,
+                'message': 'UNKNOWN_ERROR',
+              },
+            ),
+          ),
+        );
+
+        await expectLater(
+          () => apiClient.submitEncryptedAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            wrappedKey: 'wrapped-key',
+            iv: 'iv',
+            ciphertext: 'ciphertext',
+          ),
+          throwsA(
+            isA<ConflictException>()
+                .having((e) => e.message, 'message', 'UNKNOWN_ERROR')
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<NotCurrentTaskException>()),
+                )
+                .having(
+                  (e) => e,
+                  'not a typed subclass',
+                  isNot(isA<ResponseWindowExpiredException>()),
+                ),
+          ),
+        );
+      },
+    );
+  });
 }

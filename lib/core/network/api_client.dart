@@ -122,6 +122,36 @@ class ApiClient {
     }
   }
 
+  /// STRICT-integrity counterpart to [submitAnswer] — used only when the
+  /// attempt's pinned `answerIntegrityLevel == STRICT`. Same **only
+  /// `SyncEngine._flushOne` may call this** constraint and same 409-remap
+  /// behavior as [submitAnswer]; only the endpoint and body shape differ.
+  Future<Response<void>> submitEncryptedAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String wrappedKey,
+    required String iv,
+    required String ciphertext,
+  }) async {
+    try {
+      return await post<void>(
+        '/api/exam-delivery/attempts/$attemptPublicId/answers/encrypted',
+        data: {
+          'pinnedItemPublicId': pinnedItemPublicId,
+          'wrappedKey': wrappedKey,
+          'iv': iv,
+          'ciphertext': ciphertext,
+        },
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
+        _ => e,
+      };
+    }
+  }
+
   Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {
     try {
       return _asTypedResponse<T>(await call());

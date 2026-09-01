@@ -173,6 +173,7 @@ class AttemptTaskResponse {
     required this.attemptStatus,
     required this.completed,
     this.task,
+    this.encryptionPublicKey,
   });
 
   final String attemptPublicId;
@@ -180,12 +181,19 @@ class AttemptTaskResponse {
   final bool completed;
   final TaskView? task;
 
+  /// Base64 X.509 SubjectPublicKeyInfo — non-null only when this attempt's
+  /// pinned `answerIntegrityLevel == STRICT` (task 20, Phase 1). Its presence
+  /// alone is the signal to encrypt submissions; there is no separate
+  /// boolean field for the integrity level itself.
+  final String? encryptionPublicKey;
+
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {
     return AttemptTaskResponse(
       attemptPublicId: json['attemptPublicId'] as String,
       attemptStatus: json['attemptStatus'] as String,
       completed: json['completed'] as bool,
       task: json['task'] == null ? null : TaskView.fromJson(json['task'] as Map<String, dynamic>),
+      encryptionPublicKey: json['encryptionPublicKey'] as String?,
     );
   }
 }

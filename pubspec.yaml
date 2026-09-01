@@ -50,6 +50,7 @@ dependencies:
   stomp_dart_client: ^3.0.1
   just_audio_media_kit: ^2.1.0
   media_kit_libs_windows_audio: ^1.0.9
+  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_test:

@@ -1,12 +1,12 @@
-# aptis_app
+# pte_app
 
-Flutter exam-taking client for the Aptis LMS platform. Offline-resilient,
+Flutter exam-taking client for the PTE LMS platform. Offline-resilient,
 server-authoritative exam delivery: the exam is the highest-stakes flow on
 the platform, so the architecture is built around one rule — **answers are
 never lost**, even offline, even if the app is killed mid-exam.
 
-> Flutter only. The web frontend (`aptis-web`, Next.js) and backend
-> (`aptis-api`, Spring Boot) are separate repos — this app shares no code
+> Flutter only. The web frontend (`pte-web`, Next.js) and backend
+> (`pte-api`, Spring Boot) are separate repos — this app shares no code
 > or generated types with either.
 
 ## Setup
@@ -33,12 +33,12 @@ never lost**, even offline, even if the app is killed mid-exam.
 ## Directory Structure
 
 ```
-aptis-app/
+pte-app/
 ├── lib/
-│   ├── main.dart              # Entry point — runApp(AptisApp()). DI modules are NOT
+│   ├── main.dart              # Entry point — runApp(PteApp()). DI modules are NOT
 │   │                          # wired here yet; see "Wiring DI" below before adding the
 │   │                          # first real screen.
-│   ├── app.dart                # AptisApp — MaterialApp shell. Still a placeholder Scaffold;
+│   ├── app.dart                # PteApp — MaterialApp shell. Still a placeholder Scaffold;
 │   │                            # swap `home:` for a router/first real page when ready.
 │   ├── core/                    # Shared infrastructure. NOT a feature — no UI, no
 │   │                            # business rules, only services every feature can depend on.
@@ -51,7 +51,7 @@ aptis-app/
 │   │   │   │   └── token_refresh_interceptor.dart  # Transparent 401 refresh, single in-flight lock
 │   │   │   ├── api_exceptions.dart       # Sealed ApiException + mapDioExceptionToApiException()
 │   │   │   ├── api_client.dart            # ApiClient — startAttempt/submitAnswers/syncTimer/finishAttempt
-│   │   │   ├── models/                     # Skeleton DTOs (fields pending aptis-be contract confirmation)
+│   │   │   ├── models/                     # Skeleton DTOs (fields pending pte-be contract confirmation)
 │   │   │   └── network_module.dart           # registerNetworkModule(GetIt, AppConfig)
 │   │   ├── storage/                 # Local persistence (Drift/SQLite)
 │   │   │   ├── tables/                 # answer_outbox_table.dart — the outbox schema
@@ -85,7 +85,7 @@ aptis-app/
 │               ├── cubit/
 │               └── pages/
 ├── test/unit/                # Mirrors lib/ — one test dir per core/ subfolder + per feature
-├── plans/aptis-app-architecture/   # (in the aptis workspace repo) — plan.md + 6 phase-XX-*.md files,
+├── plans/pte-app-architecture/   # (in the pte workspace repo) — plan.md + 6 phase-XX-*.md files,
 │                                   # spec.md, and the ADRs/decisions behind this structure
 └── pubspec.yaml
 ```
@@ -113,12 +113,12 @@ Three invariants the whole sync story rests on — don't break these:
    alone. If you add a second source of "are we online," it must compose
    with this, not replace it.
 
-### `lib/features/<name>/` — one folder per `aptis-be` bounded context
+### `lib/features/<name>/` — one folder per `pte-be` bounded context
 
-Today only `exam_delivery` is a production feature tied to an `aptis-be`
+Today only `exam_delivery` is a production feature tied to a `pte-api`
 bounded context. Additionally, `device_check` exists as a dev-only feature
 for microphone/sound testing, not wired into production flows. Future features
-(`auth`, `exam_operations`, `results` — see `aptis-be`'s bounded contexts) get
+(`auth`, `exam_operations`, `results` — see `pte-api`'s bounded contexts) get
 their own folder, each with the same three-layer shape:
 
 ```
@@ -168,7 +168,7 @@ worked example to copy the pattern from.
 
 Every `core/` and `feature/` module currently exposes a
 `registerXModule(GetIt)` function, but **nothing calls them yet** —
-`main.dart` only does `runApp(const AptisApp())`. Before wiring a real
+`main.dart` only does `runApp(const PteApp())`. Before wiring a real
 screen to live services, add a bootstrap step, in dependency order:
 
 ```dart
@@ -178,7 +178,7 @@ registerStorageModule(getIt);
 registerTimerModule(getIt);
 registerSyncModule(getIt);
 registerExamDeliveryModule(getIt);
-runApp(const AptisApp());
+runApp(const PteApp());
 ```
 
 (`network` and `storage` have no inter-dependency and can register in
@@ -198,10 +198,10 @@ to `lib/bootstrap.dart` once it grows past a few lines.
   inside service/Bloc classes themselves
 - **Testing:** `flutter_test` only — no mocking package; every fake is a
   hand-written subclass overriding the one or two methods a test needs
-- **Backend:** `aptis-api`/`aptis-be` (separate repo) over REST
+- **Backend:** `pte-api`/`pte-be` (separate repo) over REST
 
-See `plans/aptis-app-architecture/plan.md` (and its `phase-01..06-*.md`
+See `plans/pte-app-architecture/plan.md` (and its `phase-01..06-*.md`
 files) for the full rationale and decision history behind this structure,
-including the red-team review and the open `aptis-be` contract questions
+including the red-team review and the open `pte-be` contract questions
 (idempotency-key format, retry semantics) noted in that plan's
 pre-implementation checklist.
