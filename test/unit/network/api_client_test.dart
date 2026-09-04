@@ -449,6 +449,83 @@ void main() {
     );
   });
 
+  group('fetchTimerState() typed-409 dispatch (plans/phat-speaking-dynamic-prep-timing follow-up)', () {
+    DioException timerConflictWithMessage(String message) {
+      final requestOptions = RequestOptions(
+        path: '/api/exam-delivery/attempts/attempt-1/timer',
+      );
+      return DioException(
+        requestOptions: requestOptions,
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: requestOptions,
+          statusCode: 409,
+          data: {'success': false, 'data': null, 'message': message},
+        ),
+      );
+    }
+
+    test(
+      'a 409 with message "ATTEMPT_ALREADY_COMPLETE" produces AttemptAlreadyCompleteException, not the generic '
+      'ConflictException',
+      () async {
+        when(
+          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
+        ).thenThrow(timerConflictWithMessage('ATTEMPT_ALREADY_COMPLETE'));
+
+        await expectLater(
+          () => apiClient.fetchTimerState('attempt-1'),
+          throwsA(
+            isA<AttemptAlreadyCompleteException>().having(
+              (e) => e.message,
+              'message',
+              'ATTEMPT_ALREADY_COMPLETE',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'fetchTimerState() calls the correct endpoint path',
+      () async {
+        final response = Response<dynamic>(
+          requestOptions: RequestOptions(path: '/api/x'),
+          data: {'phase': 'PREP'},
+        );
+        when(
+          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
+        ).thenAnswer((_) async => response);
+
+        await apiClient.fetchTimerState('attempt-1');
+
+        final captured = verify(
+          () => dio.get<dynamic>(captureAny(), queryParameters: any(named: 'queryParameters')),
+        ).captured;
+        expect(captured.single, '/api/exam-delivery/attempts/attempt-1/timer');
+      },
+    );
+
+    test(
+      'a 409 with an unrecognized message falls back to the generic ConflictException, not a crash or unhandled '
+      'type',
+      () async {
+        when(
+          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
+        ).thenThrow(timerConflictWithMessage('SOME_FUTURE_UNKNOWN_CODE'));
+
+        await expectLater(
+          () => apiClient.fetchTimerState('attempt-1'),
+          throwsA(
+            isA<ConflictException>()
+                .having((e) => e.message, 'message', 'SOME_FUTURE_UNKNOWN_CODE')
+                .having((e) => e, 'not a typed subclass', isNot(isA<AttemptAlreadyCompleteException>())),
+          ),
+        );
+      },
+    );
+  });
+
   group('submitEncryptedAnswer() (Phase 3)', () {
     test(
       'submitEncryptedAnswer() posts to the encrypted answers endpoint with pinnedItemPublicId, wrappedKey, iv, and ciphertext',

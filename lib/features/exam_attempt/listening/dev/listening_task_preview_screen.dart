@@ -5,6 +5,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -29,6 +30,7 @@ class ListeningTaskPreviewScreen extends StatefulWidget {
     required this.mediaDao,
     required this.mediaUploadCoordinator,
     required this.audioPlayerService,
+    required this.audioPromptRepository,
     required this.examAttemptBloc,
   });
 
@@ -38,6 +40,7 @@ class ListeningTaskPreviewScreen extends StatefulWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator mediaUploadCoordinator;
   final AudioPlayerService audioPlayerService;
+  final AudioPromptRepository audioPromptRepository;
   final ExamAttemptBloc examAttemptBloc;
 
   @override
@@ -64,6 +67,7 @@ class _ListeningTaskPreviewScreenState extends State<ListeningTaskPreviewScreen>
               mediaDao: widget.mediaDao,
               mediaUploadCoordinator: widget.mediaUploadCoordinator,
               audioPlayerService: widget.audioPlayerService,
+              audioPromptRepository: widget.audioPromptRepository,
             ),
           ),
           DevPreviewBackButton(onPressed: () => setState(() => _selected = null)),

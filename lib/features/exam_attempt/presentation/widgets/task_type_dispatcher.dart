@@ -4,6 +4,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -77,6 +78,7 @@ class TaskTypeDispatcher extends StatelessWidget {
     required this.mediaDao,
     required this.mediaUploadCoordinator,
     required this.audioPlayerService,
+    required this.audioPromptRepository,
   });
 
   final TaskView task;
@@ -87,10 +89,18 @@ class TaskTypeDispatcher extends StatelessWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator mediaUploadCoordinator;
 
-  /// Only consumed by listening task types (phase-02 Design Constraints) —
-  /// unused by Reading/Speaking/Writing screens, same pattern as
-  /// `audioRecorderService` being unused outside `READ_ALOUD`.
+  /// Consumed by listening task types AND the 5 audio-prompt Speaking task
+  /// types (Repeat Sentence, Retell Lecture, Answer Short Question,
+  /// Summarize Group Discussion, Respond to a Situation) as of
+  /// plans/phat-speaking-audio-prompt-e2e — unused by every other screen,
+  /// same pattern as `audioRecorderService` being unused outside the
+  /// auto-record screens.
   final AudioPlayerService audioPlayerService;
+
+  /// Only consumed by the same 5 audio-prompt Speaking task types above —
+  /// resolves the on-demand `/audio` endpoint's playable URL
+  /// (plans/phat-speaking-audio-prompt-e2e).
+  final AudioPromptRepository audioPromptRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +183,8 @@ _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task
         mediaDao: mediaDao,
         coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
+        audioPlayerService: audioPlayerService,
+        audioPromptRepository: audioPromptRepository,
       ),
       _taskTypeDescribeImage => DescribeImageScreen(
         key: key,
@@ -191,6 +203,8 @@ _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task
         mediaDao: mediaDao,
         coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
+        audioPlayerService: audioPlayerService,
+        audioPromptRepository: audioPromptRepository,
       ),
       _taskTypeAnswerShortQuestion => AnswerShortQuestionScreen(
         key: key,
@@ -200,6 +214,8 @@ _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task
         mediaDao: mediaDao,
         coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
+        audioPlayerService: audioPlayerService,
+        audioPromptRepository: audioPromptRepository,
       ),
       _taskTypeSummarizeGroupDiscussion => SummarizeGroupDiscussionScreen(
         key: key,
@@ -209,6 +225,8 @@ _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task
         mediaDao: mediaDao,
         coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
+        audioPlayerService: audioPlayerService,
+        audioPromptRepository: audioPromptRepository,
       ),
       _taskTypeRespondToASituation => RespondToASituationScreen(
         key: key,
@@ -218,6 +236,8 @@ _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task
         mediaDao: mediaDao,
         coordinator: mediaUploadCoordinator,
         syncEngine: syncEngine,
+        audioPlayerService: audioPlayerService,
+        audioPromptRepository: audioPromptRepository,
       ),
       _taskTypeWriteFromDictation => WriteFromDictationScreen(
         key: key,

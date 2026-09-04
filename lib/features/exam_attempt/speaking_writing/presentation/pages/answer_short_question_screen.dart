@@ -6,22 +6,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
-
-/// Mock-only sub-stage split within the shared `prep` window — same shape as
-/// `RepeatSentenceScreen`'s split (`_preListenSeconds = 3`,
-/// `_preRecordSeconds = 3`), just a shorter audio stage: `prepSeconds - 3 -
-/// 3` (8s when `prepSeconds = 14`).
-const int _preListenSeconds = 3;
-const int _preRecordSeconds = 3;
 
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
@@ -39,6 +35,8 @@ class AnswerShortQuestionScreen extends StatefulWidget {
     required this.mediaDao,
     required this.coordinator,
     required this.syncEngine,
+    required this.audioPlayerService,
+    required this.audioPromptRepository,
   });
 
   final TaskView task;
@@ -47,6 +45,8 @@ class AnswerShortQuestionScreen extends StatefulWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator coordinator;
   final SyncEngine syncEngine;
+  final AudioPlayerService audioPlayerService;
+  final AudioPromptRepository audioPromptRepository;
 
   @override
   State<AnswerShortQuestionScreen> createState() =>
@@ -56,6 +56,7 @@ class AnswerShortQuestionScreen extends StatefulWidget {
 class _AnswerShortQuestionScreenState extends State<AnswerShortQuestionScreen>
     with AutoRecordTimerBridgeMixin<AnswerShortQuestionScreen> {
   late final AutoRecordCubit _cubit;
+  late final AudioPromptCubit _audioPromptCubit;
 
   @override
   void initState() {
@@ -67,20 +68,39 @@ class _AnswerShortQuestionScreenState extends State<AnswerShortQuestionScreen>
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
     );
-    startAutoRecordBridge(task: widget.task, cubit: _cubit);
+    _audioPromptCubit = AudioPromptCubit(
+      repository: widget.audioPromptRepository,
+      player: widget.audioPlayerService,
+      task: widget.task,
+      attemptPublicId: widget.attemptPublicId,
+      // Server-owned as of plans/phat-speaking-dynamic-prep-timing — never
+      // null here by construction (see RepeatSentenceScreen's identical
+      // comment).
+      preListenSeconds: widget.task.preListenSeconds!,
+      preRecordSeconds: widget.task.preRecordSeconds!,
+    );
+    startAutoRecordBridge(
+      task: widget.task,
+      cubit: _cubit,
+      audioPromptCubit: _audioPromptCubit,
+    );
   }
 
   @override
   void dispose() {
     disposeAutoRecordBridge();
     unawaited(_cubit.close());
+    unawaited(_audioPromptCubit.close());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _cubit),
+        BlocProvider.value(value: _audioPromptCubit),
+      ],
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _AnswerShortQuestionBody(task: widget.task),
@@ -106,8 +126,8 @@ class _AnswerShortQuestionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AudioPromptRecordBody(
       task: task,
-      preListenSeconds: _preListenSeconds,
-      preRecordSeconds: _preRecordSeconds,
+      preListenSeconds: task.preListenSeconds!,
+      preRecordSeconds: task.preRecordSeconds!,
       instructionText:
           SpeakingWritingStrings.answerShortQuestionInstructionText,
     );

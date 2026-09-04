@@ -83,4 +83,21 @@ void main() {
       expect(task.blankGroups, isNull);
     });
   });
+
+  group('TaskView.fromJson — imageUrl (plans/phat-describe-image-e2e)', () {
+    test('parses as null when absent from JSON', () {
+      final task = _taskFrom({});
+      expect(task.imageUrl, isNull);
+    });
+
+    test('parses correctly when present, independently of imagePromptRef', () {
+      final task = _taskFrom({
+        'imagePromptRef': 'raw-media-object-uuid',
+        'imageUrl': 'https://example.com/resolved-image.png',
+      });
+
+      expect(task.imagePromptRef, 'raw-media-object-uuid');
+      expect(task.imageUrl, 'https://example.com/resolved-image.png');
+    });
+  });
 }

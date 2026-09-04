@@ -9,9 +9,11 @@ class TimerRepositoryImpl implements TimerRepository {
 
   @override
   Future<TimerStateResponse> fetchTimerState(String attemptPublicId) async {
-    final response = await _apiClient.get<Map<String, dynamic>>(
-      '/api/exam-delivery/attempts/$attemptPublicId/timer',
-    );
+    // Routed through ApiClient's own dedicated method (not the generic
+    // get()) so a 409 comes back as the typed AttemptAlreadyCompleteException
+    // rather than a bare ConflictException (plans/phat-speaking-dynamic-
+    // prep-timing follow-up).
+    final response = await _apiClient.fetchTimerState(attemptPublicId);
     return TimerStateResponse.fromJson(response.data!);
   }
 }

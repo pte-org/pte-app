@@ -5,10 +5,12 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/dev_preview_back_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/speaking_writing_task_fixtures.dart';
@@ -36,6 +38,7 @@ class SpeakingWritingTaskPreviewScreen extends StatefulWidget {
     required this.mediaDao,
     required this.mediaUploadCoordinator,
     required this.audioPlayerService,
+    required this.audioPromptRepository,
     required this.examAttemptBloc,
   });
 
@@ -45,6 +48,7 @@ class SpeakingWritingTaskPreviewScreen extends StatefulWidget {
   final PendingMediaUploadDao mediaDao;
   final MediaUploadCoordinator mediaUploadCoordinator;
   final AudioPlayerService audioPlayerService;
+  final AudioPromptRepository audioPromptRepository;
   final ExamAttemptBloc examAttemptBloc;
 
   @override
@@ -55,6 +59,17 @@ class SpeakingWritingTaskPreviewScreen extends StatefulWidget {
 class _SpeakingWritingTaskPreviewScreenState
     extends State<SpeakingWritingTaskPreviewScreen> {
   TaskView? _selected;
+
+  /// Seeds `ExamAttemptBloc` into `AttemptInProgress` for [task] (see
+  /// `DevPreviewAttemptSeeded`'s doc) so `AutoRecordTimerBridgeMixin`'s live
+  /// countdown actually ticks in this fixture-driven preview, then shows the
+  /// task — without this, every speaking screen's "Beginning in…"/"Recording…"
+  /// label stays frozen forever, since the bloc never otherwise leaves its
+  /// initial state here.
+  void _select(TaskView task) {
+    widget.examAttemptBloc.add(DevPreviewAttemptSeeded(task));
+    setState(() => _selected = task);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +88,7 @@ class _SpeakingWritingTaskPreviewScreenState
               mediaDao: widget.mediaDao,
               mediaUploadCoordinator: widget.mediaUploadCoordinator,
               audioPlayerService: widget.audioPlayerService,
+              audioPromptRepository: widget.audioPromptRepository,
             ),
           ),
           DevPreviewBackButton(
@@ -92,12 +108,12 @@ class _SpeakingWritingTaskPreviewScreenState
           for (final task in SpeakingWritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
-              onTap: () => setState(() => _selected = task),
+              onTap: () => _select(task),
             ),
           for (final task in WritingTaskFixtures.all)
             ListTile(
               title: Text(task.taskType),
-              onTap: () => setState(() => _selected = task),
+              onTap: () => _select(task),
             ),
         ],
       ),
