@@ -28,7 +28,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/page
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/summarize_group_discussion_screen.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/summarize_spoken_text_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/summarize_written_text_screen.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/write_essay_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/write_essay_v2_screen.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/pages/write_from_dictation_screen.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
@@ -39,12 +38,9 @@ const String _taskTypeReOrderParagraphs = 'RE_ORDER_PARAGRAPHS';
 const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
 const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
+const String _taskTypeSummarizeWrittenText = 'SUMMARIZE_WRITTEN_TEXT';
 const String _taskTypePersonalIntroduction = 'PERSONAL_INTRODUCTION';
 const String _taskTypeReadAloud = 'READ_ALOUD';
-// Writing tasks (from HEAD).
-const String _taskTypeSummarizeWrittenText = 'SUMMARIZE_WRITTEN_TEXT';
-const String _taskTypeWriteEssayV2 = 'WRITE_ESSAY_V2';
-
 // Additional speaking tasks (from origin/dev).
 const String _taskTypeRepeatSentence = 'REPEAT_SENTENCE';
 const String _taskTypeDescribeImage = 'DESCRIBE_IMAGE';
@@ -138,15 +134,20 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
-      _taskTypeWriteEssay => WriteEssayScreen(
+      _taskTypeWriteEssay => WriteEssayV2Screen(
         key: key,
         task: task,
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
       ),
-_taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(key: key, task: task),
-      _taskTypeWriteEssayV2 => WriteEssayV2Screen(key: key, task: task),
+      _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(
+        key: key,
+        task: task,
+        attemptPublicId: attemptPublicId,
+        outboxDao: outboxDao,
+        syncEngine: syncEngine,
+      ),
       _taskTypePersonalIntroduction => PersonalIntroductionScreen(
         key: key,
         task: task,
