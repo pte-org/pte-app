@@ -16,9 +16,14 @@ class ApiClient {
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
   }) {
     return _run<T>(
-      () => _dio.get<dynamic>(path, queryParameters: queryParameters),
+      () => _dio.get<dynamic>(
+        path,
+        queryParameters: queryParameters,
+        options: headers == null ? null : Options(headers: headers),
+      ),
     );
   }
 
@@ -54,6 +59,64 @@ class ApiClient {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
         'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
+        _ => e,
+      };
+    }
+  }
+
+  /// The pinned item's on-demand play — `pte-api`'s `/audio` endpoint. A 403
+  /// is remapped from the generic [ForbiddenException] to
+  /// [ReplayLimitExceededException], and a 410 from [GoneException] to
+  /// [AudioUrlExpiredException], by inspecting the response body's `message`
+  /// field — same endpoint-specific-remap pattern as [submitAnswer], so
+  /// every other 403/410 call site's behavior stays untouched
+  /// (plans/phat-speaking-audio-prompt-e2e). [playRequestId] is a
+  /// client-generated UUID per play attempt — the server replays the same
+  /// outcome for a repeated id instead of re-incrementing its play count.
+  Future<String> playAudio({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String playRequestId,
+  }) async {
+    try {
+      final response = await get<Map<String, dynamic>>(
+        '/api/exam-delivery/attempts/$attemptPublicId/items/$pinnedItemPublicId/audio',
+        headers: {'X-Play-Request-Id': playRequestId},
+      );
+      return response.data!['audioUrl'] as String;
+    } on ForbiddenException catch (e) {
+      throw switch (e.message) {
+        'REPLAY_LIMIT_EXCEEDED' => ReplayLimitExceededException(e.message),
+        _ => e,
+      };
+    } on GoneException catch (e) {
+      throw switch (e.message) {
+        'AUDIO_URL_EXPIRED' => AudioUrlExpiredException(e.message),
+        _ => e,
+      };
+    }
+  }
+
+  /// The heartbeat poll behind `TimerService`'s countdown — `pte-api`'s
+  /// `/timer` endpoint. A 409 here always means the attempt already
+  /// reached a terminal status (`AttemptService.getTimerState`'s only
+  /// failure mode), remapped from the generic [ConflictException] to
+  /// [AttemptAlreadyCompleteException] so `TimerService` can stop polling
+  /// outright instead of retrying forever — same endpoint-specific-remap
+  /// pattern as [submitAnswer]/[playAudio]
+  /// (plans/phat-speaking-dynamic-prep-timing follow-up).
+  Future<Response<Map<String, dynamic>>> fetchTimerState(
+    String attemptPublicId,
+  ) async {
+    try {
+      return await get<Map<String, dynamic>>(
+        '/api/exam-delivery/attempts/$attemptPublicId/timer',
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'ATTEMPT_ALREADY_COMPLETE' => AttemptAlreadyCompleteException(
+          e.message,
+        ),
         _ => e,
       };
     }
@@ -133,10 +196,15 @@ class ApiClient {
     }
     return switch (statusCode) {
       401 => const AuthException('Authentication failed (401)'),
-      403 => const ForbiddenException('Permission denied (403)'),
+      // `_serverMessage` distinguishes a genuine permission failure from a
+      // specific-cause 403 an endpoint-specific remap wants to inspect (e.g.
+      // `ApiClient.playAudio`'s `REPLAY_LIMIT_EXCEEDED`) — same reason 409
+      // already captures it below.
+      403 => ForbiddenException(_serverMessage(e) ?? 'Permission denied (403)'),
       400 || 422 => ValidationException('Request rejected ($statusCode)'),
       404 => NotFoundException(_serverMessage(e) ?? 'Not found ($statusCode)'),
       409 => ConflictException(_serverMessage(e) ?? 'Conflict ($statusCode)'),
+      410 => GoneException(_serverMessage(e) ?? 'Gone ($statusCode)'),
       429 => RateLimitException(
         'Rate limited ($statusCode)',
         retryAfter: _retryAfter(e),

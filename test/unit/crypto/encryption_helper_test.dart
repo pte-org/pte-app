@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pte_app/core/crypto/encryption_helper.dart';
+import 'package:pointycastle/export.dart' show RSAPublicKey;
 
 void main() {
   late EncryptionHelper encryptionHelper;
@@ -59,7 +59,7 @@ void main() {
   });
 
   group('EncryptionHelper.encrypt', () {
-    late final publicKey;
+    late final RSAPublicKey publicKey;
 
     setUpAll(() {
       publicKey = encryptionHelper.parsePublicKey(testPublicKeyBase64);

@@ -57,11 +57,34 @@ class AudioListeningStatusCard extends StatelessWidget {
           const SizedBox(height: AppDimensions.spacingMedium),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppDimensions.recordingProgressBarRadius),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: AppDimensions.recordingProgressBarHeight,
-              backgroundColor: AppColors.onPrimary,
-              color: AppColors.primary,
+            // [progress] only ticks forward whenever the real audio
+            // player's position stream happens to emit — on desktop that
+            // can be coarser than once a second, so a bare
+            // LinearProgressIndicator (which snaps instantly to a new
+            // `value`, no interpolation of its own) visibly jumps in
+            // uneven steps instead of gliding. TweenAnimationBuilder
+            // smooths every jump into a short animation from wherever the
+            // bar currently sits to the new target — its own current
+            // animated value becomes the next tween's start automatically,
+            // so this stays correct across any number of updates, not just
+            // the first. The math underneath (position/duration) is
+            // already an even, duration-proportional split — a 10s audio
+            // advances ~10%/s, a 5s one ~20%/s — this only smooths how
+            // that value is *rendered* between updates, it changes no
+            // progress calculation (plans/phat-speaking-dynamic-prep-timing
+            // Phase 5 walkthrough follow-up).
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.linear,
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: AppDimensions.recordingProgressBarHeight,
+                  backgroundColor: AppColors.onPrimary,
+                  color: AppColors.primary,
+                );
+              },
             ),
           ),
         ],

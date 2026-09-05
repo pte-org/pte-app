@@ -18,9 +18,12 @@ String friendlyErrorMessage(Object error) {
     ConflictException() => 'That action conflicts with the current state. Please try again.',
     AuthException() => 'Your session has expired or your credentials are invalid. Please log in again.',
     ForbiddenException() => "You don't have permission to do that.",
+    ReplayLimitExceededException() => 'No plays left for this audio.',
     ValidationException(:final message) => message,
     RateLimitException() => 'Too many requests — please wait a moment and try again.',
     NotFoundException() => "That wasn't found. Please double-check and try again.",
+    AudioUrlExpiredException() => 'That audio link expired. Please try again.',
+    GoneException() => 'That resource is no longer available.',
     NetworkException() => "Couldn't reach the server. Check your connection and try again.",
     UnknownApiException(:final message) => 'Something went wrong. ($message)',
   };

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -17,14 +18,26 @@ class _MockTimerRepository extends Mock implements TimerRepository {}
 /// callbacks manually instead of waiting on real time. Returns a
 /// long-lived, never-really-firing `Timer` so `Timer.cancel()` calls made by
 /// production code remain harmless no-ops.
+///
+/// [timers] also exposes the exact `Timer` object returned for each call
+/// (plans/phat-speaking-dynamic-prep-timing, Phase 4 — 2nd-pass plan-reviewer
+/// finding): a regression test built only on re-invoking a captured
+/// `callback` closure bypasses real `Timer.cancel()` semantics entirely, so
+/// it can't tell "cancelled" apart from "closure still happens to work" —
+/// it would pass even if production code's cancel-before-reconcile step
+/// were silently removed. Tests that need to prove a real cancellation
+/// happened assert on `timers[i].isActive` instead.
 class _CapturingScheduler {
   final List<void Function()> callbacks = [];
   final List<Duration> durations = [];
+  final List<Timer> timers = [];
 
   Timer call(Duration duration, void Function() callback) {
     durations.add(duration);
     callbacks.add(callback);
-    return Timer(const Duration(days: 999), () {});
+    final timer = Timer(const Duration(days: 999), () {});
+    timers.add(timer);
+    return timer;
   }
 }
 
@@ -372,4 +385,307 @@ void main() {
       },
     );
   });
+
+  group('one-shot deadline poll — reconciles promptly for short-prep task types (Phase 4)', () {
+    test(
+      'startPolling schedules a one-shot poll timed to the current countdown remaining; firing it triggers a '
+      'fresh server reconciliation without waiting for the periodic interval',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+        var fetchCount = 0;
+        when(() => repository.fetchTimerState(any())).thenAnswer((_) async {
+          fetchCount++;
+          return _serverState(
+            phase: TimerPhase.prep,
+            currentOrderIndex: 1,
+            prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+            serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+          );
+        });
+
+        // A short 5s prep window — the scenario this phase exists for.
+        service.seedFromTask(
+          _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+        );
+        service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+
+        // Scheduled synchronously within startPolling, before the initial
+        // poll's own async reconciliation runs: [0] tick (1s), [1] the
+        // one-shot, targeted at the ~5s remaining — well under the 10s
+        // periodic interval, proving it's a distinct, earlier-firing timer.
+        expect(scheduler.durations[1], lessThanOrEqualTo(const Duration(seconds: 5)));
+        expect(scheduler.durations[1], greaterThan(const Duration(seconds: 3)));
+
+        // startPolling's own initial immediate poll already ran
+        // synchronously up to its first await — one fetch so far, no new
+        // one from the one-shot mechanism itself yet.
+        expect(fetchCount, 1);
+
+        final oneShotCallback = scheduler.callbacks[1];
+        oneShotCallback();
+        await pumpEventQueue();
+
+        // Firing the one-shot triggered a second, independent server
+        // reconciliation — not merely a local tick — without any real time
+        // passing and without the 10s periodic interval ever firing.
+        expect(fetchCount, 2);
+      },
+    );
+
+    test(
+      'firing the one-shot poll leaves exactly one active periodic chain — the previously-active periodic Timer '
+      'is genuinely cancelled, not merely superseded by a new schedule call',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+        when(() => repository.fetchTimerState(any())).thenAnswer(
+          (_) async => _serverState(
+            phase: TimerPhase.prep,
+            currentOrderIndex: 1,
+            prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+            serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+          ),
+        );
+
+        service.seedFromTask(
+          _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+        );
+        service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+        await pumpEventQueue();
+
+        // After the initial poll's own reconciliation, exactly one
+        // periodic Timer is active — the last one scheduled (_poll's tail).
+        final periodicTimerBeforeOneShot = scheduler.timers.last;
+        expect(periodicTimerBeforeOneShot.isActive, isTrue);
+
+        final oneShotCallback = scheduler.callbacks[1];
+        oneShotCallback();
+        await pumpEventQueue();
+
+        // The one-shot's cancel-before-reconcile step must have called
+        // real Timer.cancel() on the previously-active periodic timer —
+        // asserting on the closure re-firing safely would not catch a
+        // missing cancellation (2nd-pass plan-reviewer finding).
+        expect(periodicTimerBeforeOneShot.isActive, isFalse);
+
+        // Exactly one, brand-new periodic timer is active afterward.
+        final periodicTimerAfterOneShot = scheduler.timers.last;
+        expect(periodicTimerAfterOneShot.isActive, isTrue);
+        expect(identical(periodicTimerAfterOneShot, periodicTimerBeforeOneShot), isFalse);
+      },
+    );
+
+    test(
+      'a race where the one-shot fires and re-enters _poll before the original startPolling call\'s own fetch has '
+      'resolved still leaves exactly one active periodic chain (code-review finding: _poll\'s own tail-end '
+      'scheduling was not symmetric with _scheduleOneShotPoll\'s cancel-before-overwrite)',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+
+        // The very first fetchTimerState call (startPolling's own initial
+        // _poll) stays deliberately unresolved until explicitly completed
+        // below — simulating a slow/cold network round-trip racing the
+        // one-shot's short window. Every later call resolves immediately.
+        final firstFetchCompleter = Completer<TimerStateResponse>();
+        var fetchCallCount = 0;
+        when(() => repository.fetchTimerState(any())).thenAnswer((_) {
+          fetchCallCount++;
+          if (fetchCallCount == 1) return firstFetchCompleter.future;
+          return Future<TimerStateResponse>.value(
+            _serverState(
+              phase: TimerPhase.prep,
+              currentOrderIndex: 1,
+              prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+              serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+            ),
+          );
+        });
+
+        service.seedFromTask(
+          _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+        );
+        service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+        // Deliberately no pumpEventQueue here — the original _poll call's
+        // fetch is still pending, so _pollTimer is still null at this exact
+        // moment: the race window this test targets.
+
+        final oneShotCallback = scheduler.callbacks[1];
+        oneShotCallback();
+        await pumpEventQueue();
+
+        // The one-shot-triggered _poll call (2nd+ fetch, resolves
+        // immediately) reconciled and scheduled its own periodic timer,
+        // while the original call is still stuck awaiting its fetch.
+        final periodicTimerFromOneShot = scheduler.timers.last;
+        expect(periodicTimerFromOneShot.isActive, isTrue);
+
+        // Now let the original (slow) fetch resolve too.
+        firstFetchCompleter.complete(
+          _serverState(
+            phase: TimerPhase.prep,
+            currentOrderIndex: 1,
+            prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+            serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+          ),
+        );
+        await pumpEventQueue();
+
+        // The original call's own tail-end scheduling must have cancelled
+        // the one-shot-triggered periodic timer before installing its own
+        // — never two independently active periodic chains, regardless of
+        // which of the two racing _poll calls finishes last.
+        expect(periodicTimerFromOneShot.isActive, isFalse);
+        final finalPeriodicTimer = scheduler.timers.last;
+        expect(finalPeriodicTimer.isActive, isTrue);
+        expect(identical(finalPeriodicTimer, periodicTimerFromOneShot), isFalse);
+      },
+    );
+
+    test(
+      'a fresh reconciliation replaces the previously-scheduled one-shot with one re-targeted at the new deadline',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+        when(() => repository.fetchTimerState(any())).thenAnswer(
+          (_) async => _serverState(
+            phase: TimerPhase.prep,
+            currentOrderIndex: 1,
+            prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+            serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+          ),
+        );
+
+        service.seedFromTask(
+          _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+        );
+        service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+        await pumpEventQueue();
+
+        // [1] the one-shot scheduled synchronously within startPolling is
+        // superseded by [2], re-armed once the initial poll's own
+        // reconciliation re-seeds the countdown — proving the re-arm
+        // (Step 4) runs on every reconciliation, not only when the
+        // one-shot itself fires.
+        final originalOneShotTimer = scheduler.timers[1];
+        expect(originalOneShotTimer.isActive, isFalse);
+
+        final reArmedOneShotTimer = scheduler.timers[2];
+        expect(reArmedOneShotTimer.isActive, isTrue);
+        expect(scheduler.durations[2], lessThanOrEqualTo(const Duration(seconds: 5)));
+      },
+    );
+
+    test('stop() leaves no orphaned one-shot callback capable of firing', () async {
+      final scheduler = _CapturingScheduler();
+      final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+      var fetchCount = 0;
+      when(() => repository.fetchTimerState(any())).thenAnswer((_) async {
+        fetchCount++;
+        return _serverState(
+          phase: TimerPhase.prep,
+          currentOrderIndex: 1,
+          prepDeadline: DateTime(2026, 1, 1, 0, 0, 10),
+          serverNow: DateTime(2026, 1, 1, 0, 0, 5),
+        );
+      });
+
+      service.seedFromTask(
+        _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+      );
+      service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+      await pumpEventQueue();
+
+      final staleOneShotCallback = scheduler.callbacks[1];
+      final fetchCountBeforeStop = fetchCount;
+      final callbackCountBeforeStop = scheduler.callbacks.length;
+
+      service.stop();
+      staleOneShotCallback();
+      await pumpEventQueue();
+
+      // The stale generation guard makes this a safe no-op: no new poll,
+      // no new schedule call.
+      expect(fetchCount, fetchCountBeforeStop);
+      expect(scheduler.callbacks.length, callbackCountBeforeStop);
+    });
+
+    test(
+      'reconcileFromServer called directly (no startPolling active) never schedules a one-shot poll — the '
+      'existing seedFromTask/reconcileFromServer-only tests above must stay free of stray real Timers',
+      () {
+        final scheduler = _CapturingScheduler();
+        final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+
+        service.seedFromTask(_task(serverNow: DateTime(2026, 1, 1, 0, 0, 10)));
+        service.reconcileFromServer(
+          _serverState(phase: TimerPhase.prep, currentOrderIndex: 1, serverNow: DateTime(2026, 1, 1, 0, 0, 15)),
+        );
+
+        expect(scheduler.callbacks, isEmpty);
+      },
+    );
+  });
+
+  group(
+    'AttemptAlreadyCompleteException — stops the whole poll/tick/one-shot chain outright, no retry-forever '
+    '(plans/phat-speaking-dynamic-prep-timing follow-up)',
+    () {
+      test(
+        'a 409 typed as AttemptAlreadyCompleteException calls stop() instead of scheduling a retry',
+        () async {
+          final scheduler = _CapturingScheduler();
+          final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+          when(() => repository.fetchTimerState(any())).thenAnswer(
+            (_) async => throw const AttemptAlreadyCompleteException('ATTEMPT_ALREADY_COMPLETE'),
+          );
+
+          service.seedFromTask(
+            _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+          );
+          service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+          await pumpEventQueue();
+
+          // stop() was called instead of the normal catch-all retry path —
+          // every callback captured so far (tick, one-shot) is now stale
+          // (generation bumped) and firing any of them must be a safe
+          // no-op, mirroring the dispose() test's convention.
+          final callbackCountAfterFailure = scheduler.callbacks.length;
+          for (final callback in List<void Function()>.from(scheduler.callbacks)) {
+            expect(callback, returnsNormally);
+          }
+          await pumpEventQueue();
+
+          // Nothing new was scheduled — no periodic retry timer, no
+          // re-armed one-shot. A generic (non-terminal) failure would have
+          // scheduled a new periodic Timer here instead.
+          expect(scheduler.callbacks.length, callbackCountAfterFailure);
+        },
+      );
+
+      test(
+        'an ordinary (non-terminal) fetch failure still retries as before — only AttemptAlreadyCompleteException '
+        'short-circuits to stop()',
+        () async {
+          final scheduler = _CapturingScheduler();
+          final service = TimerService(timerRepository: repository, scheduler: scheduler.call);
+          when(
+            () => repository.fetchTimerState(any()),
+          ).thenAnswer((_) async => throw Exception('connectivity blip'));
+
+          service.seedFromTask(
+            _task(serverNow: DateTime(2026, 1, 1), prepDeadline: DateTime(2026, 1, 1, 0, 0, 5)),
+          );
+          service.startPolling('attempt-1', interval: const Duration(seconds: 10));
+          await pumpEventQueue();
+
+          // Unlike the terminal case above, a generic failure still
+          // schedules a fresh periodic retry Timer at _poll's tail.
+          final periodicTimer = scheduler.timers.last;
+          expect(periodicTimer.isActive, isTrue);
+        },
+      );
+    },
+  );
 }

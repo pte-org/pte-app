@@ -12,35 +12,41 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_playback_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
 
 /// Isolated coverage for `AudioPromptRecordBody` itself — as opposed to
 /// exercising it only indirectly through `RepeatSentenceScreen`/
-/// `RetellLectureScreen`/`AnswerShortQuestionScreen`. Those 3 screens'
-/// hardcoded `preListenSeconds`/`preRecordSeconds` values (3/3, 3/10, 3/3)
-/// never sum to >= their `prepSeconds`, so the `AudioListeningPrepCard`
-/// "audio window is non-positive" clamp (`audioSeconds <= 0 ? 1.0 : ...`) — real
-/// widget logic introduced by moving these constants to per-call
-/// constructor params — has zero coverage anywhere else in the suite. Only
-/// this specific boundary is targeted here; every other code path in
-/// `AudioPromptRecordBody` is already exercised at least 3x over by the
-/// screens' own test suites.
+/// `RetellLectureScreen`/`AnswerShortQuestionScreen`. The "Playing" label's
+/// countdown text stays timer-driven (still real widget arithmetic tested
+/// here — the non-positive-audio-window boundary none of the 3 real
+/// screens' fixed sub-stage constants ever reach); the progress *bar*
+/// itself is driven by `AudioPromptCubit`'s state instead
+/// (plans/phat-speaking-audio-prompt-e2e), so this test now proves that
+/// wiring — the bar reflects the cubit's `progress` verbatim — rather than
+/// re-deriving it from `audioSeconds`.
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
     implements ExamAttemptBloc {}
 
 class _MockAutoRecordCubit extends MockCubit<AutoRecordState>
     implements AutoRecordCubit {}
 
+class _MockAudioPromptCubit extends MockCubit<AudioPromptPlaybackState>
+    implements AudioPromptCubit {}
+
 void main() {
   late _MockExamAttemptBloc bloc;
   late _MockAutoRecordCubit autoRecordCubit;
+  late _MockAudioPromptCubit audioPromptCubit;
   late StreamController<ExamAttemptState> stateController;
 
   setUp(() {
     bloc = _MockExamAttemptBloc();
     autoRecordCubit = _MockAutoRecordCubit();
+    audioPromptCubit = _MockAudioPromptCubit();
     stateController = StreamController<ExamAttemptState>.broadcast();
     when(() => autoRecordCubit.state).thenReturn(const AutoRecordState());
     whenListen(
@@ -62,12 +68,15 @@ void main() {
         value: bloc,
         child: BlocProvider<AutoRecordCubit>.value(
           value: autoRecordCubit,
-          child: Scaffold(
-            body: AudioPromptRecordBody(
-              task: task,
-              preListenSeconds: preListenSeconds,
-              preRecordSeconds: preRecordSeconds,
-              instructionText: 'irrelevant instruction text',
+          child: BlocProvider<AudioPromptCubit>.value(
+            value: audioPromptCubit,
+            child: Scaffold(
+              body: AudioPromptRecordBody(
+                task: task,
+                preListenSeconds: preListenSeconds,
+                preRecordSeconds: preRecordSeconds,
+                instructionText: 'irrelevant instruction text',
+              ),
             ),
           ),
         ),
@@ -109,11 +118,31 @@ void main() {
         currentOrderIndex: 1,
       );
       stubBlocState(AttemptInProgress('attempt-1', task, snapshot));
+      when(() => audioPromptCubit.state).thenReturn(const AudioPromptPlaybackState(
+        phase: AudioPromptPlaybackPhase.playing,
+        progress: 0.73,
+      ));
+      whenListen(
+        audioPromptCubit,
+        const Stream<AudioPromptPlaybackState>.empty(),
+        initialState: const AudioPromptPlaybackState(
+          phase: AudioPromptPlaybackPhase.playing,
+          progress: 0.73,
+        ),
+      );
 
       await tester.pumpWidget(
         buildSubject(task: task, preListenSeconds: 3, preRecordSeconds: 5),
       );
+      // The Listening card's bar is now wrapped in a TweenAnimationBuilder
+      // (plans/phat-speaking-dynamic-prep-timing Phase 5 walkthrough
+      // follow-up) — its first frame renders the animation's `begin` (0.0),
+      // reaching the real target only once the 300ms tween settles.
+      await tester.pumpAndSettle();
 
+      // The countdown label text stays real timer-driven arithmetic —
+      // "Playing 0 seconds left" here is the still-relevant non-positive-
+      // audio-window clamp (audioSeconds = (6 - 3 - 5).clamp(0, 6) = 0).
       expect(find.text('Playing 0 seconds left'), findsOneWidget);
       // preRecordStart = (6 - 5).clamp(0, 6) = 1; elapsed(3) >= 1, so the
       // Record card is independently already in its own "Beginning in"
@@ -125,10 +154,68 @@ void main() {
         find.byType(LinearProgressIndicator),
       );
       // First bar belongs to the Listening card (declared before the
-      // Record card in AudioPromptRecordBody's Column) and must be fully
-      // filled (1.0) per the clamp, not NaN/negative from dividing by a
-      // non-positive audioSeconds.
+      // Record card in AudioPromptRecordBody's Column). Once the
+      // elapsed-time window has closed (audioRemaining <= 0 here), the bar
+      // is forced to 1.0 regardless of the cubit's real-playback progress
+      // — deliberately still stubbed at 0.73 to prove the clamp actually
+      // overrides it, not merely that it happens to already be 1.0
+      // (plans/phat-speaking-dynamic-prep-timing Phase 5 walkthrough
+      // finding: without this clamp, real playback's start latency could
+      // leave the bar visibly short of full even after the label already
+      // read "0 seconds left").
       expect(progressBars.first.value, 1.0);
+    },
+  );
+
+  testWidgets(
+    'while the audio sub-stage window is still open (audioRemaining > 0), the bar tracks the cubit\'s real '
+    'playback progress verbatim, not the 1.0 clamp',
+    (tester) async {
+      // prepSeconds=12, preListenSeconds=3, preRecordSeconds=3 ->
+      // audioSeconds = 6; elapsed=5 -> audioElapsed=2, audioRemaining=4 (>0).
+      final task = TaskView(
+        pinnedItemPublicId: 'item-1',
+        orderIndex: 1,
+        totalTasks: 32,
+        section: 'SPEAKING',
+        taskType: 'ANSWER_SHORT_QUESTION',
+        title: 'Mid-playback task',
+        prepSeconds: 12,
+        responseSeconds: 10,
+        prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
+        responseDeadline: DateTime(2026, 1, 1, 0, 0, 22),
+        serverNow: DateTime(2026, 1, 1),
+      );
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 7),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(AttemptInProgress('attempt-1', task, snapshot));
+      when(() => audioPromptCubit.state).thenReturn(const AudioPromptPlaybackState(
+        phase: AudioPromptPlaybackPhase.playing,
+        progress: 0.42,
+      ));
+      whenListen(
+        audioPromptCubit,
+        const Stream<AudioPromptPlaybackState>.empty(),
+        initialState: const AudioPromptPlaybackState(
+          phase: AudioPromptPlaybackPhase.playing,
+          progress: 0.42,
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildSubject(task: task, preListenSeconds: 3, preRecordSeconds: 3),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Playing 4 seconds left'), findsOneWidget);
+
+      final progressBars = tester.widgetList<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progressBars.first.value, 0.42);
     },
   );
 }

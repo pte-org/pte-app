@@ -74,6 +74,45 @@ final class ResponseWindowExpiredException extends ConflictException {
   const ResponseWindowExpiredException(super.message);
 }
 
+/// The attempt reached a terminal status before this poll — `pte-api`'s
+/// `AttemptAlreadyCompleteException` (`message: "ATTEMPT_ALREADY_COMPLETE"`),
+/// `AttemptService.getTimerState`'s only failure mode (confirmed by direct
+/// source read — no other 409 cause exists on that endpoint). Distinct from
+/// the generic [ConflictException] fallback so `TimerService._poll` can stop
+/// its whole poll/tick chain outright instead of retrying a call that can
+/// now never succeed (plans/phat-speaking-dynamic-prep-timing follow-up).
+final class AttemptAlreadyCompleteException extends ConflictException {
+  const AttemptAlreadyCompleteException(super.message);
+}
+
+/// `/audio`'s per-item play-count limit was already reached — `pte-api`'s
+/// `ReplayLimitExceededException` (403, `message: "REPLAY_LIMIT_EXCEEDED"`).
+/// Deliberately not a subtype of [ForbiddenException] (that type is `final`,
+/// and a genuine permission failure elsewhere in the app has nothing to do
+/// with this one endpoint's play-count semantics) — callers who want to
+/// show "no plays left" catch this specifically; anyone who doesn't still
+/// catches the sealed [ApiException] (plans/phat-speaking-audio-prompt-e2e).
+final class ReplayLimitExceededException extends ApiException {
+  const ReplayLimitExceededException(super.message);
+}
+
+/// `/audio`'s resolved URL's TTL has passed — `pte-api`'s
+/// `AudioUrlExpiredException` (410, `message: "AUDIO_URL_EXPIRED"`). Should
+/// not happen under normal operation (the TTL spans the whole session
+/// window), so callers can treat this as an unexpected-but-non-crashing
+/// condition rather than a routine retry case
+/// (plans/phat-speaking-audio-prompt-e2e).
+final class AudioUrlExpiredException extends ApiException {
+  const AudioUrlExpiredException(super.message);
+}
+
+/// 410 — the resource existed but is now permanently gone. Currently only
+/// produced by `/audio`'s TTL expiry before endpoint-specific remapping
+/// (see `ApiClient.playAudio`) turns it into [AudioUrlExpiredException].
+final class GoneException extends ApiException {
+  const GoneException(super.message);
+}
+
 /// 404 — the resource genuinely doesn't exist *or* exists but isn't visible
 /// to the caller yet, indistinguishably (e.g. `pte-api`'s reporting
 /// endpoint returns the same `REPORT_NOT_FOUND` 404 for both "not yet

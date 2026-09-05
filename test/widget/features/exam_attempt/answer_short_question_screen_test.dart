@@ -11,9 +11,11 @@ import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -32,6 +34,11 @@ class _MockMediaUploadCoordinator extends Mock
     implements MediaUploadCoordinator {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
+
+class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
+
+class _MockAudioPromptRepository extends Mock
+    implements AudioPromptRepository {}
 
 /// `AnswerShortQuestionScreen` constructs its own `AutoRecordCubit`
 /// internally using the real `resolveRecordingFilePath`, which calls
@@ -61,6 +68,10 @@ TaskView _answerShortQuestionTask({String pinnedItemPublicId = 'item-1'}) {
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 14),
     responseDeadline: DateTime(2026, 1, 1, 0, 0, 24),
     serverNow: DateTime(2026, 1, 1),
+    // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
+    // screen null-asserts these, so the fixture must always supply them.
+    preListenSeconds: 3,
+    preRecordSeconds: 3,
   );
 }
 
@@ -74,6 +85,8 @@ void main() {
   late _MockPendingMediaUploadDao mediaDao;
   late _MockMediaUploadCoordinator coordinator;
   late _MockSyncEngine syncEngine;
+  late _MockAudioPlayerService audioPlayerService;
+  late _MockAudioPromptRepository audioPromptRepository;
   late StreamController<ExamAttemptState> stateController;
 
   setUp(() {
@@ -82,6 +95,8 @@ void main() {
     mediaDao = _MockPendingMediaUploadDao();
     coordinator = _MockMediaUploadCoordinator();
     syncEngine = _MockSyncEngine();
+    audioPlayerService = _MockAudioPlayerService();
+    audioPromptRepository = _MockAudioPromptRepository();
     stateController = StreamController<ExamAttemptState>.broadcast();
 
     when(
@@ -89,6 +104,22 @@ void main() {
     ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    // AudioPromptCubit subscribes to these in its constructor (every
+    // screen build) and calls playAudio/playUrl/close whenever a
+    // snapshot's elapsed time enters the mocked "Playing" sub-stage —
+    // all 4 stubbed here so every existing test (most of which sweep
+    // through that sub-stage) doesn't hit mocktail's MissingStubError.
+    when(() => audioPlayerService.position).thenAnswer((_) => const Stream<Duration>.empty());
+    when(() => audioPlayerService.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
+    when(() => audioPlayerService.close()).thenAnswer((_) async {});
+    when(
+      () => audioPromptRepository.playAudio(
+        attemptPublicId: any(named: 'attemptPublicId'),
+        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+        playRequestId: any(named: 'playRequestId'),
+      ),
+    ).thenAnswer((_) async => 'https://example.com/audio.mp3');
   });
 
   tearDown(() => stateController.close());
@@ -104,6 +135,8 @@ void main() {
           mediaDao: mediaDao,
           coordinator: coordinator,
           syncEngine: syncEngine,
+          audioPlayerService: audioPlayerService,
+          audioPromptRepository: audioPromptRepository,
         ),
       ),
     );

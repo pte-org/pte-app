@@ -43,7 +43,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '/tmp';
 }
 
-TaskView _describeImageTask({String pinnedItemPublicId = 'item-1', String? imagePromptRef = 'https://example.com/img.png'}) {
+TaskView _describeImageTask({String pinnedItemPublicId = 'item-1', String? imageUrl = 'https://example.com/img.png'}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
     orderIndex: 1,
@@ -51,7 +51,9 @@ TaskView _describeImageTask({String pinnedItemPublicId = 'item-1', String? image
     section: 'SPEAKING',
     taskType: 'DESCRIBE_IMAGE',
     title: 'Describe image',
-    imagePromptRef: imagePromptRef,
+    // Server-resolved (plans/phat-describe-image-e2e) — not imagePromptRef,
+    // which is only ever a raw MediaObject UUID and never a loadable URL.
+    imageUrl: imageUrl,
     prepSeconds: 25,
     responseSeconds: 40,
     prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
@@ -210,27 +212,27 @@ void main() {
     },
   );
 
-  testWidgets('renders the image via TaskImageDisplay with the task\'s imagePromptRef', (tester) async {
+  testWidgets('renders the image via TaskImageDisplay with the task\'s imageUrl', (tester) async {
     const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 25), currentOrderIndex: 1);
     stubBlocState(
       AttemptInProgress(
         'attempt-1',
-        _describeImageTask(imagePromptRef: 'https://example.com/food-pyramid.png'),
+        _describeImageTask(imageUrl: 'https://example.com/food-pyramid.png'),
         snapshot,
       ),
     );
 
-    await tester.pumpWidget(buildSubject(task: _describeImageTask(imagePromptRef: 'https://example.com/food-pyramid.png')));
+    await tester.pumpWidget(buildSubject(task: _describeImageTask(imageUrl: 'https://example.com/food-pyramid.png')));
 
     final display = tester.widget<TaskImageDisplay>(find.byType(TaskImageDisplay));
     expect(display.imageUrl, 'https://example.com/food-pyramid.png');
   });
 
-  testWidgets('a null imagePromptRef renders the fallback message instead of throwing', (tester) async {
+  testWidgets('a null imageUrl renders the fallback message instead of throwing', (tester) async {
     const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 25), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(imagePromptRef: null), snapshot));
+    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(imageUrl: null), snapshot));
 
-    await tester.pumpWidget(buildSubject(task: _describeImageTask(imagePromptRef: null)));
+    await tester.pumpWidget(buildSubject(task: _describeImageTask(imageUrl: null)));
 
     expect(find.byType(TaskImageDisplay), findsNothing);
     expect(find.text('No image available for this task.'), findsOneWidget);

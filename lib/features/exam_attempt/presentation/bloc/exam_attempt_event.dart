@@ -1,3 +1,4 @@
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 sealed class ExamAttemptEvent {
@@ -72,6 +73,20 @@ final class SyncTaskRejectedExternally extends ExamAttemptEvent {
 /// explicit confirmation step (phase-07 Design Constraints).
 final class ForceSubmitRequested extends ExamAttemptEvent {
   const ForceSubmitRequested();
+}
+
+/// `kDebugMode`-only: seeds [task] straight into `AttemptInProgress` without
+/// any repository/network call, so a dev-preview screen (e.g.
+/// `SpeakingWritingTaskPreviewScreen`) can drive `AutoRecordTimerBridgeMixin`'s
+/// live countdown off a fixture. Mirrors `_emitFromResponse`'s in-progress
+/// branch (`TimerService.seedFromTask` + `startPolling`) but skips the
+/// `completed`/`task == null` branches that only apply to a real server
+/// response — never dispatched outside dev-preview tooling
+/// (phat-speaking-audio-verify plan.md Phase 2).
+final class DevPreviewAttemptSeeded extends ExamAttemptEvent {
+  const DevPreviewAttemptSeeded(this.task);
+
+  final TaskView task;
 }
 
 /// Dispatched by `ExamScaffold`'s `WidgetsBindingObserver` when the app
