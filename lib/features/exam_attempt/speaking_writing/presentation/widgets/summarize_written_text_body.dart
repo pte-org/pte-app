@@ -16,9 +16,14 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// production screen [SummarizeWrittenTextScreen] wraps this in
 /// `ExamScaffold`; the chrome dev preview mounts this directly.
 class SummarizeWrittenTextBody extends StatefulWidget {
-  const SummarizeWrittenTextBody({super.key, required this.task});
+  const SummarizeWrittenTextBody({
+    super.key,
+    required this.task,
+    this.persistDraft,
+  });
 
   final TaskView task;
+  final ValueChanged<String>? persistDraft;
 
   @override
   State<SummarizeWrittenTextBody> createState() => _SummarizeWrittenTextBodyState();
@@ -37,6 +42,7 @@ class _SummarizeWrittenTextBodyState extends State<SummarizeWrittenTextBody> {
 
   void _onDraftChanged() {
     final next = _countWords(_controller.text);
+    widget.persistDraft?.call(_controller.text);
     if (next != _wordCount) setState(() => _wordCount = next);
   }
 
@@ -74,7 +80,7 @@ class _SummarizeWrittenTextBodyState extends State<SummarizeWrittenTextBody> {
           WritingTaskHeader(
             title: AppStrings.summarizeWrittenTextTitle,
             instruction: AppStrings.summarizeWrittenTextInstruction,
-            totalSeconds: kSummarizeWrittenTextDurationSeconds,
+            totalSeconds: widget.task.responseSeconds,
             onTimeExpired: _handleTimeExpired,
           ),
           const SizedBox(height: AppDimensions.spacingMedium),

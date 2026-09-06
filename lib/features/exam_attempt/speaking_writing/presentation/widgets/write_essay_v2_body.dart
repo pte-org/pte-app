@@ -16,9 +16,14 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// The production screen [WriteEssayV2Screen] wraps this in
 /// `ExamScaffold`; the chrome dev preview mounts this directly.
 class WriteEssayV2Body extends StatefulWidget {
-  const WriteEssayV2Body({super.key, required this.task});
+  const WriteEssayV2Body({
+    super.key,
+    required this.task,
+    this.persistDraft,
+  });
 
   final TaskView task;
+  final ValueChanged<String>? persistDraft;
 
   @override
   State<WriteEssayV2Body> createState() => _WriteEssayV2BodyState();
@@ -37,6 +42,7 @@ class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
 
   void _onDraftChanged() {
     final next = _countWords(_controller.text);
+    widget.persistDraft?.call(_controller.text);
     if (next != _wordCount) setState(() => _wordCount = next);
   }
 
@@ -74,7 +80,7 @@ class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
           WritingTaskHeader(
             title: AppStrings.writeEssayV2Title,
             instruction: AppStrings.writeEssayV2Instruction,
-            totalSeconds: kWriteEssayDurationSeconds,
+            totalSeconds: widget.task.responseSeconds,
             onTimeExpired: _handleTimeExpired,
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
