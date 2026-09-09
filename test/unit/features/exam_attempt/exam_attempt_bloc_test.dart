@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
@@ -29,6 +30,8 @@ class _MockTimerService extends Mock implements TimerService {}
 class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
 
 class _MockHeartbeatService extends Mock implements HeartbeatService {}
+
+class _MockLockdownService extends Mock implements LockdownService {}
 
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
@@ -62,6 +65,7 @@ void main() {
   late _MockTimerService timerService;
   late _MockMediaUploadCoordinator mediaUploadCoordinator;
   late _MockHeartbeatService heartbeatService;
+  late _MockLockdownService lockdownService;
 
   setUpAll(() {
     // Required because `timerService.seedFromTask(any())` is stubbed below —
@@ -77,10 +81,13 @@ void main() {
     timerService = _MockTimerService();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
     heartbeatService = _MockHeartbeatService();
+    lockdownService = _MockLockdownService();
     when(() => mediaUploadCoordinator.start()).thenReturn(null);
     when(() => mediaUploadCoordinator.stop()).thenReturn(null);
     when(() => heartbeatService.start(any())).thenReturn(null);
     when(() => heartbeatService.stop()).thenReturn(null);
+    when(() => heartbeatService.dispose()).thenReturn(null);
+    when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
@@ -102,6 +109,7 @@ void main() {
         syncEngine: syncEngine,
         timerService: timerService,
         mediaUploadCoordinator: mediaUploadCoordinator,
+        lockdownService: lockdownService,
         heartbeatService: heartbeatService,
       );
 
@@ -167,6 +175,7 @@ void main() {
       syncEngine: syncEngine,
       timerService: timerService,
       mediaUploadCoordinator: mediaUploadCoordinator,
+      lockdownService: lockdownService,
       heartbeatService: heartbeatService,
     ),
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'ignored-by-fake')),

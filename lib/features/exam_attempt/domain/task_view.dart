@@ -174,6 +174,7 @@ class AttemptTaskResponse {
     required this.completed,
     this.task,
     this.encryptionPublicKey,
+    this.lockdownMode,
   });
 
   final String attemptPublicId;
@@ -187,6 +188,16 @@ class AttemptTaskResponse {
   /// boolean field for the integrity level itself.
   final String? encryptionPublicKey;
 
+  /// Phase 1's `scheduling` server pins `ExamPolicy.lockdownMode` to the
+  /// attempt snapshot (`PinnedExamSnapshot.lockdownMode`) and the
+  /// `exam-delivery` mapper projects it back out here. Wire values
+  /// match `pte-api`'s `LockdownMode` enum uppercase
+  /// (`NONE`/`STANDARD`/`STRICT`), and `null` is tolerated for older
+  /// deployments that predate Phase 1 — [ExamAttemptBloc] treats
+  /// `null` as `none` to avoid regressing legacy backends
+  /// (phase-04 Design Constraints).
+  final String? lockdownMode;
+
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {
     return AttemptTaskResponse(
       attemptPublicId: json['attemptPublicId'] as String,
@@ -194,6 +205,7 @@ class AttemptTaskResponse {
       completed: json['completed'] as bool,
       task: json['task'] == null ? null : TaskView.fromJson(json['task'] as Map<String, dynamic>),
       encryptionPublicKey: json['encryptionPublicKey'] as String?,
+      lockdownMode: json['lockdownMode'] as String?,
     );
   }
 }

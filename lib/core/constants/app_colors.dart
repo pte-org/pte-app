@@ -7,6 +7,9 @@ class AppColors {
 
   static const Color primary = Color(0xFF1E88E5);
   static const Color error = Color(0xFFF44336);
+  static const Color warningBackground = Color(0xFFFFF8E1);
+  static const Color warningForeground = Color(0xFF8D6E00);
+  static const Color warningIcon = Color(0xFFFFB300);
   static const Color textPrimary = Color(0xFF212121);
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color examBottomBarNeutral = Color(0xFFEEEEEE);

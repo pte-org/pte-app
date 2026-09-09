@@ -1,0 +1,14 @@
+{
+  "windows": [
+    {"name": "Google Chrome", "processName": "chrome.exe", "category": "browser"},
+    {"name": "Mozilla Firefox", "processName": "firefox.exe", "category": "browser"},
+    {"name": "Microsoft Edge", "processName": "msedge.exe", "category": "browser"},
+    {"name": "Discord", "processName": "Discord.exe", "category": "communication"},
+    {"name": "Microsoft Teams", "processName": "Teams.exe", "category": "communication"},
+    {"name": "Skype", "processName": "Skype.exe", "category": "communication"},
+    {"name": "Slack", "processName": "slack.exe", "category": "communication"},
+    {"name": "AnyDesk", "processName": "AnyDesk.exe", "category": "remote_desktop"},
+    {"name": "TeamViewer", "processName": "TeamViewer.exe", "category": "remote_desktop"},
+    {"name": "WhatsApp", "processName": "WhatsApp.exe", "category": "communication"}
+  ]
+}

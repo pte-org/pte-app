@@ -1,9 +1,0 @@
-{
-  "target": "phase-07-notification-and-violation-audit-flutter",
-  "verdict": "APPROVED_WITH_RUNTIME_CHECK_PENDING",
-  "policy_version": "1.0.0",
-  "report_path": "plans/hung-host-mini-console/quality/phase-07-notification-and-violation-audit-quality-report.json",
-  "source_fingerprint": "phase-07-working-tree-before-commit",
-  "reviewed_at": "2026-07-28",
-  "open_blocking_findings": 0
-}

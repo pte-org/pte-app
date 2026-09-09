@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_app_bar.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_bottom_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/violation_warning_banner.dart';
 
 /// Composes [ExamAppBar] + task-type-specific content (injected by Phase
 /// 5/6) + [ExamBottomBar]. No internal `Timer.periodic` of its own — the
@@ -50,9 +52,17 @@ class _ExamScaffoldState extends State<ExamScaffold> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    // The violation banner listens to `LockdownService.violations` —
+    // a broadcast stream that lives across the whole app, so the
+    // banner simply renders nothing on its own when no violation is
+    // observed. Hoisting the stream source here (rather than inside
+    // the banner widget) keeps it possible to test the banner in
+    // isolation by passing a synthetic `StreamController`.
+    final lockdownStream = context.read<LockdownService>().violations;
     return Scaffold(
       body: Column(
         children: [
+          ViolationWarningBanner(violations: lockdownStream),
           ExamAppBar(totalTasks: widget.totalTasks),
           Expanded(child: widget.body),
           ExamBottomBar(action: widget.bottomAction),

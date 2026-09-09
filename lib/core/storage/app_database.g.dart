@@ -1053,6 +1053,488 @@ class PendingMediaUploadTableCompanion
   }
 }
 
+class $LocalViolationsTableTable extends LocalViolationsTable
+    with TableInfo<$LocalViolationsTableTable, LocalViolation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalViolationsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _attemptPublicIdMeta = const VerificationMeta(
+    'attemptPublicId',
+  );
+  @override
+  late final GeneratedColumn<String> attemptPublicId = GeneratedColumn<String>(
+    'attempt_public_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _violationTypeMeta = const VerificationMeta(
+    'violationType',
+  );
+  @override
+  late final GeneratedColumn<String> violationType = GeneratedColumn<String>(
+    'violation_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _severityMeta = const VerificationMeta(
+    'severity',
+  );
+  @override
+  late final GeneratedColumn<String> severity = GeneratedColumn<String>(
+    'severity',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _metadataMeta = const VerificationMeta(
+    'metadata',
+  );
+  @override
+  late final GeneratedColumn<String> metadata = GeneratedColumn<String>(
+    'metadata',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sentMeta = const VerificationMeta('sent');
+  @override
+  late final GeneratedColumn<bool> sent = GeneratedColumn<bool>(
+    'sent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("sent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    attemptPublicId,
+    violationType,
+    severity,
+    timestamp,
+    metadata,
+    sent,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_violations_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalViolation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('attempt_public_id')) {
+      context.handle(
+        _attemptPublicIdMeta,
+        attemptPublicId.isAcceptableOrUnknown(
+          data['attempt_public_id']!,
+          _attemptPublicIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_attemptPublicIdMeta);
+    }
+    if (data.containsKey('violation_type')) {
+      context.handle(
+        _violationTypeMeta,
+        violationType.isAcceptableOrUnknown(
+          data['violation_type']!,
+          _violationTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_violationTypeMeta);
+    }
+    if (data.containsKey('severity')) {
+      context.handle(
+        _severityMeta,
+        severity.isAcceptableOrUnknown(data['severity']!, _severityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_severityMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    if (data.containsKey('metadata')) {
+      context.handle(
+        _metadataMeta,
+        metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
+      );
+    }
+    if (data.containsKey('sent')) {
+      context.handle(
+        _sentMeta,
+        sent.isAcceptableOrUnknown(data['sent']!, _sentMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalViolation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalViolation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      attemptPublicId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}attempt_public_id'],
+      )!,
+      violationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}violation_type'],
+      )!,
+      severity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}severity'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      metadata: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}metadata'],
+      ),
+      sent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}sent'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalViolationsTableTable createAlias(String alias) {
+    return $LocalViolationsTableTable(attachedDatabase, alias);
+  }
+}
+
+class LocalViolation extends DataClass implements Insertable<LocalViolation> {
+  final int id;
+
+  /// `attempt_public_id` — same opaque id as everywhere else (e.g.
+  /// `AnswerOutboxTable.attemptPublicId`); the proctor endpoint already
+  /// understands this id and uses it to attribute violations to the
+  /// session tab on the proctor dashboard.
+  final String attemptPublicId;
+
+  /// Wire string for `ViolationType` (e.g. `LOCKDOWN_FULLSCREEN_EXIT`).
+  /// Stored as plain text rather than an enum index so adding a new
+  /// violation type to the backend doesn't force a database migration.
+  final String violationType;
+
+  /// `WARNING` / `CRITICAL` — same casing the proctor endpoint accepts.
+  final String severity;
+  final DateTime timestamp;
+
+  /// Free-form JSON envelope for additional context. Nullable for
+  /// violation types that have no extra context (`screenshot attempt`
+  /// doesn't need anything beyond the fact it happened).
+  final String? metadata;
+
+  /// Sync flag. `false` until the violation has been acknowledged by
+  /// the backend.
+  final bool sent;
+  const LocalViolation({
+    required this.id,
+    required this.attemptPublicId,
+    required this.violationType,
+    required this.severity,
+    required this.timestamp,
+    this.metadata,
+    required this.sent,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['attempt_public_id'] = Variable<String>(attemptPublicId);
+    map['violation_type'] = Variable<String>(violationType);
+    map['severity'] = Variable<String>(severity);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    if (!nullToAbsent || metadata != null) {
+      map['metadata'] = Variable<String>(metadata);
+    }
+    map['sent'] = Variable<bool>(sent);
+    return map;
+  }
+
+  LocalViolationsTableCompanion toCompanion(bool nullToAbsent) {
+    return LocalViolationsTableCompanion(
+      id: Value(id),
+      attemptPublicId: Value(attemptPublicId),
+      violationType: Value(violationType),
+      severity: Value(severity),
+      timestamp: Value(timestamp),
+      metadata: metadata == null && nullToAbsent
+          ? const Value.absent()
+          : Value(metadata),
+      sent: Value(sent),
+    );
+  }
+
+  factory LocalViolation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalViolation(
+      id: serializer.fromJson<int>(json['id']),
+      attemptPublicId: serializer.fromJson<String>(json['attemptPublicId']),
+      violationType: serializer.fromJson<String>(json['violationType']),
+      severity: serializer.fromJson<String>(json['severity']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      metadata: serializer.fromJson<String?>(json['metadata']),
+      sent: serializer.fromJson<bool>(json['sent']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'attemptPublicId': serializer.toJson<String>(attemptPublicId),
+      'violationType': serializer.toJson<String>(violationType),
+      'severity': serializer.toJson<String>(severity),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'metadata': serializer.toJson<String?>(metadata),
+      'sent': serializer.toJson<bool>(sent),
+    };
+  }
+
+  LocalViolation copyWith({
+    int? id,
+    String? attemptPublicId,
+    String? violationType,
+    String? severity,
+    DateTime? timestamp,
+    Value<String?> metadata = const Value.absent(),
+    bool? sent,
+  }) => LocalViolation(
+    id: id ?? this.id,
+    attemptPublicId: attemptPublicId ?? this.attemptPublicId,
+    violationType: violationType ?? this.violationType,
+    severity: severity ?? this.severity,
+    timestamp: timestamp ?? this.timestamp,
+    metadata: metadata.present ? metadata.value : this.metadata,
+    sent: sent ?? this.sent,
+  );
+  LocalViolation copyWithCompanion(LocalViolationsTableCompanion data) {
+    return LocalViolation(
+      id: data.id.present ? data.id.value : this.id,
+      attemptPublicId: data.attemptPublicId.present
+          ? data.attemptPublicId.value
+          : this.attemptPublicId,
+      violationType: data.violationType.present
+          ? data.violationType.value
+          : this.violationType,
+      severity: data.severity.present ? data.severity.value : this.severity,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      sent: data.sent.present ? data.sent.value : this.sent,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalViolation(')
+          ..write('id: $id, ')
+          ..write('attemptPublicId: $attemptPublicId, ')
+          ..write('violationType: $violationType, ')
+          ..write('severity: $severity, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('metadata: $metadata, ')
+          ..write('sent: $sent')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    attemptPublicId,
+    violationType,
+    severity,
+    timestamp,
+    metadata,
+    sent,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalViolation &&
+          other.id == this.id &&
+          other.attemptPublicId == this.attemptPublicId &&
+          other.violationType == this.violationType &&
+          other.severity == this.severity &&
+          other.timestamp == this.timestamp &&
+          other.metadata == this.metadata &&
+          other.sent == this.sent);
+}
+
+class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
+  final Value<int> id;
+  final Value<String> attemptPublicId;
+  final Value<String> violationType;
+  final Value<String> severity;
+  final Value<DateTime> timestamp;
+  final Value<String?> metadata;
+  final Value<bool> sent;
+  const LocalViolationsTableCompanion({
+    this.id = const Value.absent(),
+    this.attemptPublicId = const Value.absent(),
+    this.violationType = const Value.absent(),
+    this.severity = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.metadata = const Value.absent(),
+    this.sent = const Value.absent(),
+  });
+  LocalViolationsTableCompanion.insert({
+    this.id = const Value.absent(),
+    required String attemptPublicId,
+    required String violationType,
+    required String severity,
+    required DateTime timestamp,
+    this.metadata = const Value.absent(),
+    this.sent = const Value.absent(),
+  }) : attemptPublicId = Value(attemptPublicId),
+       violationType = Value(violationType),
+       severity = Value(severity),
+       timestamp = Value(timestamp);
+  static Insertable<LocalViolation> custom({
+    Expression<int>? id,
+    Expression<String>? attemptPublicId,
+    Expression<String>? violationType,
+    Expression<String>? severity,
+    Expression<DateTime>? timestamp,
+    Expression<String>? metadata,
+    Expression<bool>? sent,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (attemptPublicId != null) 'attempt_public_id': attemptPublicId,
+      if (violationType != null) 'violation_type': violationType,
+      if (severity != null) 'severity': severity,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (metadata != null) 'metadata': metadata,
+      if (sent != null) 'sent': sent,
+    });
+  }
+
+  LocalViolationsTableCompanion copyWith({
+    Value<int>? id,
+    Value<String>? attemptPublicId,
+    Value<String>? violationType,
+    Value<String>? severity,
+    Value<DateTime>? timestamp,
+    Value<String?>? metadata,
+    Value<bool>? sent,
+  }) {
+    return LocalViolationsTableCompanion(
+      id: id ?? this.id,
+      attemptPublicId: attemptPublicId ?? this.attemptPublicId,
+      violationType: violationType ?? this.violationType,
+      severity: severity ?? this.severity,
+      timestamp: timestamp ?? this.timestamp,
+      metadata: metadata ?? this.metadata,
+      sent: sent ?? this.sent,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (attemptPublicId.present) {
+      map['attempt_public_id'] = Variable<String>(attemptPublicId.value);
+    }
+    if (violationType.present) {
+      map['violation_type'] = Variable<String>(violationType.value);
+    }
+    if (severity.present) {
+      map['severity'] = Variable<String>(severity.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (metadata.present) {
+      map['metadata'] = Variable<String>(metadata.value);
+    }
+    if (sent.present) {
+      map['sent'] = Variable<bool>(sent.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalViolationsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('attemptPublicId: $attemptPublicId, ')
+          ..write('violationType: $violationType, ')
+          ..write('severity: $severity, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('metadata: $metadata, ')
+          ..write('sent: $sent')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1060,11 +1542,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $AnswerOutboxTableTable(this);
   late final $PendingMediaUploadTableTable pendingMediaUploadTable =
       $PendingMediaUploadTableTable(this);
+  late final $LocalViolationsTableTable localViolationsTable =
+      $LocalViolationsTableTable(this);
   late final AnswerOutboxDao answerOutboxDao = AnswerOutboxDao(
     this as AppDatabase,
   );
   late final PendingMediaUploadDao pendingMediaUploadDao =
       PendingMediaUploadDao(this as AppDatabase);
+  late final LocalViolationDao localViolationDao = LocalViolationDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1072,6 +1559,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     answerOutboxTable,
     pendingMediaUploadTable,
+    localViolationsTable,
   ];
 }
 
@@ -1614,6 +2102,258 @@ typedef $$PendingMediaUploadTableTableProcessedTableManager =
       PendingMediaUpload,
       PrefetchHooks Function()
     >;
+typedef $$LocalViolationsTableTableCreateCompanionBuilder =
+    LocalViolationsTableCompanion Function({
+      Value<int> id,
+      required String attemptPublicId,
+      required String violationType,
+      required String severity,
+      required DateTime timestamp,
+      Value<String?> metadata,
+      Value<bool> sent,
+    });
+typedef $$LocalViolationsTableTableUpdateCompanionBuilder =
+    LocalViolationsTableCompanion Function({
+      Value<int> id,
+      Value<String> attemptPublicId,
+      Value<String> violationType,
+      Value<String> severity,
+      Value<DateTime> timestamp,
+      Value<String?> metadata,
+      Value<bool> sent,
+    });
+
+class $$LocalViolationsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalViolationsTableTable> {
+  $$LocalViolationsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get attemptPublicId => $composableBuilder(
+    column: $table.attemptPublicId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get violationType => $composableBuilder(
+    column: $table.violationType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalViolationsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalViolationsTableTable> {
+  $$LocalViolationsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get attemptPublicId => $composableBuilder(
+    column: $table.attemptPublicId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get violationType => $composableBuilder(
+    column: $table.violationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalViolationsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalViolationsTableTable> {
+  $$LocalViolationsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get attemptPublicId => $composableBuilder(
+    column: $table.attemptPublicId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get violationType => $composableBuilder(
+    column: $table.violationType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get severity =>
+      $composableBuilder(column: $table.severity, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<String> get metadata =>
+      $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<bool> get sent =>
+      $composableBuilder(column: $table.sent, builder: (column) => column);
+}
+
+class $$LocalViolationsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalViolationsTableTable,
+          LocalViolation,
+          $$LocalViolationsTableTableFilterComposer,
+          $$LocalViolationsTableTableOrderingComposer,
+          $$LocalViolationsTableTableAnnotationComposer,
+          $$LocalViolationsTableTableCreateCompanionBuilder,
+          $$LocalViolationsTableTableUpdateCompanionBuilder,
+          (
+            LocalViolation,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalViolationsTableTable,
+              LocalViolation
+            >,
+          ),
+          LocalViolation,
+          PrefetchHooks Function()
+        > {
+  $$LocalViolationsTableTableTableManager(
+    _$AppDatabase db,
+    $LocalViolationsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalViolationsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalViolationsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalViolationsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> attemptPublicId = const Value.absent(),
+                Value<String> violationType = const Value.absent(),
+                Value<String> severity = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<String?> metadata = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+              }) => LocalViolationsTableCompanion(
+                id: id,
+                attemptPublicId: attemptPublicId,
+                violationType: violationType,
+                severity: severity,
+                timestamp: timestamp,
+                metadata: metadata,
+                sent: sent,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String attemptPublicId,
+                required String violationType,
+                required String severity,
+                required DateTime timestamp,
+                Value<String?> metadata = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+              }) => LocalViolationsTableCompanion.insert(
+                id: id,
+                attemptPublicId: attemptPublicId,
+                violationType: violationType,
+                severity: severity,
+                timestamp: timestamp,
+                metadata: metadata,
+                sent: sent,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalViolationsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalViolationsTableTable,
+      LocalViolation,
+      $$LocalViolationsTableTableFilterComposer,
+      $$LocalViolationsTableTableOrderingComposer,
+      $$LocalViolationsTableTableAnnotationComposer,
+      $$LocalViolationsTableTableCreateCompanionBuilder,
+      $$LocalViolationsTableTableUpdateCompanionBuilder,
+      (
+        LocalViolation,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalViolationsTableTable,
+          LocalViolation
+        >,
+      ),
+      LocalViolation,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1625,4 +2365,6 @@ class $AppDatabaseManager {
         _db,
         _db.pendingMediaUploadTable,
       );
+  $$LocalViolationsTableTableTableManager get localViolationsTable =>
+      $$LocalViolationsTableTableTableManager(_db, _db.localViolationsTable);
 }
