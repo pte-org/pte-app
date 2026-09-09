@@ -2,9 +2,8 @@ import 'package:flutter/services.dart';
 
 import 'package:pte_app/core/platform/lockdown_exception.dart';
 
-/// Platform channel for process management (enumerate and terminate
-/// processes). Maps to Windows CreateToolhelp32Snapshot/TerminateProcess and
-/// macOS NSWorkspace.runningApplications/killall. Every error is remapped to
+/// Platform channel for process management on Windows. Maps to Windows
+/// CreateToolhelp32Snapshot/TerminateProcess. Every error is remapped to
 /// [ProcessManagementException] so callers never handle raw
 /// [PlatformException].
 class ProcessManagerChannel {

@@ -64,6 +64,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     }
   }
 
+  if (lockdown_plugin::LockdownPlugin::HandleWindowMessage(message, wparam, lparam)) {
+    return 0;
+  }
+
   switch (message) {
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();

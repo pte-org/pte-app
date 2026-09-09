@@ -2,9 +2,8 @@ import 'package:flutter/services.dart';
 
 import 'package:pte_app/core/platform/lockdown_exception.dart';
 
-/// Platform channel for system shortcut interception. Maps to Windows
-/// SetWindowsHookEx(WH_KEYBOARD_LL) and macOS
-/// NSEvent.addGlobalMonitorForEvents. Every error is remapped to
+/// Platform channel for system shortcut interception on Windows. Maps to
+/// SetWindowsHookEx(WH_KEYBOARD_LL). Every error is remapped to
 /// [ShortcutInterceptionException] so callers never handle raw
 /// [PlatformException].
 class ShortcutInterceptorChannel {

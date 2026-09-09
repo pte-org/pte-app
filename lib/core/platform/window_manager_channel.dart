@@ -2,9 +2,8 @@ import 'package:flutter/services.dart';
 
 import 'package:pte_app/core/platform/lockdown_exception.dart';
 
-/// Platform channel for window management (fullscreen enforcement, escape
-/// detection). Maps native calls to Windows SetWindowLong/GetMonitorInfo and
-/// macOS NSWindow.toggleFullScreen. Every error is remapped to
+/// Platform channel for Windows window management (fullscreen enforcement and
+/// escape detection). Every error is remapped to
 /// [FullscreenEnforcementException] so callers never handle raw
 /// [PlatformException].
 class WindowManagerChannel {
