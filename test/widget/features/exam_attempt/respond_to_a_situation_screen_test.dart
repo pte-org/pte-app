@@ -68,9 +68,6 @@ TaskView _respondToASituationTask({String pinnedItemPublicId = 'item-1'}) {
         'of a family emergency. Explain the situation to your professor and ask what you should do.',
     prepSeconds: 40,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 40),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 20),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 20,

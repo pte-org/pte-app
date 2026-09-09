@@ -38,8 +38,20 @@ class McListeningSingleCubit extends TaskAnswerCubit<McListeningSingleState> {
     );
   }
 
+  /// Every selection already writes immediately, but if the student never
+  /// touches this task at all (skips straight to Next, or its local
+  /// countdown reaches zero untouched — client-side-exam-timer Phase 4), no
+  /// outbox row exists yet — write the current state (possibly still
+  /// unanswered) unconditionally so `SyncEngine.flushOne` always has a row
+  /// to submit, matching `McReadingSingleCubit`'s identical fallback.
   @override
-  Future<void> flushPendingEdit() async {}
+  Future<void> flushPendingEdit() async {
+    await _outboxDao.upsertAnswer(
+      attemptPublicId: attemptPublicId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: state.selectedOrderIndex ?? '',
+    );
+  }
 
   @override
   Future<void> close() async {

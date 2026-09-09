@@ -30,9 +30,6 @@ TaskView _task({String? audioPromptRef = 'media-1'}) {
     audioPromptRef: audioPromptRef,
     prepSeconds: 12,
     responseSeconds: 15,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 

@@ -16,11 +16,6 @@ void main() {
       expect(friendlyErrorMessage(error), 'That action conflicts with the current state. Please try again.');
     });
 
-    test('ResponseWindowExpiredException gets its own sentence', () {
-      const error = ResponseWindowExpiredException('RESPONSE_WINDOW_EXPIRED');
-      expect(friendlyErrorMessage(error), contains('Time ran out'));
-    });
-
     test('NotCurrentTaskException gets its own sentence', () {
       const error = NotCurrentTaskException('NOT_CURRENT_TASK');
       expect(friendlyErrorMessage(error), contains("isn't current anymore"));

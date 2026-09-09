@@ -19,12 +19,10 @@ final class ProctorCommandRequested extends LiveProctorEvent {
   const ProctorCommandRequested({
     required this.attemptPublicId,
     required this.commandType,
-    this.extraSeconds,
   });
 
   final String attemptPublicId;
   final ProctorCommandType commandType;
-  final int? extraSeconds;
 }
 
 final class ViolationFlagRequested extends LiveProctorEvent {

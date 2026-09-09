@@ -19,11 +19,11 @@ class TimerSnapshot extends Equatable {
   final int currentOrderIndex;
 
   /// Countdown for the whole exam, shown in `ExamAppBar`'s "Time Remaining".
-  /// Derived from the server-provided `TaskView.examEndTime`/
-  /// `TimerStateResponse.examEndTime` (`ExamAttempt.startedAt` plus the
-  /// pinned snapshot's total `prepSeconds + responseSeconds`), recomputed on
-  /// every seed/reconciliation. Defaults to `Duration.zero` before the first
-  /// one, or for an attempt predating the backend field.
+  /// Derived from the server-provided `TaskView.examEndTime`
+  /// (`ExamAttempt.startedAt` plus the pinned snapshot's total
+  /// `prepSeconds + responseSeconds`), recomputed on every seed. Defaults to
+  /// `Duration.zero` before the first one, or for an attempt predating the
+  /// backend field.
   final Duration examRemaining;
 
   @override

@@ -7,6 +7,14 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 /// window per question (fetched from the backend); this fixture mocks
 /// ~30s prep / ~40s response — the current best-known typical values,
 /// never used outside `kDebugMode` tooling.
+///
+/// **Stale note (client-side-exam-timer Phase 3):** several `prepSeconds`
+/// values below were deliberately rounded to land on a "10-second poll
+/// boundary" — that rationale no longer applies. `TimerService` no longer
+/// polls at all; every phase transition (prep→response) now fires at the
+/// exact local wall-clock instant regardless of the value chosen, so the
+/// poll-alignment doc comments throughout this file are historical context
+/// only, not a constraint on any value still being picked here.
 class SpeakingWritingTaskFixtures {
   const SpeakingWritingTaskFixtures._();
 
@@ -21,7 +29,6 @@ class SpeakingWritingTaskFixtures {
   /// transitions, never a production concern (see [describeImage]'s doc
   /// comment for the identical tradeoff and rationale).
   static TaskView get personalIntroduction {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 25;
     const responseSeconds = 30;
     return TaskView(
@@ -40,16 +47,10 @@ class SpeakingWritingTaskFixtures {
           '• Why you chose this test',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
   static TaskView get readAloud {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 30;
     const responseSeconds = 40;
     return TaskView(
@@ -65,11 +66,6 @@ class SpeakingWritingTaskFixtures {
           'and how this integrity is compromised by management.',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -90,7 +86,6 @@ class SpeakingWritingTaskFixtures {
   /// 10s boundary keeps that lag effectively zero. See the identical
   /// alignment choice on `readAloud`'s `prepSeconds: 30` above.
   static TaskView get repeatSentence {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 10;
     const responseSeconds = 15;
     return TaskView(
@@ -102,11 +97,6 @@ class SpeakingWritingTaskFixtures {
       title: 'Sample REPEAT_SENTENCE',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -134,7 +124,6 @@ class SpeakingWritingTaskFixtures {
   /// covers the offline case gracefully, but the picture itself won't
   /// render without a connection).
   static TaskView get describeImage {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 25;
     const responseSeconds = 40;
     return TaskView(
@@ -148,11 +137,6 @@ class SpeakingWritingTaskFixtures {
           'https://picsum.photos/seed/describe-image-fixture/800/600',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -172,7 +156,6 @@ class SpeakingWritingTaskFixtures {
   /// which deliberately keeps its literal, non-boundary-aligned `25`/`40`
   /// values and accepts the resulting lag.
   static TaskView get retellLecture {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 70;
     const responseSeconds = 40;
     return TaskView(
@@ -184,11 +167,6 @@ class SpeakingWritingTaskFixtures {
       title: 'Sample RE_TELL_LECTURE',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -207,7 +185,6 @@ class SpeakingWritingTaskFixtures {
   /// [describeImage]'s doc comment for the identical tradeoff and why it's
   /// never a production concern).
   static TaskView get answerShortQuestion {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 14;
     const responseSeconds = 10;
     return TaskView(
@@ -219,11 +196,6 @@ class SpeakingWritingTaskFixtures {
       title: 'Sample ANSWER_SHORT_QUESTION',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -240,7 +212,6 @@ class SpeakingWritingTaskFixtures {
   /// fixture, avoiding the "Beginning in 0 seconds" stuck-UI dev-preview-only
   /// lag (see [repeatSentence]'s doc comment).
   static TaskView get summarizeGroupDiscussion {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 200;
     const responseSeconds = 120;
     return TaskView(
@@ -252,11 +223,6 @@ class SpeakingWritingTaskFixtures {
       title: 'Sample SUMMARIZE_GROUP_DISCUSSION',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 
@@ -272,7 +238,6 @@ class SpeakingWritingTaskFixtures {
   /// `ExamAttemptBloc`'s 10-second poll boundary — no rounding needed here,
   /// unlike [retellLecture]'s/[summarizeGroupDiscussion]'s fixtures.
   static TaskView get respondToASituation {
-    final now = DateTime(2026, 1, 1, 9);
     const prepSeconds = 40;
     const responseSeconds = 40;
     return TaskView(
@@ -287,11 +252,6 @@ class SpeakingWritingTaskFixtures {
           'of a family emergency. Explain the situation to your professor and ask what you should do.',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        const Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
     );
   }
 

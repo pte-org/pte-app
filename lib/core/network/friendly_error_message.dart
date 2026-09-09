@@ -13,7 +13,6 @@ String friendlyErrorMessage(Object error) {
   return switch (error) {
     ConflictException(:final message) when message == 'ALREADY_ATTEMPTED' =>
       "You've already used this session ID and can't restart it. Ask your host for a new session.",
-    ResponseWindowExpiredException() => 'Time ran out for that task before your answer reached the server.',
     NotCurrentTaskException() => "That task isn't current anymore — refreshing to your actual current task.",
     ConflictException() => 'That action conflicts with the current state. Please try again.',
     AuthException() => 'Your session has expired or your credentials are invalid. Please log in again.',

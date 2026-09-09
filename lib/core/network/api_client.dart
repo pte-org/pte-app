@@ -41,10 +41,13 @@ class ApiClient {
   /// (phase-02 Design Constraints). Do not add a shortcut call site.
   ///
   /// A 409 here is remapped from the generic [ConflictException] to
-  /// [NotCurrentTaskException]/[ResponseWindowExpiredException] by
-  /// inspecting the response body's `message` field — this endpoint-specific
-  /// remap, not a change to [_mapError] itself, is what keeps every other
-  /// 409 call site's behavior untouched (phase-07 Design Constraints).
+  /// [NotCurrentTaskException] by inspecting the response body's `message`
+  /// field — this endpoint-specific remap, not a change to [_mapError]
+  /// itself, is what keeps every other 409 call site's behavior untouched
+  /// (phase-07 Design Constraints). Used to also remap `RESPONSE_WINDOW_EXPIRED`
+  /// to a dedicated exception type — removed (client-side-exam-timer Phase 7)
+  /// once the server-side exception producing that message was deleted in
+  /// Phase 5; the server can no longer send it.
   Future<Response<void>> submitAnswer({
     required String attemptPublicId,
     required String pinnedItemPublicId,
@@ -58,7 +61,6 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
-        'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
         _ => e,
       };
     }
@@ -97,31 +99,6 @@ class ApiClient {
     }
   }
 
-  /// The heartbeat poll behind `TimerService`'s countdown — `pte-api`'s
-  /// `/timer` endpoint. A 409 here always means the attempt already
-  /// reached a terminal status (`AttemptService.getTimerState`'s only
-  /// failure mode), remapped from the generic [ConflictException] to
-  /// [AttemptAlreadyCompleteException] so `TimerService` can stop polling
-  /// outright instead of retrying forever — same endpoint-specific-remap
-  /// pattern as [submitAnswer]/[playAudio]
-  /// (plans/phat-speaking-dynamic-prep-timing follow-up).
-  Future<Response<Map<String, dynamic>>> fetchTimerState(
-    String attemptPublicId,
-  ) async {
-    try {
-      return await get<Map<String, dynamic>>(
-        '/api/exam-delivery/attempts/$attemptPublicId/timer',
-      );
-    } on ConflictException catch (e) {
-      throw switch (e.message) {
-        'ATTEMPT_ALREADY_COMPLETE' => AttemptAlreadyCompleteException(
-          e.message,
-        ),
-        _ => e,
-      };
-    }
-  }
-
   /// STRICT-integrity counterpart to [submitAnswer] — used only when the
   /// attempt's pinned `answerIntegrityLevel == STRICT`. Same **only
   /// `SyncEngine._flushOne` may call this** constraint and same 409-remap
@@ -146,10 +123,23 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
-        'RESPONSE_WINDOW_EXPIRED' => ResponseWindowExpiredException(e.message),
         _ => e,
       };
     }
+  }
+
+  /// Presence signal for the parallel connectivity-monitoring feature
+  /// (client-side-exam-timer Phase 4, FR-04) — carries no timer/deadline/task
+  /// data, replacing the former `fetchTimerState`'s incidental role as a
+  /// heartbeat carrier (that endpoint was already unused by `TimerService`
+  /// as of Phase 3, and was deleted server-side and here in Phase 5/7). No
+  /// endpoint-specific error remap, unlike [submitAnswer]/[playAudio] —
+  /// every failure mode here is the caller's (`HeartbeatService`) concern to
+  /// swallow identically (log, retry next interval), per this phase's own
+  /// Risk mitigation: never surfaced to the student, never affecting the
+  /// exam flow.
+  Future<Response<void>> sendHeartbeat(String attemptPublicId) {
+    return post<void>('/api/exam-delivery/attempts/$attemptPublicId/heartbeat');
   }
 
   Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {

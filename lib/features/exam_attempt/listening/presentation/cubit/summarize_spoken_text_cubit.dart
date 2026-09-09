@@ -45,8 +45,12 @@ class SummarizeSpokenTextCubit extends TaskAnswerCubit<SummarizeSpokenTextState>
     );
   }
 
+  /// Every keystroke already writes synchronously, but if the student never
+  /// types anything at all (client-side-exam-timer Phase 4), `_persist()`
+  /// has never been called — call it unconditionally so `SyncEngine.flushOne`
+  /// always has a row to submit, matching `McReadingSingleCubit`'s fallback.
   @override
-  Future<void> flushPendingEdit() async {}
+  Future<void> flushPendingEdit() => _persist();
 
   @override
   Future<void> close() async {

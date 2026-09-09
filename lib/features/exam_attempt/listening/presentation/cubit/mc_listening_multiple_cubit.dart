@@ -47,8 +47,16 @@ class McListeningMultipleCubit extends TaskAnswerCubit<McListeningMultipleState>
     return sorted.join(',');
   }
 
+  /// Unconditional fallback write for an untouched task (client-side-exam-timer
+  /// Phase 4) — see `McListeningSingleCubit.flushPendingEdit`'s doc comment.
   @override
-  Future<void> flushPendingEdit() async {}
+  Future<void> flushPendingEdit() async {
+    await _outboxDao.upsertAnswer(
+      attemptPublicId: attemptPublicId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: _sortedPayload(state.selectedOrderIndexes),
+    );
+  }
 
   @override
   Future<void> close() async {

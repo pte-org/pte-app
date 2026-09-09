@@ -32,9 +32,6 @@ TaskView _essayTask() {
     maxWordCount: 100,
     prepSeconds: 30,
     responseSeconds: 300,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-    responseDeadline: DateTime(2026, 1, 1, 0, 5, 30),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 

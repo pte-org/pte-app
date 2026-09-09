@@ -59,9 +59,6 @@ TaskView _personalIntroductionTask({String pinnedItemPublicId = 'item-1'}) {
         '• Why you chose this test',
     prepSeconds: 25,
     responseSeconds: 30,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 55),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 

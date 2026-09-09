@@ -11,9 +11,6 @@ TaskView _taskFrom(Map<String, dynamic> json) {
     'title': 'title',
     'prepSeconds': 0,
     'responseSeconds': 60,
-    'prepDeadline': '2026-01-01T00:00:00.000Z',
-    'responseDeadline': '2026-01-01T00:01:00.000Z',
-    'serverNow': '2026-01-01T00:00:00.000Z',
     ...json,
   });
 }

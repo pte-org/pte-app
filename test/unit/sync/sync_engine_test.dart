@@ -293,32 +293,11 @@ void main() {
       },
     );
 
-    test(
-      'ResponseWindowExpiredException marks terminal-rejected AND emits on taskRejectedExternally',
-      () async {
-        when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-        when(
-          () => apiClient.submitAnswer(
-            attemptPublicId: any(named: 'attemptPublicId'),
-            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-            payload: any(named: 'payload'),
-          ),
-        ).thenThrow(const ResponseWindowExpiredException('RESPONSE_WINDOW_EXPIRED'));
-        when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
-
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-        var rejectedCount = 0;
-        final sub = engine.taskRejectedExternally.listen((_) => rejectedCount++);
-        addTearDown(sub.cancel);
-
-        engine.startSync('attempt-1');
-        canaryController.add(null);
-        await Future<void>.delayed(Duration.zero);
-
-        verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'RESPONSE_WINDOW_EXPIRED')).called(1);
-        expect(rejectedCount, 1);
-      },
-    );
+    // A `ResponseWindowExpiredException` regression test used to live here —
+    // removed (client-side-exam-timer Phase 7) along with the exception type
+    // itself once the server-side exception producing it was deleted in
+    // Phase 5. Its message would now be caught by the generic-fallback test
+    // below instead.
 
     test(
       'the generic-fallback ConflictException (e.g. ANSWER_ALREADY_SUBMITTED, or an unrecognized future 409 code) '

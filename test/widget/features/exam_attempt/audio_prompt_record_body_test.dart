@@ -106,9 +106,6 @@ void main() {
         title: 'Boundary task',
         prepSeconds: 6,
         responseSeconds: 10,
-        prepDeadline: DateTime(2026, 1, 1, 0, 0, 6),
-        responseDeadline: DateTime(2026, 1, 1, 0, 0, 16),
-        serverNow: DateTime(2026, 1, 1),
       );
       // elapsed = prepSeconds(6) - remaining(3) = 3, i.e. exactly at the
       // pre-listen -> audio sub-stage boundary.
@@ -182,9 +179,6 @@ void main() {
         title: 'Mid-playback task',
         prepSeconds: 12,
         responseSeconds: 10,
-        prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
-        responseDeadline: DateTime(2026, 1, 1, 0, 0, 22),
-        serverNow: DateTime(2026, 1, 1),
       );
       const snapshot = TimerSnapshot(
         phase: TimerPhase.prep,

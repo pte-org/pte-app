@@ -17,9 +17,6 @@ TaskView _task() {
     title: 'Read aloud',
     prepSeconds: 35,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 35),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 15),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
