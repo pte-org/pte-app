@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/security/lockdown_mode.dart';
+import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
@@ -29,11 +31,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required SyncEngine syncEngine,
     required TimerService timerService,
     required MediaUploadCoordinator mediaUploadCoordinator,
+    required LockdownService lockdownService,
   })  : _repository = repository,
         _sessionEntryRepository = sessionEntryRepository,
         _syncEngine = syncEngine,
         _timerService = timerService,
         _mediaUploadCoordinator = mediaUploadCoordinator,
+        _lockdownService = lockdownService,
         super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
@@ -57,6 +61,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   final SyncEngine _syncEngine;
   final TimerService _timerService;
   final MediaUploadCoordinator _mediaUploadCoordinator;
+  final LockdownService _lockdownService;
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
   late final StreamSubscription<void> _taskRejectedSubscription;
@@ -87,6 +92,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // a background sync session and crashing the next legitimate
       // startSync (QUAL-302, Phase 3 quality gate).
       if (!response.completed && response.task != null) {
+        // Lockdown activation runs *before* SyncEngine is armed so the
+        // attempt never starts observing timer/canary events while the
+        // student's clipboard is still wide open. A failure here aborts
+        // the entire start — STRICT-mode attempts MUST NOT begin if
+        // fullscreen/shortcut/clipboard hooks aren't installed.
+        await _activateLockdownForResponse(response);
+
         // Resume reconciliation: any Phase 2 outbox rows left over from a
         // prior app session for this attempt get an immediate flush
         // attempt, rather than passively waiting on the next canary event
@@ -97,6 +109,11 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         await _syncEngine.flushNow(response.attemptPublicId);
       }
       _emitFromResponse(response, emit);
+    } on LockdownActivationException catch (e) {
+      // STRICT/STANDARD activation failed. Surface as an
+      // [AttemptError] so the UI can render the failure dialog; do
+      // NOT touch SyncEngine — nothing was started yet.
+      emit(AttemptError(e));
     } catch (e) {
       // Any failure here — SessionResolutionException, a mapped
       // ApiException, or an unexpected shape error from a malformed
@@ -105,6 +122,20 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // gate, mirroring Phase 1's AuthBloc QUAL-103 fix).
       emit(AttemptError(_asAttemptException(e)));
     }
+  }
+
+  /// Maps the response's `lockdownMode` (Phase 1 wire value) to the
+  /// service's [LockdownMode] enum and activates accordingly. `none` /
+  /// null are silent no-ops. Anything else surfaces as a
+  /// [LockdownActivationException] the caller catches.
+  Future<void> _activateLockdownForResponse(AttemptTaskResponse response) async {
+    final wire = response.lockdownMode;
+    final mode = wire == null ? LockdownMode.none : LockdownMode.fromString(wire);
+    if (mode == LockdownMode.none) return;
+    await _lockdownService.activateLockdown(
+      mode: mode,
+      attemptPublicId: response.attemptPublicId,
+    );
   }
 
   Future<void> _onNextTaskRequested(NextTaskRequested event, Emitter<ExamAttemptState> emit) async {
@@ -159,7 +190,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // _emitFromResponse — force-submit and running out of tasks are
       // indistinguishable from the UI's perspective (phase-07 Design
       // Constraints).
-      _completeAttempt(attemptPublicId, emit);
+      await _completeAttempt(attemptPublicId, emit);
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
     }
@@ -181,20 +212,32 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// ([_emitFromResponse]) and [_onForceSubmitRequested] — kept as one
   /// place so the two paths can't drift out of sync (phase-07 Design
   /// Constraints: force-submit must reach the identical terminal state).
-  void _completeAttempt(String attemptPublicId, Emitter<ExamAttemptState> emit) {
+  Future<void> _completeAttempt(String attemptPublicId, Emitter<ExamAttemptState> emit) async {
     _attemptPublicId = null;
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
     _timerService.stop();
     _mediaUploadCoordinator.stop();
+    // Tear down lockdown AFTER the academic-flow stop chain so a
+    // fullscreen/clipboard platform call that errors doesn't leave the
+    // student's UI in a half-restored state while the timer is still
+    // ticking (phase-04 Design Constraints). Teardown itself is
+    // idempotent — running it twice in a row is a no-op.
+    try {
+      await _lockdownService.deactivateLockdown();
+    } on Object catch (_) {
+      // Lockdown teardown must never throw out of this path — the
+      // attempt is terminal, the student's screen state must reflect
+      // that even if a platform call glitched on the way out.
+    }
     final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
     _lastAdvanceReason = AdvanceReason.manual;
     emit(AttemptCompleted(attemptPublicId, timeExpired: timeExpired));
   }
 
-  void _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) {
+  Future<void> _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) async {
     if (response.completed) {
-      _completeAttempt(response.attemptPublicId, emit);
+      await _completeAttempt(response.attemptPublicId, emit);
       return;
     }
 
@@ -243,6 +286,11 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     unawaited(_timerTicksSubscription.cancel());
     unawaited(_taskAdvancedSubscription.cancel());
     unawaited(_taskRejectedSubscription.cancel());
+    // Best-effort: if the bloc is being torn down while a lockdown
+    // session is still active (force-quit, hot-restart, etc.) we want
+    // the window back to a normal state. Errors are silently ignored
+    // because there's no UI to surface them on at this point.
+    unawaited(_lockdownService.deactivateLockdown());
     return super.close();
   }
 }

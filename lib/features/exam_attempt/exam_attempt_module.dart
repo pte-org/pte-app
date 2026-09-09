@@ -5,6 +5,7 @@ import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/media_repository_impl.dart';
 import 'package:pte_app/core/network/network_canary.dart';
 import 'package:pte_app/core/network/raw_upload_client.dart';
+import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
@@ -86,6 +87,7 @@ void setupExamAttemptModule() {
       syncEngine: getIt<SyncEngine>(),
       timerService: getIt<TimerService>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      lockdownService: getIt<LockdownService>(),
     ),
   );
 }

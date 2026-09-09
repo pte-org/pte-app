@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/network/friendly_error_message.dart';
+import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/lockdown_activation_failure_dialog.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/reading_instructions_screen.dart';
 
 /// Placeholder manual session-ID entry screen — the only thing that
@@ -46,7 +48,20 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
       body: BlocConsumer<ExamAttemptBloc, ExamAttemptState>(
         listener: (context, state) {
           if (state is AttemptError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(state.error))));
+            final error = state.error;
+            if (error is LockdownActivationException) {
+              LockdownActivationFailureDialog.show(
+                context,
+                failedChecks: error.failedChecks,
+                onRetry: () => context.read<ExamAttemptBloc>().add(
+                      SessionResolutionRequested(rawInput: _controller.text),
+                    ),
+              );
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(friendlyErrorMessage(state.error))),
+            );
           }
         },
         builder: (context, state) {
