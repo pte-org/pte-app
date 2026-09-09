@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
 import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/security/models/violation_event.dart';
 import 'package:pte_app/core/storage/dao/local_violation_dao.dart';
 

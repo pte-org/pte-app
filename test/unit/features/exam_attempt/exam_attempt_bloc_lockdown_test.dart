@@ -8,9 +8,11 @@ import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
@@ -29,6 +31,8 @@ class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator
 
 class _MockLockdownService extends Mock implements LockdownService {}
 
+class _MockHeartbeatService extends Mock implements HeartbeatService {}
+
 TaskView _task({String pinnedItemPublicId = 'item-1'}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
@@ -39,9 +43,6 @@ TaskView _task({String pinnedItemPublicId = 'item-1'}) {
     title: 'Task title',
     prepSeconds: 30,
     responseSeconds: 60,
-    prepDeadline: DateTime(2026, 1, 1),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -62,6 +63,8 @@ class _StubAttemptTaskResponse {
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeTimerSnapshot());
+    registerFallbackValue(_task());
+    registerFallbackValue(LockdownMode.none);
   });
 
   late _MockExamAttemptRepository repository;
@@ -70,6 +73,7 @@ void main() {
   late _MockTimerService timerService;
   late _MockMediaUploadCoordinator mediaUploadCoordinator;
   late _MockLockdownService lockdownService;
+  late _MockHeartbeatService heartbeatService;
 
   setUp(() {
     repository = _MockExamAttemptRepository();
@@ -78,6 +82,7 @@ void main() {
     timerService = _MockTimerService();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
     lockdownService = _MockLockdownService();
+    heartbeatService = _MockHeartbeatService();
 
     when(() => sessionEntryRepository.resolveSessionPublicId(any()))
         .thenAnswer((_) async => 'session-1');
@@ -88,13 +93,7 @@ void main() {
     when(() => timerService.taskAdvancedExternally)
         .thenAnswer((_) => const Stream<void>.empty());
     when(() => timerService.currentSnapshot).thenReturn(
-      const TimerSnapshot(
-        phase: TimerPhase.prep,
-        secondsLeftInPhase: 30,
-        secondsLeftTotal: 90,
-        serverNow: null,
-        responseDeadline: null,
-      ),
+      const TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 30), currentOrderIndex: 1),
     );
     when(() => syncEngine.startSync(any(), encryptionPublicKey: any(named: 'encryptionPublicKey')))
         .thenReturn(null);
@@ -106,6 +105,9 @@ void main() {
     when(() => timerService.seedFromTask(any())).thenReturn(null);
     when(() => mediaUploadCoordinator.start()).thenReturn(null);
     when(() => mediaUploadCoordinator.stop()).thenReturn(null);
+    when(() => heartbeatService.start(any())).thenReturn(null);
+    when(() => heartbeatService.stop()).thenReturn(null);
+    when(() => heartbeatService.dispose()).thenReturn(null);
     when(() => lockdownService.activateLockdown(
           mode: any(named: 'mode'),
           attemptPublicId: any(named: 'attemptPublicId'),
@@ -120,6 +122,7 @@ void main() {
         timerService: timerService,
         mediaUploadCoordinator: mediaUploadCoordinator,
         lockdownService: lockdownService,
+        heartbeatService: heartbeatService,
       );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
@@ -211,7 +214,7 @@ void main() {
       when(() => repository.startOrResumeAttempt(any())).thenAnswer(
         (_) async => _StubAttemptTaskResponse.make(lockdownMode: 'STRICT'),
       );
-      when(() => repository.nextTask('attempt-1')).thenAnswer(
+      when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
         (_) async => AttemptTaskResponse(
           attemptPublicId: 'attempt-1',
           attemptStatus: 'COMPLETED',
@@ -236,7 +239,11 @@ void main() {
     build: buildBloc,
     act: (bloc) async => bloc.close(),
     verify: (_) {
-      verify(() => lockdownService.deactivateLockdown()).called(1);
+      // blocTest's own teardown calls bloc.close() again regardless of this
+      // act already having closed it (mirrors the >=1 assertion above,
+      // line 233, for the same double-invocation reason) — deactivateLockdown
+      // is idempotent, so a second call is harmless.
+      verify(() => lockdownService.deactivateLockdown()).called(greaterThanOrEqualTo(1));
     },
   );
 }

@@ -5,6 +5,7 @@ import 'package:pte_app/core/network/network_canary.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/storage/dao/local_violation_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 
 /// GetIt registration for the offline answer outbox and its background

@@ -45,7 +45,7 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   Future<List<LocalViolation>> getUnsent() {
     return (select(localViolationsTable)
           ..where((t) => t.sent.equals(false))
-          ..order = [(t) => OrderingTerm.asc(t.id)]())
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
         .get();
   }
 
@@ -86,7 +86,7 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   Future<List<LocalViolation>> getAllForAttempt(String attemptPublicId) {
     return (select(localViolationsTable)
           ..where((t) => t.attemptPublicId.equals(attemptPublicId))
-          ..order = [(t) => OrderingTerm.asc(t.id)]())
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
         .get();
   }
 

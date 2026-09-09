@@ -126,7 +126,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         _syncEngine.startSync(response.attemptPublicId, encryptionPublicKey: response.encryptionPublicKey);
         await _syncEngine.flushNow(response.attemptPublicId);
       }
-      _emitFromResponse(response, emit);
+      await _emitFromResponse(response, emit);
     } on LockdownActivationException catch (e) {
       // STRICT/STANDARD activation failed. Surface as an
       // [AttemptError] so the UI can render the failure dialog; do
@@ -162,7 +162,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _lastAdvanceReason = event.reason;
     try {
       final response = await _repository.fetchNextTask(attemptPublicId);
-      _emitFromResponse(response, emit);
+      await _emitFromResponse(response, emit);
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
     }
