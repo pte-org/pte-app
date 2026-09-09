@@ -14,7 +14,6 @@ class ReadingTaskFixtures {
     List<TaskOption>? options,
     List<BlankGroup>? blankGroups,
   }) {
-    final now = DateTime(2026, 1, 1, 9);
     return TaskView(
       pinnedItemPublicId: 'fixture-$taskType',
       orderIndex: 0,
@@ -27,9 +26,6 @@ class ReadingTaskFixtures {
       blankGroups: blankGroups,
       prepSeconds: 0,
       responseSeconds: 120,
-      prepDeadline: now,
-      responseDeadline: now.add(const Duration(minutes: 2)),
-      serverNow: now,
     );
   }
 

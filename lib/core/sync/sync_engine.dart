@@ -70,11 +70,13 @@ class SyncEngine {
   final StreamController<void> _taskRejectedController = StreamController<void>.broadcast();
 
   /// Emits whenever a background flush discovers the currently-displayed
-  /// task has already been closed out server-side
-  /// (`NotCurrentTaskException`/`ResponseWindowExpiredException`) — the
-  /// client's local view of "current task" is stale and must re-fetch
-  /// `next-task`, the same idea as `TimerService.taskAdvancedExternally`
-  /// for a different trigger (phase-07 Design Constraints).
+  /// task has already been closed out server-side (`NotCurrentTaskException`)
+  /// — the client's local view of "current task" is stale and must re-fetch
+  /// `next-task` (phase-07 Design Constraints). `TimerService.taskAdvancedExternally`
+  /// used to cover the same idea for a different trigger (a changed
+  /// `currentOrderIndex` noticed by polling) but never emits at all as of
+  /// client-side-exam-timer Phase 3, since polling was removed — this stream
+  /// is the only one of the two still actually capable of firing.
   Stream<void> get taskRejectedExternally => _taskRejectedController.stream;
 
   /// Starts background outbox flushing for [attemptPublicId]. A no-op if
@@ -205,15 +207,16 @@ class SyncEngine {
       // done (phase-07 Design Constraints).
       await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
       _taskRejectedController.add(null);
-    } on ResponseWindowExpiredException catch (e) {
-      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
-      _taskRejectedController.add(null);
     } on ConflictException catch (e) {
       // Generic fallback — an already-submitted answer or any other/future
       // 409 cause not yet given its own type. Still terminal (Phase 2's
-      // conservative baseline), but no task-refetch signal: unlike the two
-      // typed causes above, this doesn't necessarily mean the client's
-      // current-task view is stale.
+      // conservative baseline), but no task-refetch signal: unlike the typed
+      // cause above, this doesn't necessarily mean the client's current-task
+      // view is stale. Used to also catch `ResponseWindowExpiredException`
+      // (its own typed case, same handling as `NotCurrentTaskException`'s)
+      // until the server-side exception producing it was deleted in
+      // client-side-exam-timer Phase 5 — removed here in Phase 7 since the
+      // server can no longer send it.
       await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
     } on ValidationException catch (e) {
       // The server rejected this exact payload as malformed — retrying

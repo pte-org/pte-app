@@ -39,8 +39,16 @@ class SelectMissingWordCubit extends TaskAnswerCubit<SelectMissingWordState> {
     );
   }
 
+  /// Unconditional fallback write for an untouched task (client-side-exam-timer
+  /// Phase 4) — see `McListeningSingleCubit.flushPendingEdit`'s doc comment.
   @override
-  Future<void> flushPendingEdit() async {}
+  Future<void> flushPendingEdit() async {
+    await _outboxDao.upsertAnswer(
+      attemptPublicId: attemptPublicId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: state.selectedOrderIndex ?? '',
+    );
+  }
 
   @override
   Future<void> close() async {

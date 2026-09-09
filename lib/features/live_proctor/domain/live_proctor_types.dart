@@ -14,9 +14,15 @@ enum ViolationType {
   final String wireName;
 }
 
+/// EXTEND_TIME removed (client-side-exam-timer Phase 5): it worked by pushing
+/// a new `TimerState.responseDeadline` that the student's app noticed on its
+/// next `/timer` poll — both the deadline it mutated and the poll that
+/// delivered it are gone as of this refactor, with no replacement live-push
+/// channel. Accepted capability loss, decided explicitly by the user rather
+/// than silently dropped (see `research/refactor_polling.md` and the plan's
+/// Phase 5 Session Notes).
 enum ProctorCommandType {
-  forceSubmit('FORCE_SUBMIT'),
-  extendTime('EXTEND_TIME');
+  forceSubmit('FORCE_SUBMIT');
 
   const ProctorCommandType(this.wireName);
 

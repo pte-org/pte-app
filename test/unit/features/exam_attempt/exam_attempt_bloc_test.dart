@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -26,6 +27,8 @@ class _MockSyncEngine extends Mock implements SyncEngine {}
 class _MockTimerService extends Mock implements TimerService {}
 
 class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+
+class _MockHeartbeatService extends Mock implements HeartbeatService {}
 
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
@@ -49,9 +52,6 @@ TaskView _task({String pinnedItemPublicId = 'item-1'}) {
     title: 'Task title',
     prepSeconds: 30,
     responseSeconds: 60,
-    prepDeadline: DateTime(2026, 1, 1),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -61,6 +61,7 @@ void main() {
   late _MockSyncEngine syncEngine;
   late _MockTimerService timerService;
   late _MockMediaUploadCoordinator mediaUploadCoordinator;
+  late _MockHeartbeatService heartbeatService;
 
   setUpAll(() {
     // Required because `timerService.seedFromTask(any())` is stubbed below —
@@ -75,8 +76,11 @@ void main() {
     syncEngine = _MockSyncEngine();
     timerService = _MockTimerService();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
+    heartbeatService = _MockHeartbeatService();
     when(() => mediaUploadCoordinator.start()).thenReturn(null);
     when(() => mediaUploadCoordinator.stop()).thenReturn(null);
+    when(() => heartbeatService.start(any())).thenReturn(null);
+    when(() => heartbeatService.stop()).thenReturn(null);
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
@@ -98,6 +102,7 @@ void main() {
         syncEngine: syncEngine,
         timerService: timerService,
         mediaUploadCoordinator: mediaUploadCoordinator,
+        heartbeatService: heartbeatService,
       );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
@@ -162,6 +167,7 @@ void main() {
       syncEngine: syncEngine,
       timerService: timerService,
       mediaUploadCoordinator: mediaUploadCoordinator,
+      heartbeatService: heartbeatService,
     ),
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'ignored-by-fake')),
     expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
@@ -456,6 +462,45 @@ void main() {
         verifyNever(() => repository.forceSubmit(any()));
       },
     );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a second ForceSubmitRequested arriving while the first is still in flight (e.g. the manual button\'s async '
+      'confirm dialog racing the exam-clock-zero auto-trigger, bloc\'s default concurrent EventTransformer) is a '
+      'no-op — never double-calls repository.forceSubmit and never overwrites AttemptCompleted with AttemptError '
+      '(code review finding, client-side-exam-timer Phase 4)',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        final forceSubmitStarted = Completer<void>();
+        when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {
+          forceSubmitStarted.complete();
+          // Never resolves within this test — the first call stays "in
+          // flight" for the whole test, which is exactly the window the
+          // second, racing event must be rejected in.
+          return Completer<void>().future;
+        });
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+        await Future<void>.delayed(Duration.zero); // let the first handler start its await
+        bloc.add(const ForceSubmitRequested());
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => repository.forceSubmit('attempt-1')).called(1);
+      },
+    );
   });
 
   group('AppResumed (background/foreground resync)', () {
@@ -537,6 +582,191 @@ void main() {
       verify: (_) {
         verify(() => repository.fetchNextTask('attempt-1')).called(1);
         verify(() => syncEngine.setActiveTask('item-2')).called(1);
+      },
+    );
+  });
+
+  group('Heartbeat wiring (client-side-exam-timer Phase 4)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'heartbeatService.start is called with the attempt id once the attempt becomes IN_PROGRESS',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => heartbeatService.start('attempt-1')).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'is called again on every task transition — HeartbeatService\'s own idempotency (tested in '
+      'heartbeat_service_test.dart) is what actually prevents the periodic cadence from restarting, not this bloc',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-1'),
+          ),
+        );
+        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(pinnedItemPublicId: 'item-2'),
+          ),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const NextTaskRequested());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => heartbeatService.start('attempt-1')).called(2);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'heartbeatService.stop is called when the attempt completes',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async =>
+              const AttemptTaskResponse(attemptPublicId: 'attempt-1', attemptStatus: 'COMPLETED', completed: true),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptCompleted>()],
+      verify: (_) {
+        verify(() => heartbeatService.stop()).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'AppResumed does not itself call heartbeatService.start — heartbeat is attempt-scoped, unlike '
+      'TimerService.startPolling which AppResumed does re-arm',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const AppResumed());
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        verify(() => heartbeatService.start('attempt-1')).called(1); // only from the initial in-progress transition
+      },
+    );
+  });
+
+  group('Exam-clock-zero auto force-submit (client-side-exam-timer Phase 4, FR-05)', () {
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'examRemaining reaching zero automatically triggers force-submit and completes the attempt — no server-side '
+      'deadline check exists anymore to block it',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => timerService.currentSnapshot).thenReturn(
+          const TimerSnapshot(
+            phase: TimerPhase.prep,
+            remaining: Duration(seconds: 30),
+            currentOrderIndex: 1,
+            examRemaining: Duration(minutes: 5),
+          ),
+        );
+        when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {});
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(
+          const TimerSnapshotUpdated(
+            TimerSnapshot(
+              phase: TimerPhase.response,
+              remaining: Duration.zero,
+              currentOrderIndex: 1,
+              examRemaining: Duration.zero,
+            ),
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptCompleted>(),
+      ],
+      verify: (_) {
+        verify(() => repository.forceSubmit('attempt-1')).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'never auto-force-submits for an attempt whose examRemaining is always zero (no examEndTime known) — the '
+      'transition check requires genuinely observing a prior > 0 value first',
+      setUp: () {
+        when(() => sessionEntryRepository.resolveSessionPublicId('session-1')).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => AttemptTaskResponse(
+            attemptPublicId: 'attempt-1',
+            attemptStatus: 'IN_PROGRESS',
+            completed: false,
+            task: _task(),
+          ),
+        );
+        when(() => timerService.currentSnapshot).thenReturn(
+          const TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 30), currentOrderIndex: 1),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(
+          const TimerSnapshotUpdated(
+            TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1),
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (_) {
+        verifyNever(() => repository.forceSubmit(any()));
       },
     );
   });

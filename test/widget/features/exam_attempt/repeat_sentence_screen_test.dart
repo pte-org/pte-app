@@ -61,9 +61,6 @@ TaskView _repeatSentenceTask({String pinnedItemPublicId = 'item-1'}) {
     title: 'Repeat sentence',
     prepSeconds: 12,
     responseSeconds: 15,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 3,

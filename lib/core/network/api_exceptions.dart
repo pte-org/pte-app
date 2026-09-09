@@ -44,16 +44,17 @@ final class RateLimitException extends ApiException {
 }
 
 /// 409 — a conflict the server considers final on the answers endpoint
-/// (stale/non-current task, expired response window, or an
-/// already-submitted answer). A generic 409 with no recognized `message`
-/// body (including `ANSWER_ALREADY_SUBMITTED`) stays this type and is
-/// still treated as terminal — the conservative fallback Phase 2
-/// established. [NotCurrentTaskException] and [ResponseWindowExpiredException]
-/// are the two causes precise enough to warrant their own type (phase-02/07
-/// Design Constraints); `base` (not `final`) so they can extend it while
-/// [ApiException]'s own sealed exhaustiveness only needs to know about this
-/// type, not every conflict subclass. [message] carries the response
-/// body's distinguishing `message` field for diagnostics.
+/// (stale/non-current task, or an already-submitted answer). A generic 409
+/// with no recognized `message` body (including `ANSWER_ALREADY_SUBMITTED`)
+/// stays this type and is still treated as terminal — the conservative
+/// fallback Phase 2 established. [NotCurrentTaskException] is the one cause
+/// precise enough to warrant its own type (phase-02/07 Design Constraints;
+/// a former `ResponseWindowExpiredException` sibling was removed in
+/// client-side-exam-timer Phase 7 once the server-side exception producing
+/// it was deleted in Phase 5); `base` (not `final`) so a typed cause can
+/// extend it while [ApiException]'s own sealed exhaustiveness only needs to
+/// know about this type, not every conflict subclass. [message] carries the
+/// response body's distinguishing `message` field for diagnostics.
 base class ConflictException extends ApiException {
   const ConflictException(super.message);
 }
@@ -66,21 +67,15 @@ final class NotCurrentTaskException extends ConflictException {
   const NotCurrentTaskException(super.message);
 }
 
-/// A submission arrived after the server-computed response deadline —
-/// `pte-api`'s `ResponseWindowExpiredException`
-/// (`message: "RESPONSE_WINDOW_EXPIRED"`). Same terminal-and-refetch
-/// handling as [NotCurrentTaskException] (phase-07 Design Constraints).
-final class ResponseWindowExpiredException extends ConflictException {
-  const ResponseWindowExpiredException(super.message);
-}
-
-/// The attempt reached a terminal status before this poll — `pte-api`'s
-/// `AttemptAlreadyCompleteException` (`message: "ATTEMPT_ALREADY_COMPLETE"`),
-/// `AttemptService.getTimerState`'s only failure mode (confirmed by direct
-/// source read — no other 409 cause exists on that endpoint). Distinct from
-/// the generic [ConflictException] fallback so `TimerService._poll` can stop
-/// its whole poll/tick chain outright instead of retrying a call that can
-/// now never succeed (plans/phat-speaking-dynamic-prep-timing follow-up).
+/// The attempt reached a terminal status before some other call did —
+/// `pte-api`'s `AttemptAlreadyCompleteException` (`message: "ATTEMPT_ALREADY_COMPLETE"`),
+/// thrown by several endpoints (`submitAnswer`, `playAudio`, `forceSubmit`, `heartbeat`)
+/// whenever the attempt is no longer `IN_PROGRESS`. Distinct from the generic
+/// [ConflictException] fallback so a caller can stop retrying/polling outright instead
+/// of retrying a call that can now never succeed (plans/phat-speaking-dynamic-prep-timing
+/// follow-up; the specific "`TimerService._poll`" caller that comment originally named
+/// no longer exists — `TimerService` stopped polling entirely in client-side-exam-timer
+/// Phase 3 — but the same reasoning applies to every other caller of this exception).
 final class AttemptAlreadyCompleteException extends ConflictException {
   const AttemptAlreadyCompleteException(super.message);
 }

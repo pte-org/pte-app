@@ -18,7 +18,6 @@ class ListeningTaskFixtures {
     int? minWordCount,
     int? maxWordCount,
   }) {
-    final now = DateTime(2026, 1, 1, 9);
     return TaskView(
       pinnedItemPublicId: 'fixture-$taskType',
       orderIndex: 0,
@@ -33,9 +32,6 @@ class ListeningTaskFixtures {
       maxWordCount: maxWordCount,
       prepSeconds: 0,
       responseSeconds: 120,
-      prepDeadline: now,
-      responseDeadline: now.add(const Duration(minutes: 2)),
-      serverNow: now,
     );
   }
 

@@ -56,9 +56,6 @@ TaskView _describeImageTask({String pinnedItemPublicId = 'item-1', String? image
     imageUrl: imageUrl,
     prepSeconds: 25,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 5),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 

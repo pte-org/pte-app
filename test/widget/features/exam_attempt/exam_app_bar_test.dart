@@ -25,9 +25,6 @@ TaskView _task({String title = 'Task A'}) {
     title: title,
     prepSeconds: 30,
     responseSeconds: 60,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 

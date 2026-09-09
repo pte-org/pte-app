@@ -60,9 +60,6 @@ TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {
     title: 'Task title',
     prepSeconds: 12,
     responseSeconds: 15,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 12),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 27),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 3,
@@ -83,9 +80,6 @@ TaskView _describeImageTask({required String pinnedItemPublicId}) {
     imageUrl: 'https://example.com/img.png',
     prepSeconds: 25,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 5),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -99,9 +93,6 @@ TaskView _retellLectureTask({required String pinnedItemPublicId}) {
     title: 'Task title',
     prepSeconds: 70,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 1, 10),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 50),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 3,
@@ -119,9 +110,6 @@ TaskView _answerShortQuestionTask({required String pinnedItemPublicId}) {
     title: 'Task title',
     prepSeconds: 14,
     responseSeconds: 10,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 14),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 24),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 3,
@@ -139,9 +127,6 @@ TaskView _summarizeGroupDiscussionTask({required String pinnedItemPublicId}) {
     title: 'Task title',
     prepSeconds: 200,
     responseSeconds: 120,
-    prepDeadline: DateTime(2026, 1, 1, 0, 3, 20),
-    responseDeadline: DateTime(2026, 1, 1, 0, 5, 20),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 5,
@@ -160,9 +145,6 @@ TaskView _respondToASituationTask({required String pinnedItemPublicId}) {
     promptText: 'You are a student at a university.',
     prepSeconds: 40,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 40),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 20),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 20,
@@ -181,9 +163,6 @@ TaskView _personalIntroductionTask({required String pinnedItemPublicId}) {
     promptText: 'Please introduce yourself.',
     prepSeconds: 25,
     responseSeconds: 30,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 25),
-    responseDeadline: DateTime(2026, 1, 1, 0, 0, 55),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -206,9 +185,6 @@ TaskView _mcTask({required String pinnedItemPublicId}) {
     ],
     prepSeconds: 30,
     responseSeconds: 60,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -226,9 +202,6 @@ TaskView _mcMultipleTask({required String pinnedItemPublicId}) {
     ],
     prepSeconds: 30,
     responseSeconds: 60,
-    prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
-    serverNow: DateTime(2026, 1, 1),
   );
 }
 
@@ -386,9 +359,6 @@ void main() {
             title: 'Unsupported',
             prepSeconds: 30,
             responseSeconds: 60,
-            prepDeadline: DateTime(2026, 1, 1, 0, 0, 30),
-            responseDeadline: DateTime(2026, 1, 1, 0, 1, 30),
-            serverNow: DateTime(2026, 1, 1),
           );
 
           await tester.pumpWidget(buildSubject(task));

@@ -7,6 +7,7 @@ import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -32,12 +33,14 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required TimerService timerService,
     required MediaUploadCoordinator mediaUploadCoordinator,
     required LockdownService lockdownService,
+    required HeartbeatService heartbeatService,
   })  : _repository = repository,
         _sessionEntryRepository = sessionEntryRepository,
         _syncEngine = syncEngine,
         _timerService = timerService,
         _mediaUploadCoordinator = mediaUploadCoordinator,
         _lockdownService = lockdownService,
+        _heartbeatService = heartbeatService,
         super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
@@ -62,6 +65,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   final TimerService _timerService;
   final MediaUploadCoordinator _mediaUploadCoordinator;
   final LockdownService _lockdownService;
+  final HeartbeatService _heartbeatService;
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
   late final StreamSubscription<void> _taskRejectedSubscription;
@@ -76,6 +80,20 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// a normal one. Never read for `ForceSubmitRequested`'s own completion
   /// path (force-submit is always user-initiated, never time-triggered).
   AdvanceReason _lastAdvanceReason = AdvanceReason.manual;
+
+  /// Synchronous re-entrancy guard for [_onForceSubmitRequested] — `bloc`'s
+  /// default `EventTransformer` is concurrent, so a manual tap
+  /// (`ExamAppBar`'s confirm dialog is async and its button is never
+  /// disabled mid-submit) can race the exam-clock-zero auto-trigger added in
+  /// [_onTimerSnapshotUpdated] (client-side-exam-timer Phase 4, code review
+  /// finding): both handlers could otherwise pass the `_attemptPublicId !=
+  /// null` check before either's `await _repository.forceSubmit` resolves,
+  /// firing the request twice — the loser gets `AttemptAlreadyCompleteException`
+  /// from the server and would overwrite an already-emitted `AttemptCompleted`
+  /// with `AttemptError`. Set/cleared synchronously (never across an
+  /// `await`), so the second concurrent invocation sees it before making any
+  /// network call at all.
+  bool _forceSubmitInFlight = false;
 
   Future<void> _onSessionResolutionRequested(
     SessionResolutionRequested event,
@@ -152,10 +170,24 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
   Exception _asAttemptException(Object error) => error is Exception ? error : UnknownApiException(error.toString());
 
+  /// Also wires the whole-attempt local countdown reaching zero to the same
+  /// force-submit path a manual tap uses (client-side-exam-timer Phase 4,
+  /// FR-05) — no server-side deadline check to block it now that server-side
+  /// enforcement is gone entirely, so the client is the only thing that can
+  /// close out the attempt when the exam clock runs out. Edge-triggered
+  /// (fires once, on the >0 -> ==0 transition) rather than on every
+  /// subsequent zero tick — also correctly never fires at all for an
+  /// attempt predating `examEndTime` (its `examRemaining` is always zero
+  /// from the very first tick, so this transition never happens).
   void _onTimerSnapshotUpdated(TimerSnapshotUpdated event, Emitter<ExamAttemptState> emit) {
     final currentState = state;
     if (currentState is! AttemptInProgress) return;
+    final examJustExpired =
+        event.snapshot.examRemaining == Duration.zero && currentState.timerSnapshot.examRemaining > Duration.zero;
     emit(AttemptInProgress(currentState.attemptPublicId, currentState.task, event.snapshot));
+    if (examJustExpired) {
+      add(const ForceSubmitRequested());
+    }
   }
 
   Future<void> _onTimerTaskAdvancedExternally(
@@ -182,7 +214,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
 
   Future<void> _onForceSubmitRequested(ForceSubmitRequested event, Emitter<ExamAttemptState> emit) async {
     final attemptPublicId = _attemptPublicId;
-    if (attemptPublicId == null) return;
+    if (attemptPublicId == null || _forceSubmitInFlight) return;
+    _forceSubmitInFlight = true;
     _lastAdvanceReason = AdvanceReason.manual;
     try {
       await _repository.forceSubmit(attemptPublicId);
@@ -193,6 +226,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       await _completeAttempt(attemptPublicId, emit);
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
+    } finally {
+      _forceSubmitInFlight = false;
     }
   }
 
@@ -217,6 +252,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
     _timerService.stop();
+    _heartbeatService.stop();
     _mediaUploadCoordinator.stop();
     // Tear down lockdown AFTER the academic-flow stop chain so a
     // fullscreen/clipboard platform call that errors doesn't leave the
@@ -260,17 +296,22 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _mediaUploadCoordinator.start();
     _timerService.seedFromTask(task);
     _timerService.startPolling(response.attemptPublicId);
+    // 15s heartbeat, independent of TimerService's per-task lifecycle and
+    // SyncEngine's active-task exclusion (client-side-exam-timer Phase 4) —
+    // called on every in-progress transition like the two services above,
+    // but HeartbeatService.start is itself idempotent for the same attempt
+    // (its own doc comment), so this never restarts the cadence per task.
+    _heartbeatService.start(response.attemptPublicId);
     emit(AttemptInProgress(response.attemptPublicId, task, _timerService.currentSnapshot));
   }
 
   /// `kDebugMode`-only path (see [DevPreviewAttemptSeeded]'s doc) — same
   /// seeding [_emitFromResponse] does for a real in-progress response, minus
-  /// the `completed`/`task == null` branches a fixture never needs.
-  /// `startPolling`'s network poll will fail against the fake
-  /// `dev-preview-attempt` ID (no such attempt exists server-side), but that
-  /// failure is swallowed and silently retried by `TimerService._poll` —
-  /// the local sub-second tick loop it also starts is what actually drives
-  /// the countdown and is unaffected by the poll's outcome.
+  /// the `completed`/`task == null` branches a fixture never needs. Works
+  /// against the fake `dev-preview-attempt` ID with no real backend at all
+  /// (client-side-exam-timer Phase 3): `TimerService` no longer makes any
+  /// network call — `startPolling` just arms the local tick/phase-transition
+  /// timers against whatever `seedFromTask` already computed.
   void _onDevPreviewAttemptSeeded(DevPreviewAttemptSeeded event, Emitter<ExamAttemptState> emit) {
     const attemptPublicId = 'dev-preview-attempt';
     _attemptPublicId = attemptPublicId;
@@ -278,6 +319,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _mediaUploadCoordinator.start();
     _timerService.seedFromTask(event.task);
     _timerService.startPolling(attemptPublicId);
+    // Not heartbeatService.start() here, unlike _emitFromResponse — this is
+    // a fake, backend-less fixture id (code review finding: pinging the real
+    // endpoint every 15s for an attempt that doesn't exist just produces
+    // recurring warning-log noise during dev preview, with no upside).
     emit(AttemptInProgress(attemptPublicId, event.task, _timerService.currentSnapshot));
   }
 
@@ -291,6 +336,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // the window back to a normal state. Errors are silently ignored
     // because there's no UI to surface them on at this point.
     unawaited(_lockdownService.deactivateLockdown());
+    _heartbeatService.dispose();
     return super.close();
   }
 }

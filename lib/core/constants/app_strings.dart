@@ -168,8 +168,6 @@ class AppStrings {
   static const String liveConnectionLabel = 'Connection';
   static const String liveReconnect = 'Reconnect';
   static const String liveAttemptIdLabel = 'Attempt public ID';
-  static const String liveExtraSecondsLabel = 'Extra seconds';
-  static const String liveExtendTime = 'Extend time';
   static const String liveForceSubmit = 'Force submit';
   static const String liveFlagViolation = 'Flag violation';
   static const String liveViolationsTitle = 'Live violations';

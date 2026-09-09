@@ -321,43 +321,23 @@ void main() {
             payload: 'hello',
           ),
           throwsA(
-            isA<NotCurrentTaskException>()
-                .having((e) => e.message, 'message', 'NOT_CURRENT_TASK')
-                .having(
-                  (e) => e,
-                  'exact runtime type',
-                  isNot(isA<ResponseWindowExpiredException>()),
-                ),
+            isA<NotCurrentTaskException>().having(
+              (e) => e.message,
+              'message',
+              'NOT_CURRENT_TASK',
+            ),
           ),
         );
       },
     );
 
-    test(
-      'a 409 with message "RESPONSE_WINDOW_EXPIRED" produces ResponseWindowExpiredException, not the generic ConflictException',
-      () async {
-        when(
-          () => dio.post<dynamic>(any(), data: any(named: 'data')),
-        ).thenThrow(conflictWithMessage('RESPONSE_WINDOW_EXPIRED'));
-
-        await expectLater(
-          () => apiClient.submitAnswer(
-            attemptPublicId: 'attempt-1',
-            pinnedItemPublicId: 'item-1',
-            payload: 'hello',
-          ),
-          throwsA(
-            isA<ResponseWindowExpiredException>()
-                .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED')
-                .having(
-                  (e) => e,
-                  'exact runtime type',
-                  isNot(isA<NotCurrentTaskException>()),
-                ),
-          ),
-        );
-      },
-    );
+    // A "RESPONSE_WINDOW_EXPIRED" 409-remap test used to live here — removed
+    // (client-side-exam-timer Phase 7) along with `ResponseWindowExpiredException`
+    // itself once the server-side exception producing that message was
+    // deleted in Phase 5. Such a message now falls into the generic
+    // `ConflictException` fallback, covered by the "unrecognized message"
+    // test below (the server can never send this specific string again, but
+    // the fallback behavior for any unmapped message is the same either way).
 
     test(
       'a 409 with message "ANSWER_ALREADY_SUBMITTED" falls back to the generic ConflictException, not a crash',
@@ -379,11 +359,6 @@ void main() {
                   (e) => e,
                   'not a typed subclass',
                   isNot(isA<NotCurrentTaskException>()),
-                )
-                .having(
-                  (e) => e,
-                  'not a typed subclass',
-                  isNot(isA<ResponseWindowExpiredException>()),
                 ),
           ),
         );
@@ -410,11 +385,6 @@ void main() {
                   (e) => e,
                   'not a typed subclass',
                   isNot(isA<NotCurrentTaskException>()),
-                )
-                .having(
-                  (e) => e,
-                  'not a typed subclass',
-                  isNot(isA<ResponseWindowExpiredException>()),
                 ),
           ),
         );
@@ -449,82 +419,10 @@ void main() {
     );
   });
 
-  group('fetchTimerState() typed-409 dispatch (plans/phat-speaking-dynamic-prep-timing follow-up)', () {
-    DioException timerConflictWithMessage(String message) {
-      final requestOptions = RequestOptions(
-        path: '/api/exam-delivery/attempts/attempt-1/timer',
-      );
-      return DioException(
-        requestOptions: requestOptions,
-        type: DioExceptionType.badResponse,
-        response: Response(
-          requestOptions: requestOptions,
-          statusCode: 409,
-          data: {'success': false, 'data': null, 'message': message},
-        ),
-      );
-    }
-
-    test(
-      'a 409 with message "ATTEMPT_ALREADY_COMPLETE" produces AttemptAlreadyCompleteException, not the generic '
-      'ConflictException',
-      () async {
-        when(
-          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
-        ).thenThrow(timerConflictWithMessage('ATTEMPT_ALREADY_COMPLETE'));
-
-        await expectLater(
-          () => apiClient.fetchTimerState('attempt-1'),
-          throwsA(
-            isA<AttemptAlreadyCompleteException>().having(
-              (e) => e.message,
-              'message',
-              'ATTEMPT_ALREADY_COMPLETE',
-            ),
-          ),
-        );
-      },
-    );
-
-    test(
-      'fetchTimerState() calls the correct endpoint path',
-      () async {
-        final response = Response<dynamic>(
-          requestOptions: RequestOptions(path: '/api/x'),
-          data: {'phase': 'PREP'},
-        );
-        when(
-          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
-        ).thenAnswer((_) async => response);
-
-        await apiClient.fetchTimerState('attempt-1');
-
-        final captured = verify(
-          () => dio.get<dynamic>(captureAny(), queryParameters: any(named: 'queryParameters')),
-        ).captured;
-        expect(captured.single, '/api/exam-delivery/attempts/attempt-1/timer');
-      },
-    );
-
-    test(
-      'a 409 with an unrecognized message falls back to the generic ConflictException, not a crash or unhandled '
-      'type',
-      () async {
-        when(
-          () => dio.get<dynamic>(any(), queryParameters: any(named: 'queryParameters')),
-        ).thenThrow(timerConflictWithMessage('SOME_FUTURE_UNKNOWN_CODE'));
-
-        await expectLater(
-          () => apiClient.fetchTimerState('attempt-1'),
-          throwsA(
-            isA<ConflictException>()
-                .having((e) => e.message, 'message', 'SOME_FUTURE_UNKNOWN_CODE')
-                .having((e) => e, 'not a typed subclass', isNot(isA<AttemptAlreadyCompleteException>())),
-          ),
-        );
-      },
-    );
-  });
+  // `fetchTimerState()`'s typed-409 dispatch test group used to live here —
+  // removed (client-side-exam-timer Phase 7) along with the method itself:
+  // the `/timer` endpoint it called was deleted server-side in Phase 5, and
+  // the method had already been unused by `TimerService` since Phase 3.
 
   group('submitEncryptedAnswer() (Phase 3)', () {
     test(
@@ -602,45 +500,9 @@ void main() {
       },
     );
 
-    test(
-      'submitEncryptedAnswer() with 409 RESPONSE_WINDOW_EXPIRED maps to ResponseWindowExpiredException',
-      () async {
-        final requestOptions = RequestOptions(
-          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
-        );
-        when(
-          () => dio.post<dynamic>(any(), data: any(named: 'data')),
-        ).thenThrow(
-          DioException(
-            requestOptions: requestOptions,
-            type: DioExceptionType.badResponse,
-            response: Response(
-              requestOptions: requestOptions,
-              statusCode: 409,
-              data: {
-                'success': false,
-                'data': null,
-                'message': 'RESPONSE_WINDOW_EXPIRED',
-              },
-            ),
-          ),
-        );
-
-        await expectLater(
-          () => apiClient.submitEncryptedAnswer(
-            attemptPublicId: 'attempt-1',
-            pinnedItemPublicId: 'item-1',
-            wrappedKey: 'wrapped-key',
-            iv: 'iv',
-            ciphertext: 'ciphertext',
-          ),
-          throwsA(
-            isA<ResponseWindowExpiredException>()
-                .having((e) => e.message, 'message', 'RESPONSE_WINDOW_EXPIRED'),
-          ),
-        );
-      },
-    );
+    // A "RESPONSE_WINDOW_EXPIRED" 409-remap test used to live here — removed
+    // for the same reason as `submitAnswer`'s own removed test above (client-
+    // side-exam-timer Phase 7 / Phase 5).
 
     test(
       'submitEncryptedAnswer() with 409 unknown message falls back to generic ConflictException',
@@ -681,11 +543,6 @@ void main() {
                   (e) => e,
                   'not a typed subclass',
                   isNot(isA<NotCurrentTaskException>()),
-                )
-                .having(
-                  (e) => e,
-                  'not a typed subclass',
-                  isNot(isA<ResponseWindowExpiredException>()),
                 ),
           ),
         );
