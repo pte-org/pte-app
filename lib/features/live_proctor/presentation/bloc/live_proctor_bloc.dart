@@ -117,7 +117,6 @@ class LiveProctorBloc extends Bloc<LiveProctorEvent, LiveProctorState> {
       proctorSessionPublicId: proctorSessionId,
       attemptPublicId: event.attemptPublicId,
       commandType: event.commandType,
-      extraSeconds: event.extraSeconds,
     );
   }
 

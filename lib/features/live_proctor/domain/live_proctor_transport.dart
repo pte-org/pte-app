@@ -53,7 +53,6 @@ abstract interface class LiveProctorTransport {
     required String proctorSessionPublicId,
     required String attemptPublicId,
     required ProctorCommandType commandType,
-    int? extraSeconds,
   });
 
   void flagViolation({

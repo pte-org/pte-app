@@ -43,7 +43,7 @@ void main() {
     await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'synced-1', payload: 'x');
     await db.answerOutboxDao.markSynced('a1', 'synced-1');
     await db.answerOutboxDao.upsertAnswer(attemptPublicId: 'a1', pinnedItemPublicId: 'rejected-1', payload: 'x');
-    await db.answerOutboxDao.markTerminalRejected('a1', 'rejected-1', 'RESPONSE_WINDOW_EXPIRED');
+    await db.answerOutboxDao.markTerminalRejected('a1', 'rejected-1', 'ANSWER_ALREADY_SUBMITTED');
 
     final pending = await db.answerOutboxDao.queryPendingByAttempt('a1');
 

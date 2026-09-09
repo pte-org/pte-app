@@ -14,13 +14,12 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_record
 import 'package:pte_app/features/exam_attempt/data/repositories/audio_prompt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/manual_session_entry_repository.dart';
-import 'package:pte_app/features/exam_attempt/data/repositories/timer_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
-import 'package:pte_app/features/exam_attempt/domain/repositories/timer_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 
@@ -37,16 +36,23 @@ void setupExamAttemptModule() {
     () => ExamAttemptRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
 
-  getIt.registerLazySingleton<TimerRepository>(
-    () => TimerRepositoryImpl(apiClient: getIt<ApiClient>()),
-  );
-
   getIt.registerLazySingleton<AudioPromptRepository>(
     () => AudioPromptRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
 
-  getIt.registerLazySingleton<TimerService>(
-    () => TimerService(timerRepository: getIt<TimerRepository>()),
+  // TimerService takes no repository — client-side-exam-timer Phase 3 made
+  // it a pure local wall-clock countdown, no network calls at all. The
+  // `TimerRepository`/`TimerRepositoryImpl` registration this used to depend
+  // on (and the dead `/timer`-calling `ApiClient.fetchTimerState` it wrapped)
+  // was deleted entirely in Phase 7's cross-repo cleanup pass, once Phase 5
+  // deleted the server-side `/timer` endpoint it called.
+  getIt.registerLazySingleton<TimerService>(() => TimerService());
+
+  // Presence signal for the parallel connectivity-monitoring feature
+  // (client-side-exam-timer Phase 4, FR-04) — entirely decoupled from
+  // TimerService above.
+  getIt.registerLazySingleton<HeartbeatService>(
+    () => HeartbeatService(apiClient: getIt<ApiClient>()),
   );
 
   getIt.registerLazySingleton<AudioRecorderService>(() => AudioRecorderServiceImpl());
@@ -86,6 +92,7 @@ void setupExamAttemptModule() {
       syncEngine: getIt<SyncEngine>(),
       timerService: getIt<TimerService>(),
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
+      heartbeatService: getIt<HeartbeatService>(),
     ),
   );
 }

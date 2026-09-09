@@ -149,15 +149,11 @@ class StompLiveProctorTransport implements LiveProctorTransport {
     required String proctorSessionPublicId,
     required String attemptPublicId,
     required ProctorCommandType commandType,
-    int? extraSeconds,
   }) {
     final payload = <String, dynamic>{
       'attemptPublicId': attemptPublicId,
       'commandType': commandType.wireName,
     };
-    if (extraSeconds != null) {
-      payload['extraSeconds'] = extraSeconds;
-    }
     _client?.send(
       destination: '/app/proctor-sessions/$proctorSessionPublicId/commands',
       body: jsonEncode(payload),

@@ -42,14 +42,12 @@ class LiveProctorPage extends StatefulWidget {
 
 class _LiveProctorPageState extends State<LiveProctorPage> {
   final _attemptController = TextEditingController();
-  final _extraSecondsController = TextEditingController(text: '300');
   final _detailController = TextEditingController();
   ViolationType _violationType = ViolationType.tabSwitch;
 
   @override
   void dispose() {
     _attemptController.dispose();
-    _extraSecondsController.dispose();
     _detailController.dispose();
     super.dispose();
   }
@@ -82,19 +80,6 @@ class _LiveProctorPageState extends State<LiveProctorPage> {
               decoration: const InputDecoration(
                 labelText: AppStrings.liveAttemptIdLabel,
               ),
-            ),
-            TextField(
-              controller: _extraSecondsController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: AppStrings.liveExtraSecondsLabel,
-              ),
-            ),
-            ElevatedButton(
-              onPressed: state.commandPending || state.proctorSession == null
-                  ? null
-                  : () => _confirmCommand(ProctorCommandType.extendTime),
-              child: const Text(AppStrings.liveExtendTime),
             ),
             ElevatedButton(
               onPressed: state.commandPending || state.proctorSession == null
@@ -173,13 +158,7 @@ class _LiveProctorPageState extends State<LiveProctorPage> {
     );
     if (!mounted || confirmed != true) return;
     context.read<LiveProctorBloc>().add(
-      ProctorCommandRequested(
-        attemptPublicId: attemptId,
-        commandType: type,
-        extraSeconds: type == ProctorCommandType.extendTime
-            ? int.tryParse(_extraSecondsController.text)
-            : null,
-      ),
+      ProctorCommandRequested(attemptPublicId: attemptId, commandType: type),
     );
   }
 

@@ -65,9 +65,6 @@ TaskView _retellLectureTask({String pinnedItemPublicId = 'item-1'}) {
     title: 'Retell lecture',
     prepSeconds: 70,
     responseSeconds: 40,
-    prepDeadline: DateTime(2026, 1, 1, 0, 1, 10),
-    responseDeadline: DateTime(2026, 1, 1, 0, 1, 50),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 3,

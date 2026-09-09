@@ -49,9 +49,6 @@ class WritingTaskFixtures {
   const WritingTaskFixtures._();
 
   static TaskView get summarizeWrittenText {
-    final now = DateTime(2026, 1, 1, 9);
-    const prepSeconds = 0;
-    const responseSeconds = kSummarizeWrittenTextDurationSeconds;
     return TaskView(
       pinnedItemPublicId: 'fixture-SUMMARIZE_WRITTEN_TEXT',
       orderIndex: 0,
@@ -62,20 +59,12 @@ class WritingTaskFixtures {
       promptText: kSummarizeWrittenTextPassage,
       minWordCount: int.parse(kSummarizeWrittenTextMinWords),
       maxWordCount: int.parse(kSummarizeWrittenTextMaxWords),
-      prepSeconds: prepSeconds,
-      responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
+      prepSeconds: 0,
+      responseSeconds: kSummarizeWrittenTextDurationSeconds,
     );
   }
 
   static TaskView get writeEssayV2 {
-    final now = DateTime(2026, 1, 1, 9);
-    const prepSeconds = 0;
-    const responseSeconds = kWriteEssayDurationSeconds;
     return TaskView(
       pinnedItemPublicId: 'fixture-WRITE_ESSAY_V2',
       orderIndex: 1,
@@ -86,13 +75,8 @@ class WritingTaskFixtures {
       promptText: kWriteEssayPrompt,
       minWordCount: int.parse(kWriteEssayMinWords),
       maxWordCount: int.parse(kWriteEssayMaxWords),
-      prepSeconds: prepSeconds,
-      responseSeconds: responseSeconds,
-      prepDeadline: now.add(const Duration(seconds: prepSeconds)),
-      responseDeadline: now.add(
-        Duration(seconds: prepSeconds + responseSeconds),
-      ),
-      serverNow: now,
+      prepSeconds: 0,
+      responseSeconds: kWriteEssayDurationSeconds,
     );
   }
 

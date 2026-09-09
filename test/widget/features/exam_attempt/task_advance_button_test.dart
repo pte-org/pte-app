@@ -126,9 +126,6 @@ void main() {
         title: 'Task title',
         prepSeconds: 0,
         responseSeconds: 60,
-        prepDeadline: DateTime(2026, 1, 1),
-        responseDeadline: DateTime(2026, 1, 1, 0, 1),
-        serverNow: DateTime(2026, 1, 1),
       );
     }
 

@@ -38,9 +38,9 @@ class BlankGroup {
 }
 
 /// The full task shape returned by both `startOrResumeAttempt` and
-/// `fetchNextTask` (phase-03 Steps). This phase only carries every field
-/// through untouched — Phase 4/5/6 are what consume `prepDeadline`/
-/// `responseDeadline`/`options` etc.
+/// `fetchNextTask`. [prepSeconds]/[responseSeconds] are the only timing
+/// signal (client-side-exam-timer Phase 3) — [TimerService.seedFromTask]
+/// consumes them directly, with no absolute deadline timestamp needed.
 ///
 /// [options] is reused across several reading task types beyond its
 /// original MC-choice purpose: for `MC_READING_MULTIPLE` it's the checkbox
@@ -70,9 +70,6 @@ class TaskView {
     this.blankGroups,
     required this.prepSeconds,
     required this.responseSeconds,
-    required this.prepDeadline,
-    required this.responseDeadline,
-    required this.serverNow,
     this.examEndTime,
     this.preListenSeconds,
     this.preRecordSeconds,
@@ -97,17 +94,23 @@ class TaskView {
   final int? maxWordCount;
   final List<TaskOption>? options;
   final List<BlankGroup>? blankGroups;
+  /// The client-side-exam-timer refactor's ONLY timing signal per task
+  /// (FR-01) — [TimerService.seedFromTask] computes its own local wall-clock
+  /// deadlines directly from these two ints, anchored to `DateTime.now()` at
+  /// seed time. No more `prepDeadline`/`responseDeadline`/`serverNow` —
+  /// for a section-scoped task (READING), [responseSeconds] already reflects
+  /// the live remaining shared-section budget, not just this task's own
+  /// slice (computed server-side; see `AttemptMapper.toTaskResponse`'s doc
+  /// comment in `pte-api`).
   final int prepSeconds;
   final int responseSeconds;
-  final DateTime prepDeadline;
-  final DateTime responseDeadline;
-  final DateTime serverNow;
 
   /// Whole-attempt deadline (`ExamAttempt.startedAt` + every pinned item's
-  /// `prepSeconds + responseSeconds`) — distinct from [prepDeadline]/
-  /// [responseDeadline], which govern only the current task/section. Null
-  /// only for an attempt created before the backend started populating this
-  /// field.
+  /// `prepSeconds + responseSeconds`) — distinct from [prepSeconds]/
+  /// [responseSeconds], which govern only the current task/section. Still an
+  /// absolute timestamp (unaffected by the client-side-exam-timer refactor —
+  /// out of its scope). Null only for an attempt created before the backend
+  /// started populating this field.
   final DateTime? examEndTime;
 
   /// Server-owned sub-stage lengths for the 5 audio-prompt Speaking task
@@ -150,9 +153,6 @@ class TaskView {
           .toList(),
       prepSeconds: json['prepSeconds'] as int,
       responseSeconds: json['responseSeconds'] as int,
-      prepDeadline: DateTime.parse(json['prepDeadline'] as String),
-      responseDeadline: DateTime.parse(json['responseDeadline'] as String),
-      serverNow: DateTime.parse(json['serverNow'] as String),
       examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,

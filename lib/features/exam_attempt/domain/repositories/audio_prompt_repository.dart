@@ -1,8 +1,7 @@
 /// On-demand audio-prompt playback only — kept separate from
-/// `ExamAttemptRepository` (attempt lifecycle) and `TimerRepository` (timer
-/// resync) for the same reason those two are separate from each other: a
-/// distinct concern with its own retry/idempotency semantics
-/// (plans/phat-speaking-audio-prompt-e2e).
+/// `ExamAttemptRepository` (attempt lifecycle) for the same reason a
+/// separate `SyncEngine`/`TimerService` exist: a distinct concern with its
+/// own retry/idempotency semantics (plans/phat-speaking-audio-prompt-e2e).
 abstract class AudioPromptRepository {
   /// Resolves and returns the playable URL for the given pinned item's
   /// audio prompt, subject to the server's play-count/expiry enforcement.

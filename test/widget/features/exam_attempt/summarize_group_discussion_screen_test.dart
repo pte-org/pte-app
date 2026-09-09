@@ -65,9 +65,6 @@ TaskView _summarizeGroupDiscussionTask({String pinnedItemPublicId = 'item-1'}) {
     title: 'Summarize group discussion',
     prepSeconds: 200,
     responseSeconds: 120,
-    prepDeadline: DateTime(2026, 1, 1, 0, 3, 20),
-    responseDeadline: DateTime(2026, 1, 1, 0, 5, 20),
-    serverNow: DateTime(2026, 1, 1),
     // Server-owned as of plans/phat-speaking-dynamic-prep-timing — the
     // screen null-asserts these, so the fixture must always supply them.
     preListenSeconds: 5,

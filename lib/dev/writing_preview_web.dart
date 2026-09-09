@@ -34,7 +34,6 @@ class _WritingPreviewWebState extends State<WritingPreviewWeb> {
   int _index = 0;
 
   TaskView _summarizeTask() {
-    final now = DateTime.now().toUtc();
     return TaskView(
       pinnedItemPublicId: 'swt-1',
       orderIndex: 1,
@@ -47,14 +46,10 @@ class _WritingPreviewWebState extends State<WritingPreviewWeb> {
       maxWordCount: int.parse(kSummarizeWrittenTextMaxWords),
       prepSeconds: 0,
       responseSeconds: kSummarizeWrittenTextDurationSeconds,
-      prepDeadline: now,
-      responseDeadline: now.add(const Duration(minutes: 10)),
-      serverNow: now,
     );
   }
 
   TaskView _writeEssayTask() {
-    final now = DateTime.now().toUtc();
     return TaskView(
       pinnedItemPublicId: 'we-2',
       orderIndex: 2,
@@ -67,9 +62,6 @@ class _WritingPreviewWebState extends State<WritingPreviewWeb> {
       maxWordCount: int.parse(kWriteEssayMaxWords),
       prepSeconds: 0,
       responseSeconds: kWriteEssayDurationSeconds,
-      prepDeadline: now,
-      responseDeadline: now.add(const Duration(minutes: 20)),
-      serverNow: now,
     );
   }
 
