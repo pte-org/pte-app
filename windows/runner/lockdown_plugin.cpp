@@ -281,21 +281,30 @@ void LockdownPlugin::EnforceFullscreen(const MethodCall&, std::unique_ptr<Method
   // Windows 10/11.
   LONG style = (original_style_ & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE |
                                     WS_MAXIMIZE | WS_SYSMENU)) | WS_POPUP;
-  SetLastError(ERROR_SUCCESS);
   LONG applied_style = SetWindowLong(hwnd_, GWL_STYLE, style);
-  if (GetLastError() != ERROR_SUCCESS) {
+  if (applied_style == 0) {
     result->Error("SET_WINDOW_STYLE_FAILED", "Failed to set fullscreen window style");
     // Roll back to the captured state — otherwise the user sees a
     // half-stripped window with no recovery path.
     ::SetWindowLong(hwnd_, GWL_STYLE, original_style_);
     ::SetWindowLong(hwnd_, GWL_EXSTYLE, original_ex_style_);
+    // Trigger SWP_FRAMECHANGED so the OS recomputes non-client area
+    // (re-attaches WS_CAPTION) even though we are restoring to the
+    // original position. Without this, the window can remain
+    // borderless on some GPU drivers until the next user resize.
+    ::SetWindowPos(hwnd_, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     return;
   }
   MONITORINFO monitor = {sizeof(monitor)};
   if (!GetMonitorInfo(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTOPRIMARY), &monitor)) {
     result->Error("MONITOR_INFO_FAILED", "Failed to get monitor info");
+    // Restore style AND trigger SWP_FRAMECHANGED so the original
+    // window chrome is re-attached after SetWindowLong restores it.
     ::SetWindowLong(hwnd_, GWL_STYLE, original_style_);
     ::SetWindowLong(hwnd_, GWL_EXSTYLE, original_ex_style_);
+    ::SetWindowPos(hwnd_, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     return;
   }
   if (!SetWindowPos(hwnd_, HWND_TOP, monitor.rcMonitor.left, monitor.rcMonitor.top,
@@ -303,8 +312,13 @@ void LockdownPlugin::EnforceFullscreen(const MethodCall&, std::unique_ptr<Method
                     monitor.rcMonitor.bottom - monitor.rcMonitor.top,
                     SWP_FRAMECHANGED | SWP_SHOWWINDOW)) {
     result->Error("SET_WINDOW_POS_FAILED", "Failed to set fullscreen position");
+    // Restore style AND trigger SWP_FRAMECHANGED — the window is
+    // still in its original position/size so only the frame change
+    // matters here.
     ::SetWindowLong(hwnd_, GWL_STYLE, original_style_);
     ::SetWindowLong(hwnd_, GWL_EXSTYLE, original_ex_style_);
+    ::SetWindowPos(hwnd_, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     return;
   }
   fullscreen_enforced_ = true;

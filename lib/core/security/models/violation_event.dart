@@ -20,9 +20,9 @@ enum ViolationType {
     }
     // Unknown server values must not crash — fall back to the most
     // general category so the violation still makes it to storage and
-    // the proctor console. Phase 4 / quality gate cross-checks this
-    // against Phase 1's enum additions.
-    throw ArgumentError.value(value, 'violationType', 'Unknown server value');
+    // the proctor console. The DAO mirrors this with a try/catch on
+    // ArgumentError as a belt-and-suspenders guard.
+    return ViolationType.shortcutBlocked;
   }
 }
 
