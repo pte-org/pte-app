@@ -26,8 +26,16 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  // LockdownPlugin is a C++ flutter::Plugin (unlike this project's other
+  // Windows plugins in generated_plugin_registrant.cc, which use the plain
+  // C plugin API) — its registrar must go through PluginRegistrarManager to
+  // get wrapped as a flutter::PluginRegistrarWindows*, not the raw
+  // FlutterDesktopPluginRegistrarRef GetRegistrarForPlugin returns directly.
   lockdown_plugin::LockdownPlugin::RegisterWithRegistrar(
-      flutter_controller_->engine()->GetRegistrarForPlugin("LockdownPlugin"));
+      flutter::PluginRegistrarManager::GetInstance()
+          ->GetRegistrar<flutter::PluginRegistrarWindows>(
+              flutter_controller_->engine()->GetRegistrarForPlugin(
+                  "LockdownPlugin")));
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

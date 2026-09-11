@@ -43,7 +43,14 @@ void setupSecurityModule() {
     () => ViolationReporter(
       apiClient: getIt<ApiClient>(),
       localDao: getIt<LocalViolationDao>(),
-      logger: getIt<Logger>(),
+      // Not getIt<Logger>() — this codebase never registers a shared
+      // Logger in GetIt (every other class that takes one, e.g.
+      // TimerService/AttemptMapper, defaults an optional constructor
+      // param to Logger() itself). getIt<Logger>() only ever resolved
+      // by accident via lib/features/_example/_example_module.dart,
+      // which main.dart never actually calls — this threw
+      // "Logger is not registered inside GetIt" on real app startup.
+      logger: Logger(),
     ),
   );
 
@@ -54,7 +61,7 @@ void setupSecurityModule() {
       clipboard: getIt<ClipboardMonitorChannel>(),
       shortcuts: getIt<ShortcutInterceptorChannel>(),
       violationReporter: getIt<ViolationReporter>(),
-      logger: getIt<Logger>(),
+      logger: Logger(),
     ),
   );
 }

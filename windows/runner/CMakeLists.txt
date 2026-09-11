@@ -33,7 +33,14 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 
 # Add dependency libraries and include directories. Add any application-specific
 # dependencies here.
-target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
+# flutter_wrapper_plugin is added alongside the standard flutter_wrapper_app
+# because LockdownPlugin (lockdown_plugin.cpp) is a C++ flutter::Plugin
+# embedded directly in the runner — flutter_wrapper_app alone only provides
+# the App/Engine wrapper and doesn't compile plugin_registrar.cc, which is
+# where flutter::Plugin/PluginRegistrar/PluginRegistrarManager are actually
+# implemented (this project's other plugins all use the plain C plugin API
+# instead, so this was never needed until LockdownPlugin was added).
+target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app flutter_wrapper_plugin)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
