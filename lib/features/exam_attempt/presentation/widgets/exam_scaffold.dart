@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
@@ -58,7 +59,14 @@ class _ExamScaffoldState extends State<ExamScaffold> with WidgetsBindingObserver
     // observed. Hoisting the stream source here (rather than inside
     // the banner widget) keeps it possible to test the banner in
     // isolation by passing a synthetic `StreamController`.
-    final lockdownStream = context.read<LockdownService>().violations;
+    //
+    // LockdownService is a GetIt singleton service, not a Bloc/Cubit —
+    // this app never wires a widget-tree `Provider<LockdownService>`
+    // (it only uses flutter_bloc's BlocProvider for Blocs/Cubits, e.g.
+    // ExamAttemptBloc gets LockdownService via constructor injection
+    // from GetIt). `context.read<LockdownService>()` here had no
+    // ancestor provider anywhere and threw ProviderNotFoundError.
+    final lockdownStream = GetIt.instance<LockdownService>().violations;
     return Scaffold(
       body: Column(
         children: [
