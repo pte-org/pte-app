@@ -35,16 +35,30 @@ class FillBlanksDragDropBody extends StatelessWidget {
     return BlocBuilder<FillBlanksDragDropCubit, FillBlanksDragDropState>(
       builder: (context, state) {
         final cubit = context.read<FillBlanksDragDropCubit>();
-        return SingleChildScrollView(
+        return Padding(
           padding: const EdgeInsets.all(AppDimensions.spacingMedium),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text.rich(TextSpan(children: [for (final segment in segments) _spanFor(segment, state.gapAssignments)])),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    for (final segment in segments)
+                      _spanFor(segment, state.gapAssignments),
+                  ],
+                ),
+              ),
               const SizedBox(height: AppDimensions.spacingMedium),
-              Text(ReadingStrings.fillBlanksWordBankSectionLabel, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                ReadingStrings.fillBlanksWordBankSectionLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: AppDimensions.spacingMedium / 2),
-              _WordBank(bankOptions: bankOptions, gapAssignments: state.gapAssignments, cubit: cubit),
+              _WordBank(
+                bankOptions: bankOptions,
+                gapAssignments: state.gapAssignments,
+                cubit: cubit,
+              ),
             ],
           ),
         );
@@ -52,7 +66,10 @@ class FillBlanksDragDropBody extends StatelessWidget {
     );
   }
 
-  InlineSpan _spanFor(PromptSegment segment, Map<int, TaskOption> gapAssignments) {
+  InlineSpan _spanFor(
+    PromptSegment segment,
+    Map<int, TaskOption> gapAssignments,
+  ) {
     if (segment is PromptTextSegment) {
       return TextSpan(text: segment.text);
     }
@@ -73,28 +90,36 @@ class _GapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DragTarget<_DraggedWord>(
-      onAcceptWithDetails: (details) =>
-          context.read<FillBlanksDragDropCubit>().assignToGap(gapIndex, details.data.option),
+      onAcceptWithDetails: (details) => context
+          .read<FillBlanksDragDropCubit>()
+          .assignToGap(gapIndex, details.data.option),
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
         final content = assigned == null
             ? Text(ReadingStrings.fillBlanksGapPlaceholder)
-            : Text(assigned!.text, style: const TextStyle(fontWeight: FontWeight.bold));
+            : Text(
+                assigned!.text,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              );
 
         final gapBox = Container(
-          constraints: const BoxConstraints(minWidth: AppDimensions.fillBlanksGapMinWidth),
+          constraints: const BoxConstraints(
+            minWidth: AppDimensions.fillBlanksGapMinWidth,
+          ),
           padding: const EdgeInsets.all(AppDimensions.fillBlanksGapPadding),
           decoration: BoxDecoration(
             color: isHovering
-                ? AppColors.dragTargetHoverBackground
-                : (assigned == null ? null : AppColors.fillBlanksGapFilledBackground),
-            border: Border.all(color: AppColors.fillBlanksGapEmptyBorder),
+                ? AppColors.interactiveSelected
+                : (assigned == null ? null : AppColors.interactiveSelected),
+            border: Border.all(color: AppColors.border),
           ),
           child: Center(child: content),
         );
 
         return Semantics(
-          label: assigned == null ? 'Gap ${gapIndex + 1}, empty' : 'Gap ${gapIndex + 1}, filled with \'${assigned!.text}\'',
+          label: assigned == null
+              ? 'Gap ${gapIndex + 1}, empty'
+              : 'Gap ${gapIndex + 1}, filled with \'${assigned!.text}\'',
           child: assigned == null
               ? gapBox
               : Draggable<_DraggedWord>(
@@ -110,7 +135,11 @@ class _GapTarget extends StatelessWidget {
 }
 
 class _WordBank extends StatelessWidget {
-  const _WordBank({required this.bankOptions, required this.gapAssignments, required this.cubit});
+  const _WordBank({
+    required this.bankOptions,
+    required this.gapAssignments,
+    required this.cubit,
+  });
 
   final List<TaskOption> bankOptions;
   final Map<int, TaskOption> gapAssignments;
@@ -121,8 +150,12 @@ class _WordBank extends StatelessWidget {
     // Always filtered from the original task.options order — never a
     // separately mutated/re-appended list — so an undone chip reappears at
     // its original bank position (phase-05 Design Constraints).
-    final placedOrderIndexes = gapAssignments.values.map((o) => o.orderIndex).toSet();
-    final available = bankOptions.where((option) => !placedOrderIndexes.contains(option.orderIndex));
+    final placedOrderIndexes = gapAssignments.values
+        .map((o) => o.orderIndex)
+        .toSet();
+    final available = bankOptions.where(
+      (option) => !placedOrderIndexes.contains(option.orderIndex),
+    );
 
     return DragTarget<_DraggedWord>(
       onAcceptWithDetails: (details) {
@@ -139,8 +172,14 @@ class _WordBank extends StatelessWidget {
                 label: 'Word chip \'${option.text}\', draggable',
                 child: Draggable<_DraggedWord>(
                   data: _DraggedWord(option: option),
-                  feedback: Material(color: Colors.transparent, child: _WordChip(option: option)),
-                  childWhenDragging: Opacity(opacity: 0.3, child: _WordChip(option: option)),
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: _WordChip(option: option),
+                  ),
+                  childWhenDragging: Opacity(
+                    opacity: 0.3,
+                    child: _WordChip(option: option),
+                  ),
                   child: _WordChip(option: option),
                 ),
               ),
@@ -161,7 +200,7 @@ class _WordChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.dragChipPadding),
       decoration: BoxDecoration(
-        color: AppColors.dragChipBackground,
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       child: Text(option.text),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/widgets/components/choice_list.dart';
+import 'package:pte_app/core/widgets/components/choice_row.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_cubit.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_state.dart';
@@ -18,15 +20,16 @@ class McOptionList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<McReadingSingleCubit, McReadingSingleState>(
       builder: (context, state) {
-        return RadioGroup<String>(
-          groupValue: state.selectedOrderIndex,
-          onChanged: (value) {
-            if (value != null) context.read<McReadingSingleCubit>().selectOption(value);
-          },
-          child: ListView(
-            children: [
-              for (final option in options) RadioListTile<String>(title: Text(option.text), value: option.orderIndex),
-            ],
+        final selectedIndices = {
+          for (var index = 0; index < options.length; index++)
+            if (options[index].orderIndex == state.selectedOrderIndex) index,
+        };
+        return ChoiceList(
+          labels: [for (final option in options) option.text],
+          selectedIndices: selectedIndices,
+          mode: ChoiceSelectionMode.single,
+          onTap: (index) => context.read<McReadingSingleCubit>().selectOption(
+            options[index].orderIndex,
           ),
         );
       },

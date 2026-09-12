@@ -13,7 +13,13 @@ import '../constants/app_dimensions.dart';
 /// waiting") and an actual failure, without either caller needing to know
 /// the badge's colors.
 class StatusBanner extends StatelessWidget {
-  const StatusBanner({super.key, required this.icon, required this.title, required this.message, this.isError = false});
+  const StatusBanner({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.isError = false,
+  });
 
   final IconData icon;
   final String title;
@@ -23,30 +29,47 @@ class StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor = isError ? AppColors.error : AppColors.primary;
-    final badgeColor = isError ? AppColors.statusBannerErrorIconBackground : AppColors.statusBannerIconBackground;
+    final badgeColor = isError
+        ? AppColors.errorContainer
+        : AppColors.interactiveSelected;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingMedium * 3),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppDimensions.spacingMedium * 3,
+      ),
       child: Column(
         children: [
           Container(
             width: AppDimensions.statusBannerIconBadgeSize,
             height: AppDimensions.statusBannerIconBadgeSize,
-            decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
-            child: Icon(icon, color: accentColor, size: AppDimensions.statusBannerIconSize),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: accentColor,
+              size: AppDimensions.statusBannerIconSize,
+            ),
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: AppDimensions.spacingMedium / 2),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingMedium * 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.spacingMedium * 2,
+            ),
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
           ),
         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/widgets/components/choice_list.dart';
+import 'package:pte_app/core/widgets/components/choice_row.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_multiple_cubit.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_multiple_state.dart';
@@ -18,15 +20,19 @@ class McMultipleOptionList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<McReadingMultipleCubit, McReadingMultipleState>(
       builder: (context, state) {
-        return ListView(
-          children: [
-            for (final option in options)
-              CheckboxListTile(
-                title: Text(option.text),
-                value: state.selectedOrderIndexes.contains(option.orderIndex),
-                onChanged: (_) => context.read<McReadingMultipleCubit>().toggleOption(option.orderIndex),
-              ),
-          ],
+        return ChoiceList(
+          labels: [for (final option in options) option.text],
+          selectedIndices: {
+            for (var index = 0; index < options.length; index++)
+              if (state.selectedOrderIndexes.contains(
+                options[index].orderIndex,
+              ))
+                index,
+          },
+          mode: ChoiceSelectionMode.multiple,
+          onTap: (index) => context.read<McReadingMultipleCubit>().toggleOption(
+            options[index].orderIndex,
+          ),
         );
       },
     );

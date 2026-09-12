@@ -32,7 +32,7 @@ class WritingTaskHeader extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.08),
-        border: Border(bottom: BorderSide(color: AppColors.passagePanelBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,11 +49,17 @@ class WritingTaskHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              CountdownTimer(totalSeconds: totalSeconds, onExpired: onTimeExpired),
+              CountdownTimer(
+                totalSeconds: totalSeconds,
+                onExpired: onTimeExpired,
+              ),
             ],
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
-          Text(instruction, style: const TextStyle(color: AppColors.textPrimary, height: 1.3)),
+          Text(
+            instruction,
+            style: const TextStyle(color: AppColors.textPrimary, height: 1.3),
+          ),
         ],
       ),
     );

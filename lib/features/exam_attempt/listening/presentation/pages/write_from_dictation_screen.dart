@@ -5,15 +5,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/core/widgets/components/exam_textarea.dart';
+import 'package:pte_app/core/widgets/templates/free_text_template.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/write_from_dictation_cubit.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/write_from_dictation_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
-import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_audio_bar.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
-import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_task_header_labels.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_word_count_label.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/listening/constants/listening_strings.dart';
@@ -38,7 +39,8 @@ class WriteFromDictationScreen extends StatefulWidget {
   final AudioPlayerService audioPlayerService;
 
   @override
-  State<WriteFromDictationScreen> createState() => _WriteFromDictationScreenState();
+  State<WriteFromDictationScreen> createState() =>
+      _WriteFromDictationScreenState();
 }
 
 class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
@@ -55,7 +57,8 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       audioSource: widget.task.audioPromptRef ?? '',
     );
-    _controller = TextEditingController()..addListener(() => _cubit.draftChanged(_controller.text));
+    _controller = TextEditingController()
+      ..addListener(() => _cubit.draftChanged(_controller.text));
   }
 
   @override
@@ -71,37 +74,43 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
       value: _cubit,
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
-        body: Padding(
-          padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-          child: BlocBuilder<WriteFromDictationCubit, WriteFromDictationState>(
-            builder: (context, state) {
-              return Column(
+        body: BlocBuilder<WriteFromDictationCubit, WriteFromDictationState>(
+          builder: (context, state) {
+            return FreeTextTemplate(
+              title:
+                  TaskTypeMeta.forTaskType(widget.task.taskType)?.title ??
+                  widget.task.title,
+              subtitle: widget.task.section,
+              instruction: ListeningStrings.writeFromDictationPrompt,
+              stimulus: AudioStimulusPlayer(
+                label: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio',
+                playing: !state.hasFinishedPlaying,
+                progress: state.hasFinishedPlaying ? 1 : 0,
+              ),
+              response: Column(
                 children: [
-                  ExamTaskHeaderBanner(title: listeningTaskHeaderTitle(widget.task.taskType)),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  ListeningAudioBar(hasFinishedPlaying: state.hasFinishedPlaying),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  const Text(ListeningStrings.writeFromDictationPrompt),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  Expanded(
-                    child: TextField(
+                  SizedBox(
+                    height: 320,
+                    child: ExamTextarea(
                       controller: _controller,
+                      minLines: null,
                       maxLines: null,
                       expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      decoration: const InputDecoration(labelText: ListeningStrings.writeFromDictationFieldLabel),
+                      labelText: ListeningStrings.writeFromDictationFieldLabel,
                     ),
                   ),
-                  const SizedBox(height: AppDimensions.spacingMedium),
+                  const SizedBox(height: AppDimensions.spacingMd),
                   ListeningWordCountLabel(
                     wordCount: state.wordCount,
                     minWordCount: widget.task.minWordCount,
                     maxWordCount: widget.task.maxWordCount,
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
         bottomAction: TaskAdvanceButton(
           cubit: _cubit,

@@ -19,7 +19,7 @@ void main() {
   group('insert / getUnsent / markSent', () {
     test('insert assigns an auto id, leaves sent=false, and lists under getUnsent', () async {
       final id = await db.localViolationDao.insert(
-        const ViolationEvent(
+        ViolationEvent(
           attemptPublicId: 'attempt-1',
           type: ViolationType.fullscreenExit,
           severity: ViolationSeverity.warning,
@@ -39,7 +39,7 @@ void main() {
 
     test('markSent flips the row\'s sent flag and removes it from getUnsent', () async {
       final id = await db.localViolationDao.insert(
-        const ViolationEvent(
+        ViolationEvent(
           attemptPublicId: 'attempt-1',
           type: ViolationType.shortcutBlocked,
           severity: ViolationSeverity.critical,
@@ -138,7 +138,7 @@ void main() {
   group('fromRow', () {
     test('round-trips an in-memory ViolationEvent through a Drift row', () async {
       final id = await db.localViolationDao.insert(
-        const ViolationEvent(
+        ViolationEvent(
           attemptPublicId: 'attempt-1',
           type: ViolationType.clipboardPaste,
           severity: ViolationSeverity.critical,
@@ -161,7 +161,7 @@ void main() {
       // Simulates a future server-side enum addition the client hasn't
       // been updated for yet. The DAO must not throw on retry.
       final id = await db.localViolationDao.insert(
-        const ViolationEvent(
+        ViolationEvent(
           attemptPublicId: 'attempt-unknown',
           type: ViolationType.shortcutBlocked,
           severity: ViolationSeverity.warning,
@@ -169,7 +169,7 @@ void main() {
         ),
       );
       await db.customStatement(
-        'UPDATE local_violations SET violation_type = ? WHERE id = ?',
+        'UPDATE local_violations_table SET violation_type = ? WHERE id = ?',
         ['FUTURE_TYPE', id],
       );
 
@@ -180,11 +180,6 @@ void main() {
     });
   });
 
-  // LockdownMode import is referenced indirectly via ViolationEvent —
-  // the future refactor that ties these together (Phase 5) will use
-  // the import directly. Keep the reference so the analyzer doesn't
-  // flag it as unused, but don't act on it now.
-  LockdownMode _unusedSeam() => LockdownMode.none;
 }
 
 final DateTime _t = DateTime.utc(2026, 9, 9, 0, 0, 0);

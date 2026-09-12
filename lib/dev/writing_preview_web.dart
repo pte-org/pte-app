@@ -55,7 +55,7 @@ class _WritingPreviewWebState extends State<WritingPreviewWeb> {
       orderIndex: 2,
       totalTasks: 2,
       section: 'WRITING',
-      taskType: 'WRITE_ESSAY_V2',
+      taskType: 'WRITE_ESSAY',
       title: 'Write Essay',
       promptText: kWriteEssayPrompt,
       minWordCount: int.parse(kWriteEssayMinWords),

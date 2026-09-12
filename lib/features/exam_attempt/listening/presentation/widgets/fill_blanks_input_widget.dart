@@ -22,10 +22,14 @@ class FillBlanksInputWidget extends StatelessWidget {
         textAlign: TextAlign.center,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.all(AppDimensions.fillBlanksGapPadding),
+          contentPadding: const EdgeInsets.all(
+            AppDimensions.fillBlanksGapPadding,
+          ),
           filled: true,
-          fillColor: AppColors.fillBlanksGapFilledBackground,
-          border: OutlineInputBorder(borderSide: BorderSide(color: AppColors.fillBlanksGapEmptyBorder)),
+          fillColor: AppColors.interactiveSelected,
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.border),
+          ),
         ),
       ),
     );

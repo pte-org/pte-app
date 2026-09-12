@@ -40,7 +40,6 @@ class _ViolationWarningBannerState extends State<ViolationWarningBanner> {
   StreamSubscription<ViolationType>? _subscription;
   Timer? _dismissTimer;
 
-  ViolationType? _current;
   String? _message;
 
   @override
@@ -60,13 +59,11 @@ class _ViolationWarningBannerState extends State<ViolationWarningBanner> {
     if (!mounted) return;
     _dismissTimer?.cancel();
     setState(() {
-      _current = type;
       _message = _messageFor(type);
     });
     _dismissTimer = Timer(widget.displayDuration, () {
       if (!mounted) return;
       setState(() {
-        _current = null;
         _message = null;
       });
     });
@@ -121,10 +118,8 @@ class _ViolationWarningBannerState extends State<ViolationWarningBanner> {
 /// type forces a rebuild and surfaces here, not somewhere stale.
 String _messageFor(ViolationType type) {
   return switch (type) {
-    ViolationType.fullscreenExit =>
-      ExamAttemptStrings.violationFullscreenExit,
-    ViolationType.clipboardPaste =>
-      ExamAttemptStrings.violationClipboardPaste,
+    ViolationType.fullscreenExit => ExamAttemptStrings.violationFullscreenExit,
+    ViolationType.clipboardPaste => ExamAttemptStrings.violationClipboardPaste,
     ViolationType.shortcutBlocked =>
       ExamAttemptStrings.violationShortcutBlocked,
     ViolationType.forbiddenAppDetected =>

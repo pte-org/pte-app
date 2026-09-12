@@ -11,8 +11,12 @@ import 'package:pte_app/core/constants/app_strings.dart';
 /// fake `Ticker` makes the widget's remaining value controllable from a
 /// widget test without spinning real time. Cancels the ticker on dispose.
 class CountdownTimer extends StatefulWidget {
-  const CountdownTimer({super.key, required this.totalSeconds, this.onExpired, Ticker? ticker})
-    : _ticker = ticker;
+  const CountdownTimer({
+    super.key,
+    required this.totalSeconds,
+    this.onExpired,
+    Ticker? ticker,
+  }) : _ticker = ticker;
 
   final int totalSeconds;
   final VoidCallback? onExpired;
@@ -32,7 +36,9 @@ class _CountdownTimerState extends State<CountdownTimer> {
   void initState() {
     super.initState();
     _remaining = widget.totalSeconds;
-    final stream = (widget._ticker ?? _defaultTicker)(const Duration(seconds: 1));
+    final stream = (widget._ticker ?? _defaultTicker)(
+      const Duration(seconds: 1),
+    );
     _sub = stream.listen(_onTick);
   }
 
@@ -72,7 +78,7 @@ class _CountdownTimerState extends State<CountdownTimer> {
         Text(
           '${AppStrings.countdownLabelPrefix}${_format()}',
           style: const TextStyle(
-            color: AppColors.countdownTextColor,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: AppDimensions.countdownTimerFontSize,
           ),

@@ -95,6 +95,8 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'REPEAT_SENTENCE',
       title: 'Sample REPEAT_SENTENCE',
+      preListenSeconds: 3,
+      preRecordSeconds: 3,
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );
@@ -133,8 +135,7 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'DESCRIBE_IMAGE',
       title: 'Sample DESCRIBE_IMAGE',
-      imagePromptRef:
-          'https://picsum.photos/seed/describe-image-fixture/800/600',
+      imagePromptRef: 'fixture://describe-image',
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );
@@ -165,6 +166,8 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'RE_TELL_LECTURE',
       title: 'Sample RE_TELL_LECTURE',
+      preListenSeconds: 3,
+      preRecordSeconds: 10,
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );
@@ -194,6 +197,8 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'ANSWER_SHORT_QUESTION',
       title: 'Sample ANSWER_SHORT_QUESTION',
+      preListenSeconds: 3,
+      preRecordSeconds: 3,
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );
@@ -221,6 +226,10 @@ class SpeakingWritingTaskFixtures {
       section: 'SPEAKING',
       taskType: 'SUMMARIZE_GROUP_DISCUSSION',
       title: 'Sample SUMMARIZE_GROUP_DISCUSSION',
+      promptText:
+          'The speakers discuss how public transport can improve access to education and employment.',
+      preListenSeconds: 5,
+      preRecordSeconds: 10,
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );
@@ -250,6 +259,8 @@ class SpeakingWritingTaskFixtures {
       promptText:
           'You are a student at a university. You have realized that you will miss an important exam because '
           'of a family emergency. Explain the situation to your professor and ask what you should do.',
+      preListenSeconds: 20,
+      preRecordSeconds: 10,
       prepSeconds: prepSeconds,
       responseSeconds: responseSeconds,
     );

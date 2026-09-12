@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -15,8 +15,8 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/instruction_text.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recorded_answer_status_card.dart';
+import 'package:pte_app/core/widgets/templates/record_response_template.dart';
 
 export 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_prompt_sub_stage.dart';
 
@@ -62,38 +62,33 @@ class AudioPromptRecordBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      child: BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
-        selector: (state) =>
-            state is AttemptInProgress ? state.timerSnapshot : null,
-        builder: (context, snapshot) {
-          return BlocBuilder<AutoRecordCubit, AutoRecordState>(
-            builder: (context, state) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InstructionText(text: instructionText),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  AudioListeningPrepCard(
-                    task: task,
-                    snapshot: snapshot,
-                    preListenSeconds: preListenSeconds,
-                    preRecordSeconds: preRecordSeconds,
-                  ),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  RecordedAnswerPrepCard(
-                    task: task,
-                    recordingState: state,
-                    snapshot: snapshot,
-                    preRecordSeconds: preRecordSeconds,
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+    return BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
+      selector: (state) =>
+          state is AttemptInProgress ? state.timerSnapshot : null,
+      builder: (context, snapshot) {
+        return BlocBuilder<AutoRecordCubit, AutoRecordState>(
+          builder: (context, state) {
+            return RecordResponseTemplate(
+              title:
+                  TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
+              subtitle: task.section,
+              instruction: instructionText,
+              stimulus: AudioListeningPrepCard(
+                task: task,
+                snapshot: snapshot,
+                preListenSeconds: preListenSeconds,
+                preRecordSeconds: preRecordSeconds,
+              ),
+              response: RecordedAnswerPrepCard(
+                task: task,
+                recordingState: state,
+                snapshot: snapshot,
+                preRecordSeconds: preRecordSeconds,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

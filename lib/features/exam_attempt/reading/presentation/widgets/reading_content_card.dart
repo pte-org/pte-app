@@ -21,20 +21,22 @@ class ReadingContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(AppDimensions.readingContentCardRadius);
+    final radius = BorderRadius.circular(
+      AppDimensions.readingContentCardRadius,
+    );
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.readingContentCardMargin),
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: const [BoxShadow(color: AppColors.readingContentCardShadow, blurRadius: 6, offset: Offset(0, 2))],
-        ),
+        decoration: BoxDecoration(borderRadius: radius),
         child: Material(
           color: AppColors.onPrimary,
           clipBehavior: Clip.antiAlias,
           borderRadius: radius,
           child: DecoratedBox(
-            decoration: BoxDecoration(borderRadius: radius, border: Border.all(color: AppColors.readingContentCardBorder)),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
             child: child,
           ),
         ),

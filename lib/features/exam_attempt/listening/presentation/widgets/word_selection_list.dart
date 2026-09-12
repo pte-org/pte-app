@@ -10,7 +10,12 @@ import 'package:pte_app/core/constants/app_dimensions.dart';
 /// index keeps Flutter from reusing/reordering word Elements when
 /// [selectedIndices] changes.
 class WordSelectionList extends StatelessWidget {
-  const WordSelectionList({super.key, required this.words, required this.selectedIndices, required this.onToggle});
+  const WordSelectionList({
+    super.key,
+    required this.words,
+    required this.selectedIndices,
+    required this.onToggle,
+  });
 
   final List<String> words;
   final Set<int> selectedIndices;
@@ -30,8 +35,8 @@ class WordSelectionList extends StatelessWidget {
               padding: const EdgeInsets.all(AppDimensions.dragChipPadding),
               decoration: BoxDecoration(
                 color: selectedIndices.contains(index)
-                    ? AppColors.wordSelectedBackground
-                    : AppColors.wordUnselectedBackground,
+                    ? AppColors.errorContainer
+                    : AppColors.surface,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               ),
               child: Text(words[index]),

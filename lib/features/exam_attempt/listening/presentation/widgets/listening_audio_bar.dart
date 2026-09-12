@@ -25,15 +25,22 @@ class ListeningAudioBar extends StatelessWidget {
         vertical: AppDimensions.spacingMedium,
       ),
       decoration: BoxDecoration(
-        color: hasFinishedPlaying ? AppColors.fillBlanksGapFilledBackground : AppColors.dragChipBackground,
+        color: hasFinishedPlaying
+            ? AppColors.successContainer
+            : AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       child: Row(
         children: [
-          Icon(hasFinishedPlaying ? Icons.check_circle : Icons.volume_up, color: AppColors.primary),
+          Icon(
+            hasFinishedPlaying ? Icons.check_circle : Icons.volume_up,
+            color: AppColors.primary,
+          ),
           const SizedBox(width: AppDimensions.spacingMedium),
           Text(
-            hasFinishedPlaying ? ListeningStrings.listeningAudioFinishedLabel : ListeningStrings.listeningAudioPlayingLabel,
+            hasFinishedPlaying
+                ? ListeningStrings.listeningAudioFinishedLabel
+                : ListeningStrings.listeningAudioPlayingLabel,
           ),
         ],
       ),

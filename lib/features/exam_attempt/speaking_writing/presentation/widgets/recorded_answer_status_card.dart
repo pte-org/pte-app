@@ -10,7 +10,11 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speakin
 /// every auto-record speaking task's screen (Read Aloud, Repeat Sentence) —
 /// not Read-Aloud-specific despite having originally lived under that name.
 class RecordedAnswerStatusCard extends StatelessWidget {
-  const RecordedAnswerStatusCard({super.key, required this.statusLabel, required this.progress});
+  const RecordedAnswerStatusCard({
+    super.key,
+    required this.statusLabel,
+    required this.progress,
+  });
 
   final String statusLabel;
 
@@ -24,7 +28,7 @@ class RecordedAnswerStatusCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppDimensions.spacingMedium),
       decoration: BoxDecoration(
-        color: AppColors.fillBlanksGapFilledBackground,
+        color: AppColors.successContainer,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       child: Column(
@@ -33,7 +37,10 @@ class RecordedAnswerStatusCard extends StatelessWidget {
           Center(
             child: Text(
               SpeakingWritingStrings.recordedAnswerCardTitle,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
@@ -41,10 +48,18 @@ class RecordedAnswerStatusCard extends StatelessWidget {
             SpeakingWritingStrings.recordingCurrentStatusLabel,
             style: const TextStyle(color: AppColors.textPrimary),
           ),
-          Text(statusLabel, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          Text(
+            statusLabel,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: AppDimensions.spacingMedium),
           ClipRRect(
-            borderRadius: BorderRadius.circular(AppDimensions.recordingProgressBarRadius),
+            borderRadius: BorderRadius.circular(
+              AppDimensions.recordingProgressBarRadius,
+            ),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: AppDimensions.recordingProgressBarHeight,

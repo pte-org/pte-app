@@ -17,19 +17,27 @@ class ReOrderParagraphsList extends StatelessWidget {
       builder: (context, state) {
         final paragraphs = state.currentOrder;
         return ReorderableListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           // `onReorder` reports `newIndex` as the pre-removal insertion
           // point, so it must be adjusted down by one when the item moves
           // later in the list — `ReOrderParagraphsCubit.reorder` expects
           // the already-adjusted final resting index (see its doc comment).
           onReorder: (oldIndex, newIndex) {
-            final adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
-            context.read<ReOrderParagraphsCubit>().reorder(oldIndex, adjustedNewIndex);
+            final adjustedNewIndex = newIndex > oldIndex
+                ? newIndex - 1
+                : newIndex;
+            context.read<ReOrderParagraphsCubit>().reorder(
+              oldIndex,
+              adjustedNewIndex,
+            );
           },
           children: [
             for (var position = 0; position < paragraphs.length; position++)
               Semantics(
                 key: ValueKey(paragraphs[position].orderIndex),
-                label: 'Paragraph, position ${position + 1} of ${paragraphs.length}, draggable',
+                label:
+                    'Paragraph, position ${position + 1} of ${paragraphs.length}, draggable',
                 child: Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.spacingMedium,

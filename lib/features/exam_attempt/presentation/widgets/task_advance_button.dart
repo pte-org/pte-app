@@ -28,7 +28,12 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 /// separate expiry check is needed. `_isAdvancing` guards both the tap
 /// handler and the auto-trigger from firing twice for the same task.
 class TaskAdvanceButton extends StatefulWidget {
-  const TaskAdvanceButton({super.key, required this.cubit, required this.pinnedItemPublicId, required this.syncEngine});
+  const TaskAdvanceButton({
+    super.key,
+    required this.cubit,
+    required this.pinnedItemPublicId,
+    required this.syncEngine,
+  });
 
   final FlushableAnswerCubit cubit;
   final String pinnedItemPublicId;
@@ -59,7 +64,8 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<ExamAttemptBloc, ExamAttemptState>(
-      listenWhen: (previous, current) => !_isExpired(previous) && _isExpired(current),
+      listenWhen: (previous, current) =>
+          !_isExpired(previous) && _isExpired(current),
       listener: (context, state) => _advance(reason: AdvanceReason.timeExpired),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -72,7 +78,7 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
               children: [
                 const Icon(
                   Icons.warning_amber_rounded,
-                  color: AppColors.taskAdvanceWarningIcon,
+                  color: AppColors.warningIcon,
                   size: AppDimensions.taskAdvanceWarningIconSize,
                 ),
                 const SizedBox(width: AppDimensions.spacingMedium / 4),
@@ -93,7 +99,11 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
             ),
           ),
           const SizedBox(width: AppDimensions.spacingMedium),
-          PrimaryButton(label: ExamAttemptStrings.taskAdvanceButtonLabel, onPressed: _advance, isLoading: _isAdvancing),
+          PrimaryButton(
+            label: ExamAttemptStrings.taskAdvanceButtonLabel,
+            onPressed: _advance,
+            isLoading: _isAdvancing,
+          ),
         ],
       ),
     );

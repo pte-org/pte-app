@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_colors.dart';
-import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
@@ -20,7 +19,7 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_status_card.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/instruction_text.dart';
+import 'package:pte_app/core/widgets/templates/record_response_template.dart';
 
 /// Renders inside the shared exam shell as its injected content region —
 /// builds no top/bottom chrome of its own. Structurally mirrors
@@ -110,44 +109,32 @@ class _PersonalIntroductionBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      child: BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
-        selector: (state) =>
-            state is AttemptInProgress ? state.timerSnapshot : null,
-        builder: (context, snapshot) {
-          return BlocBuilder<AutoRecordCubit, AutoRecordState>(
-            builder: (context, state) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InstructionText(
-                    text: _instructionText(
-                      task.prepSeconds,
-                      task.responseSeconds,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  AutoRecordStatusCard(
-                    task: task,
-                    recordingState: state,
-                    snapshot: snapshot,
-                  ),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        task.promptText ?? '',
-                        style: const TextStyle(color: AppColors.textPrimary),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+    return BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
+      selector: (state) =>
+          state is AttemptInProgress ? state.timerSnapshot : null,
+      builder: (context, snapshot) {
+        return BlocBuilder<AutoRecordCubit, AutoRecordState>(
+          builder: (context, state) {
+            return RecordResponseTemplate(
+              title:
+                  TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
+              subtitle: task.section,
+              instruction: _instructionText(
+                task.prepSeconds,
+                task.responseSeconds,
+              ),
+              stimulus: SingleChildScrollView(
+                child: Text(task.promptText ?? ''),
+              ),
+              response: AutoRecordStatusCard(
+                task: task,
+                recordingState: state,
+                snapshot: snapshot,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
