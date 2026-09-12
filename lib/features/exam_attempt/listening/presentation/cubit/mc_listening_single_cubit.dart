@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/mc_listening_single_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 
@@ -34,7 +35,7 @@ class McListeningSingleCubit extends TaskAnswerCubit<McListeningSingleState> {
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: orderIndex,
+      payload: listeningSingleSelectionPayload(orderIndex),
     );
   }
 
@@ -49,7 +50,7 @@ class McListeningSingleCubit extends TaskAnswerCubit<McListeningSingleState> {
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: state.selectedOrderIndex ?? '',
+      payload: listeningSingleSelectionPayload(state.selectedOrderIndex ?? ''),
     );
   }
 

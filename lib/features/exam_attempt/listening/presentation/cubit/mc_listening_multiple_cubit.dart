@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/mc_listening_multiple_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 
 /// Mirrors `McReadingMultipleCubit` exactly, plus the audio-on-construction
 /// lifecycle (phase-03 Design Constraints).
-class McListeningMultipleCubit extends TaskAnswerCubit<McListeningMultipleState> {
+class McListeningMultipleCubit
+    extends TaskAnswerCubit<McListeningMultipleState> {
   McListeningMultipleCubit({
     required AnswerOutboxDao outboxDao,
     required AudioPlayerService audioPlayerService,
@@ -38,13 +40,8 @@ class McListeningMultipleCubit extends TaskAnswerCubit<McListeningMultipleState>
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: _sortedPayload(updated),
+      payload: listeningMultipleSelectionPayload(updated),
     );
-  }
-
-  String _sortedPayload(Set<String> orderIndexes) {
-    final sorted = orderIndexes.toList()..sort((a, b) => int.parse(a).compareTo(int.parse(b)));
-    return sorted.join(',');
   }
 
   /// Unconditional fallback write for an untouched task (client-side-exam-timer
@@ -54,7 +51,7 @@ class McListeningMultipleCubit extends TaskAnswerCubit<McListeningMultipleState>
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: _sortedPayload(state.selectedOrderIndexes),
+      payload: listeningMultipleSelectionPayload(state.selectedOrderIndexes),
     );
   }
 

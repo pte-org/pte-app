@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
-import 'package:pte_app/features/exam_attempt/domain/positional_payload.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/fill_blanks_listening_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 
@@ -12,7 +12,8 @@ import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cub
 /// Constraints). Never owns a `TextEditingController` — the screen owns
 /// all of them (phase-02's corrected disposal split, phase-05 Design
 /// Constraints).
-class FillBlanksListeningCubit extends TaskAnswerCubit<FillBlanksListeningState> {
+class FillBlanksListeningCubit
+    extends TaskAnswerCubit<FillBlanksListeningState> {
   FillBlanksListeningCubit({
     required AnswerOutboxDao outboxDao,
     required AudioPlayerService audioPlayerService,
@@ -22,7 +23,9 @@ class FillBlanksListeningCubit extends TaskAnswerCubit<FillBlanksListeningState>
     required String audioSource,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(FillBlanksListeningState(answers: List<String>.filled(gapCount, ''))) {
+       super(
+         FillBlanksListeningState(answers: List<String>.filled(gapCount, '')),
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });
@@ -42,7 +45,7 @@ class FillBlanksListeningCubit extends TaskAnswerCubit<FillBlanksListeningState>
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: positionalPayload(updated),
+      payload: listeningPositionalTextPayload(updated),
     );
   }
 
@@ -53,7 +56,7 @@ class FillBlanksListeningCubit extends TaskAnswerCubit<FillBlanksListeningState>
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: positionalPayload(state.answers),
+      payload: listeningPositionalTextPayload(state.answers),
     );
   }
 
