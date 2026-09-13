@@ -13,9 +13,20 @@ import 'package:pte_app/features/exam_attempt/dev/fixture_image.dart';
 import 'package:pte_app/features/exam_attempt/presentation/model/exam_task_ui_model.dart';
 
 class ExamUiPreviewStimulus extends StatefulWidget {
-  const ExamUiPreviewStimulus({super.key, required this.model});
+  const ExamUiPreviewStimulus({
+    super.key,
+    required this.model,
+    this.audioLabel,
+    this.onAudioPressed,
+    this.audioPlaying = false,
+    this.audioProgress = 0,
+  });
 
   final ExamTaskUiModel model;
+  final String? audioLabel;
+  final VoidCallback? onAudioPressed;
+  final bool audioPlaying;
+  final double audioProgress;
 
   @override
   State<ExamUiPreviewStimulus> createState() => _ExamUiPreviewStimulusState();
@@ -39,8 +50,11 @@ class _ExamUiPreviewStimulusState extends State<ExamUiPreviewStimulus> {
     final parts = <Widget>[];
     for (final part in model.stimulus.parts) {
       parts.add(switch (part.kind) {
-        StimulusPartKind.audio => const AudioStimulusPlayer(
-          label: 'Offline audio fixture',
+        StimulusPartKind.audio => AudioStimulusPlayer(
+          label: widget.audioLabel ?? 'Offline audio fixture',
+          progress: widget.audioProgress,
+          onPressed: widget.onAudioPressed,
+          playing: widget.audioPlaying,
         ),
         StimulusPartKind.image => PreviewFixtureImage(label: part.content),
         StimulusPartKind.passage ||

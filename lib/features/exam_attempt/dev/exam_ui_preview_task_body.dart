@@ -15,13 +15,30 @@ import 'package:pte_app/features/exam_attempt/dev/exam_ui_preview_stimulus.dart'
 import 'package:pte_app/features/exam_attempt/presentation/model/exam_task_ui_model.dart';
 
 class ExamUiPreviewTaskBody extends StatelessWidget {
-  const ExamUiPreviewTaskBody({super.key, required this.model});
+  const ExamUiPreviewTaskBody({
+    super.key,
+    required this.model,
+    this.audioLabel,
+    this.onAudioPressed,
+    this.audioPlaying = false,
+    this.audioProgress = 0,
+  });
 
   final ExamTaskUiModel model;
+  final String? audioLabel;
+  final VoidCallback? onAudioPressed;
+  final bool audioPlaying;
+  final double audioProgress;
 
   @override
   Widget build(BuildContext context) {
-    final stimulus = ExamUiPreviewStimulus(model: model);
+    final stimulus = ExamUiPreviewStimulus(
+      model: model,
+      audioLabel: audioLabel,
+      onAudioPressed: onAudioPressed,
+      audioPlaying: audioPlaying,
+      audioProgress: audioProgress,
+    );
     final response = ExamUiPreviewResponse(model: model);
     final metadata = _metadata(model);
     final title = model.meta.title;

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
@@ -55,7 +56,7 @@ class ApiClient {
   }) async {
     try {
       return await post<void>(
-        '/api/exam-delivery/attempts/$attemptPublicId/answers',
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers',
         data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
       );
     } on ConflictException catch (e) {
@@ -82,7 +83,7 @@ class ApiClient {
   }) async {
     try {
       final response = await get<Map<String, dynamic>>(
-        '/api/exam-delivery/attempts/$attemptPublicId/items/$pinnedItemPublicId/audio',
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/items/$pinnedItemPublicId/audio',
         headers: {'X-Play-Request-Id': playRequestId},
       );
       return response.data!['audioUrl'] as String;
@@ -112,7 +113,7 @@ class ApiClient {
   }) async {
     try {
       return await post<void>(
-        '/api/exam-delivery/attempts/$attemptPublicId/answers/encrypted',
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/encrypted',
         data: {
           'pinnedItemPublicId': pinnedItemPublicId,
           'wrappedKey': wrappedKey,
@@ -139,7 +140,9 @@ class ApiClient {
   /// Risk mitigation: never surfaced to the student, never affecting the
   /// exam flow.
   Future<Response<void>> sendHeartbeat(String attemptPublicId) {
-    return post<void>('/api/exam-delivery/attempts/$attemptPublicId/heartbeat');
+    return post<void>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/heartbeat',
+    );
   }
 
   Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {

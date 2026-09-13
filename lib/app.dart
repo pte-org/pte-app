@@ -16,6 +16,8 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
 import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
+import 'features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'features/exam_attempt/dev/api_mock_exam_preview_screen.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'features/exam_attempt/dev/exam_ui_preview_screen.dart';
@@ -60,6 +62,11 @@ class PteApp extends StatelessWidget {
               '/dev/speaking-writing-preview': (_) =>
                   _buildSpeakingWritingTaskPreviewScreen(),
               '/dev/exam-ui-preview': (_) => const ExamUiPreviewScreen(),
+              '/dev/api-mock-exam': (_) => ApiMockExamPreviewScreen(
+                repository: GetIt.instance<ExamAttemptRepository>(),
+                audioPromptRepository: GetIt.instance<AudioPromptRepository>(),
+                audioPlayerService: GetIt.instance<AudioPlayerService>(),
+              ),
               '/dev/device-check-preview': (_) => _buildTestMicAndSoundScreen(),
               if (kIsDevSkipAuth) ..._devStandaloneRoutes,
             }
@@ -78,6 +85,11 @@ class PteApp extends StatelessWidget {
     '/dev/standalone/speaking-writing': (_) =>
         _buildSpeakingWritingTaskPreviewScreen(),
     '/dev/standalone/exam-ui': (_) => const ExamUiPreviewScreen(),
+    '/dev/standalone/api-mock-exam': (_) => ApiMockExamPreviewScreen(
+      repository: GetIt.instance<ExamAttemptRepository>(),
+      audioPromptRepository: GetIt.instance<AudioPromptRepository>(),
+      audioPlayerService: GetIt.instance<AudioPlayerService>(),
+    ),
     '/dev/standalone/device-check': (_) => _buildTestMicAndSoundScreen(),
   };
 
@@ -293,6 +305,16 @@ class _DevStandaloneMenu extends StatelessWidget {
             ),
             onTap: () =>
                 Navigator.of(context).pushNamed('/dev/standalone/exam-ui'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cloud_download),
+            title: const Text('PTE API mock exam'),
+            subtitle: const Text(
+              'Fetch two Repeat Sentence tasks from the dev-only API mock',
+            ),
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed('/dev/standalone/api-mock-exam'),
           ),
           ListTile(
             leading: const Icon(Icons.settings_voice),
