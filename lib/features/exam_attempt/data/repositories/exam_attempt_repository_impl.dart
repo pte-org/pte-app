@@ -1,16 +1,20 @@
+import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
-  ExamAttemptRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
+  ExamAttemptRepositoryImpl({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 
   @override
-  Future<AttemptTaskResponse> startOrResumeAttempt(String sessionPublicId) async {
+  Future<AttemptTaskResponse> startOrResumeAttempt(
+    String sessionPublicId,
+  ) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
-      '/api/exam-delivery/attempts',
+      AppConfig.examAttemptsPath,
       data: {
         'sessionPublicId': sessionPublicId,
         // Required by the server's `StartAttemptRequest` (a primitive
@@ -35,13 +39,15 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   @override
   Future<AttemptTaskResponse> fetchNextTask(String attemptPublicId) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
-      '/api/exam-delivery/attempts/$attemptPublicId/next-task',
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/next-task',
     );
     return AttemptTaskResponse.fromJson(response.data!);
   }
 
   @override
   Future<void> forceSubmit(String attemptPublicId) {
-    return _apiClient.post<void>('/api/exam-delivery/attempts/$attemptPublicId/submit');
+    return _apiClient.post<void>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/submit',
+    );
   }
 }

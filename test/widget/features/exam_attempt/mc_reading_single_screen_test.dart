@@ -12,9 +12,10 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_reading_single_screen.dart';
-import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
+import 'package:pte_app/core/widgets/components/subheader_banner.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
@@ -55,9 +56,19 @@ void main() {
       ),
     ).thenAnswer((_) async {});
 
-    const snapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 30), currentOrderIndex: 1);
-    when(() => bloc.state).thenReturn(AttemptInProgress('attempt-1', _mcTask(), snapshot));
-    whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: bloc.state);
+    const snapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 30),
+      currentOrderIndex: 1,
+    );
+    when(
+      () => bloc.state,
+    ).thenReturn(AttemptInProgress('attempt-1', _mcTask(), snapshot));
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: bloc.state,
+    );
   });
 
   Widget buildSubject({String? promptText}) {
@@ -74,39 +85,50 @@ void main() {
     );
   }
 
-  testWidgets('renders the banner with the MC_READING_SINGLE label', (tester) async {
+  testWidgets('renders the banner with the MC_READING_SINGLE label', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
 
-    expect(find.byType(ExamTaskHeaderBanner), findsOneWidget);
-    expect(find.text('Reading: Multiple Choice, Single Answer'), findsOneWidget);
+    expect(find.byType(SubheaderBanner), findsOneWidget);
+    expect(
+      find.text('Reading: Multiple Choice, Single Answer'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('renders passage text when promptText is non-null', (tester) async {
+  testWidgets('renders passage text when promptText is non-null', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject(promptText: 'A sample passage.'));
 
     expect(find.text('A sample passage.'), findsOneWidget);
   });
 
-  testWidgets('renders no passage text (empty) when promptText is null, without throwing', (tester) async {
-    await tester.pumpWidget(buildSubject());
+  testWidgets(
+    'renders no passage text (empty) when promptText is null, without throwing',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
 
-    expect(tester.takeException(), isNull);
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('selecting an option writes its orderIndex via the outbox — existing behavior unchanged', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
+  testWidgets(
+    'selecting an option writes its orderIndex via the outbox — existing behavior unchanged',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
 
-    await tester.tap(find.text('Paris'));
-    await tester.pump();
+      await tester.tap(find.text('Paris'));
+      await tester.pump();
 
-    verify(
-      () => outboxDao.upsertAnswer(
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        payload: '1',
-      ),
-    ).called(1);
-  });
+      verify(
+        () => outboxDao.upsertAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'item-1',
+          payload: '1',
+        ),
+      ).called(1);
+    },
+  );
 }

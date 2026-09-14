@@ -42,7 +42,7 @@ const String kWriteEssayMaxWords = '300';
 const int kWriteEssayDurationSeconds = 1200; // 20 minutes.
 
 /// Hand-built [TaskView] samples for the two writing dev-preview screens
-/// (Summarize Written Text + Write Essay v2). Mirrors the shape of
+/// (Summarize Written Text + Write Essay). Mirrors the shape of
 /// `SpeakingWritingTaskFixtures` so the existing picker can render them
 /// through the real `TaskTypeDispatcher`.
 class WritingTaskFixtures {
@@ -64,14 +64,14 @@ class WritingTaskFixtures {
     );
   }
 
-  static TaskView get writeEssayV2 {
+  static TaskView get writeEssay {
     return TaskView(
-      pinnedItemPublicId: 'fixture-WRITE_ESSAY_V2',
+      pinnedItemPublicId: 'fixture-WRITE_ESSAY',
       orderIndex: 1,
       totalTasks: 2,
       section: 'WRITING',
-      taskType: 'WRITE_ESSAY_V2',
-      title: 'Sample WRITE_ESSAY_V2',
+      taskType: 'WRITE_ESSAY',
+      title: 'Sample WRITE_ESSAY',
       promptText: kWriteEssayPrompt,
       minWordCount: int.parse(kWriteEssayMinWords),
       maxWordCount: int.parse(kWriteEssayMaxWords),
@@ -80,5 +80,5 @@ class WritingTaskFixtures {
     );
   }
 
-  static List<TaskView> get all => [summarizeWrittenText, writeEssayV2];
+  static List<TaskView> get all => [summarizeWrittenText, writeEssay];
 }

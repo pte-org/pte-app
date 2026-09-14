@@ -23,10 +23,15 @@ class FillBlanksDropdownBody extends StatelessWidget {
 
     return BlocBuilder<FillBlanksDropdownCubit, FillBlanksDropdownState>(
       builder: (context, state) {
-        return SingleChildScrollView(
+        return Padding(
           padding: const EdgeInsets.all(AppDimensions.spacingMedium),
           child: Text.rich(
-            TextSpan(children: [for (final segment in segments) _spanFor(context, segment, blankGroups, state)]),
+            TextSpan(
+              children: [
+                for (final segment in segments)
+                  _spanFor(context, segment, blankGroups, state),
+              ],
+            ),
           ),
         );
       },
@@ -55,10 +60,19 @@ class FillBlanksDropdownBody extends StatelessWidget {
         child: DropdownButton<String>(
           value: selected,
           items: [
-            for (final option in group.options) DropdownMenuItem(value: option.orderIndex, child: Text(option.text)),
+            for (final option in group.options)
+              DropdownMenuItem(
+                value: option.orderIndex,
+                child: Text(option.text),
+              ),
           ],
           onChanged: (value) {
-            if (value != null) context.read<FillBlanksDropdownCubit>().selectOption(gapIndex, value);
+            if (value != null) {
+              context.read<FillBlanksDropdownCubit>().selectOption(
+                gapIndex,
+                value,
+              );
+            }
           },
         ),
       ),

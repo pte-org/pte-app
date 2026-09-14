@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import 'core/constants/app_strings.dart';
+import 'core/constants/app_typography.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
 import 'core/sync/media_upload_coordinator.dart';
@@ -15,8 +16,11 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
 import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
+import 'features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'features/exam_attempt/dev/api_mock_exam_preview_screen.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'features/exam_attempt/dev/exam_ui_preview_screen.dart';
 import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
 import 'features/exam_attempt/reading/presentation/pages/section_completed_screen.dart';
 import 'features/exam_attempt/presentation/pages/session_entry_page.dart';
@@ -40,6 +44,10 @@ class PteApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: AppTypography.fontFamily,
+      ),
       home: kIsDevSkipAuth
           ? const _DevStandaloneMenu()
           : BlocProvider<AuthBloc>.value(
@@ -53,6 +61,12 @@ class PteApp extends StatelessWidget {
                   _buildListeningTaskPreviewScreen(),
               '/dev/speaking-writing-preview': (_) =>
                   _buildSpeakingWritingTaskPreviewScreen(),
+              '/dev/exam-ui-preview': (_) => const ExamUiPreviewScreen(),
+              '/dev/api-mock-exam': (_) => ApiMockExamPreviewScreen(
+                repository: GetIt.instance<ExamAttemptRepository>(),
+                audioPromptRepository: GetIt.instance<AudioPromptRepository>(),
+                audioPlayerService: GetIt.instance<AudioPlayerService>(),
+              ),
               '/dev/device-check-preview': (_) => _buildTestMicAndSoundScreen(),
               if (kIsDevSkipAuth) ..._devStandaloneRoutes,
             }
@@ -70,6 +84,12 @@ class PteApp extends StatelessWidget {
     '/dev/standalone/listening': (_) => _buildListeningTaskPreviewScreen(),
     '/dev/standalone/speaking-writing': (_) =>
         _buildSpeakingWritingTaskPreviewScreen(),
+    '/dev/standalone/exam-ui': (_) => const ExamUiPreviewScreen(),
+    '/dev/standalone/api-mock-exam': (_) => ApiMockExamPreviewScreen(
+      repository: GetIt.instance<ExamAttemptRepository>(),
+      audioPromptRepository: GetIt.instance<AudioPromptRepository>(),
+      audioPlayerService: GetIt.instance<AudioPlayerService>(),
+    ),
     '/dev/standalone/device-check': (_) => _buildTestMicAndSoundScreen(),
   };
 
@@ -276,6 +296,25 @@ class _DevStandaloneMenu extends StatelessWidget {
             onTap: () => Navigator.of(
               context,
             ).pushNamed('/dev/standalone/speaking-writing'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.design_services),
+            title: const Text('Complete exam UI catalog'),
+            subtitle: const Text(
+              'Review all 23 task screens without API or device side effects',
+            ),
+            onTap: () =>
+                Navigator.of(context).pushNamed('/dev/standalone/exam-ui'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cloud_download),
+            title: const Text('PTE API mock exam'),
+            subtitle: const Text(
+              'Fetch two Repeat Sentence tasks from the dev-only API mock',
+            ),
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed('/dev/standalone/api-mock-exam'),
           ),
           ListTile(
             leading: const Icon(Icons.settings_voice),

@@ -18,7 +18,11 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speakin
 /// `AudioRecorderService` or any other real signal; it exists purely to
 /// visually match the reference mockup.
 class AudioListeningStatusCard extends StatelessWidget {
-  const AudioListeningStatusCard({super.key, required this.statusLabel, required this.progress});
+  const AudioListeningStatusCard({
+    super.key,
+    required this.statusLabel,
+    required this.progress,
+  });
 
   final String statusLabel;
 
@@ -32,7 +36,7 @@ class AudioListeningStatusCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppDimensions.spacingMedium),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.fillBlanksGapEmptyBorder),
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       child: Column(
@@ -42,7 +46,13 @@ class AudioListeningStatusCard extends StatelessWidget {
             SpeakingWritingStrings.recordingCurrentStatusLabel,
             style: const TextStyle(color: AppColors.textPrimary),
           ),
-          Text(statusLabel, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          Text(
+            statusLabel,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: AppDimensions.spacingMedium),
           Row(
             children: [
@@ -56,7 +66,9 @@ class AudioListeningStatusCard extends StatelessWidget {
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
           ClipRRect(
-            borderRadius: BorderRadius.circular(AppDimensions.recordingProgressBarRadius),
+            borderRadius: BorderRadius.circular(
+              AppDimensions.recordingProgressBarRadius,
+            ),
             // [progress] only ticks forward whenever the real audio
             // player's position stream happens to emit — on desktop that
             // can be coarser than once a second, so a bare
@@ -105,7 +117,10 @@ class _DecorativeVolumeMeter extends StatelessWidget {
       child: Stack(
         alignment: Alignment.centerLeft,
         children: [
-          Container(height: AppDimensions.audioListeningMeterHeight, color: AppColors.fillBlanksGapEmptyBorder),
+          Container(
+            height: AppDimensions.audioListeningMeterHeight,
+            color: AppColors.border,
+          ),
           const Align(alignment: Alignment(0.8, 0), child: _VolumeDot()),
         ],
       ),
@@ -121,7 +136,10 @@ class _VolumeDot extends StatelessWidget {
     return Container(
       width: AppDimensions.audioListeningDotSize,
       height: AppDimensions.audioListeningDotSize,
-      decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+      decoration: const BoxDecoration(
+        color: AppColors.error,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }

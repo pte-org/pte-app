@@ -8,7 +8,11 @@ import 'package:pte_app/core/constants/app_strings.dart';
 /// Capped at [maxHeight] so the panel never crowds out the editor on small
 /// screens; long passages scroll inside the panel.
 class PassagePanel extends StatelessWidget {
-  const PassagePanel({super.key, required this.body, this.maxHeight = AppDimensions.passagePanelMaxHeight});
+  const PassagePanel({
+    super.key,
+    required this.body,
+    this.maxHeight = AppDimensions.passagePanelMaxHeight,
+  });
 
   final String body;
   final double maxHeight;
@@ -19,8 +23,11 @@ class PassagePanel extends StatelessWidget {
       width: double.infinity,
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
-        color: AppColors.passagePanelBackground,
-        border: Border.all(color: AppColors.passagePanelBorder, width: AppDimensions.passagePanelBorderWidth),
+        color: AppColors.surfaceSubtle,
+        border: Border.all(
+          color: AppColors.border,
+          width: AppDimensions.passagePanelBorderWidth,
+        ),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       padding: const EdgeInsets.all(AppDimensions.spacingMedium),
@@ -36,7 +43,10 @@ class PassagePanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppDimensions.spacingMedium),
-            SelectableText(body, style: const TextStyle(color: AppColors.textPrimary, height: 1.4)),
+            SelectableText(
+              body,
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.4),
+            ),
           ],
         ),
       ),

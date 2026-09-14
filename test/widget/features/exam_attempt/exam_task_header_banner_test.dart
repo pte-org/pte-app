@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_task_header_banner.dart';
 
 void main() {
-  testWidgets('renders the given title text and a star icon', (tester) async {
+  testWidgets('renders the given title text without decorative chrome', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: ExamTaskHeaderBanner(title: 'Reading: Multiple Choice'))),
     );
 
     expect(find.text('Reading: Multiple Choice'), findsOneWidget);
-    expect(find.byIcon(Icons.star), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsNothing);
   });
 
   testWidgets('with no instruction given, renders only the title, no extra line', (tester) async {

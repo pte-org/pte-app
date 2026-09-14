@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/domain/word_count.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/summarize_spoken_text_state.dart';
@@ -10,7 +11,8 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/summa
 /// (phase-02 Design Constraints) — kept as a separate class rather than a
 /// shared generic, matching this codebase's existing per-type duplication
 /// convention (e.g. `McReadingSingleCubit`/`McReadingMultipleCubit`).
-class SummarizeSpokenTextCubit extends TaskAnswerCubit<SummarizeSpokenTextState> {
+class SummarizeSpokenTextCubit
+    extends TaskAnswerCubit<SummarizeSpokenTextState> {
   SummarizeSpokenTextCubit({
     required AnswerOutboxDao outboxDao,
     required AudioPlayerService audioPlayerService,
@@ -41,7 +43,7 @@ class SummarizeSpokenTextCubit extends TaskAnswerCubit<SummarizeSpokenTextState>
     return _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: state.draftText,
+      payload: listeningFreeTextPayload(state.draftText),
     );
   }
 

@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 
-import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/models/violation_event.dart';
 import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/tables/local_violations_table.dart';
@@ -54,16 +53,18 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   /// `retryUnsent` cycle (Phase 4 design constraint: never trust
   /// `sent=true` on a non-2xx response).
   Future<void> markSent(int id) {
-    return (update(localViolationsTable)..where((t) => t.id.equals(id)))
-        .write(const LocalViolationsTableCompanion(sent: Value(true)));
+    return (update(localViolationsTable)..where((t) => t.id.equals(id))).write(
+      const LocalViolationsTableCompanion(sent: Value(true)),
+    );
   }
 
   /// Bulk variant — preferred path for the retry loop, where the same
   /// call may flip many rows in one transaction.
   Future<void> markManySent(Iterable<int> ids) {
     if (ids.isEmpty) return Future.value();
-    return (update(localViolationsTable)..where((t) => t.id.isIn(ids)))
-        .write(const LocalViolationsTableCompanion(sent: Value(true)));
+    return (update(localViolationsTable)..where((t) => t.id.isIn(ids))).write(
+      const LocalViolationsTableCompanion(sent: Value(true)),
+    );
   }
 
   /// Removes rows that have been acknowledged AND are older than
@@ -73,10 +74,9 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   /// is purely a retry buffer.
   Future<int> deleteOldSent({required Duration olderThan}) {
     final cutoff = DateTime.now().subtract(olderThan);
-    return (delete(localViolationsTable)
-          ..where(
-            (t) => t.sent.equals(true) & t.timestamp.isSmallerThanValue(cutoff),
-          ))
+    return (delete(localViolationsTable)..where(
+          (t) => t.sent.equals(true) & t.timestamp.isSmallerThanValue(cutoff),
+        ))
         .go();
   }
 
@@ -126,10 +126,4 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
     return ViolationSeverity.warning;
   }
 
-  // Disambiguate the unused LockdownMode import — this DAO does not
-  // declare a LockdownMode dependency directly, but the conversion
-  // helpers above intentionally keep an unused import out of the file
-  // surface so callers know the conversion is purely a row-shape
-  // problem, not a mode-mapping one.
-  static LockdownMode _unusedModeSeam() => LockdownMode.none;
 }

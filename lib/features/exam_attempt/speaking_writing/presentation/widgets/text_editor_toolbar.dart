@@ -91,8 +91,10 @@ class _TextEditorToolbarState extends State<TextEditorToolbar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.editorToolbarBackground,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingMedium),
+      color: AppColors.surfaceSubtle,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.spacingMedium,
+      ),
       child: Row(
         children: [
           _IconButton(
@@ -128,7 +130,11 @@ class _TextEditorToolbarState extends State<TextEditorToolbar> {
 }
 
 class _IconButton extends StatelessWidget {
-  const _IconButton({required this.icon, required this.tooltip, required this.onPressed});
+  const _IconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
   final IconData icon;
   final String tooltip;

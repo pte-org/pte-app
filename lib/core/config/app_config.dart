@@ -8,11 +8,21 @@ class AppConfig {
   /// path (e.g. `/api/iam/auth/login`), so concatenation never
   /// double-prefixes it. See phase-01 Design Constraints.
   ///
-  /// Must be the API gateway's own port (`8080`), not any individual
-  /// backend service's raw port (e.g. `iam`'s `8081`) — the gateway is the
-  /// only thing that understands the `/api/{service}/**` routing prefix
-  /// every call site relies on (plans/phat-speaking-api-e2e-verify Phase 1).
-  static const String gatewayBaseUrl = 'http://localhost:8080';
+  /// The default is the API gateway's own port (`8080`), not an individual
+  /// backend service's raw port. The dev-only mock may intentionally override
+  /// this to the exam-delivery service port (`8085`) together with
+  /// [examAttemptsPath].
+  static const String gatewayBaseUrl = String.fromEnvironment(
+    'PTE_API_BASE_URL',
+    defaultValue: 'http://localhost:8080',
+  );
+
+  /// Full path prefix for attempt lifecycle/audio calls. The mock API uses
+  /// `/api/exam-delivery/mock-attempts`; the default is the real route.
+  static const String examAttemptsPath = String.fromEnvironment(
+    'PTE_EXAM_ATTEMPTS_PATH',
+    defaultValue: '/api/exam-delivery/attempts',
+  );
 
   /// Every gateway `Dio` instance must set these — an unbounded call can
   /// otherwise strand a caller (e.g. `AuthBloc` stuck in

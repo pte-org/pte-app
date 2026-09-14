@@ -29,18 +29,36 @@ class _MockShortcutInterceptorChannel extends Mock
 
 class _MockViolationReporter extends Mock implements ViolationReporter {}
 
-class _MockLogger extends Mock implements Logger {}
-
 class _PlatformLogger extends Logger {
   _PlatformLogger() : super();
   @override
-  void i(String message, {Object? error, StackTrace? stackTrace}) {}
+  void i(
+    dynamic message, {
+    Object? error,
+    StackTrace? stackTrace,
+    DateTime? time,
+  }) {}
   @override
-  void d(String message, {Object? error, StackTrace? stackTrace}) {}
+  void d(
+    dynamic message, {
+    Object? error,
+    StackTrace? stackTrace,
+    DateTime? time,
+  }) {}
   @override
-  void w(String message, {Object? error, StackTrace? stackTrace}) {}
+  void w(
+    dynamic message, {
+    Object? error,
+    StackTrace? stackTrace,
+    DateTime? time,
+  }) {}
   @override
-  void e(String message, {Object? error, StackTrace? stackTrace}) {}
+  void e(
+    dynamic message, {
+    Object? error,
+    StackTrace? stackTrace,
+    DateTime? time,
+  }) {}
 }
 
 const _emptyForbidden = ForbiddenAppsConfig(windows: [], macos: []);
@@ -60,6 +78,17 @@ void main() {
   late StreamController<String> processEvents;
   late StreamController<String> shortcutEvents;
   late StreamController<String> clipboardEvents;
+
+  setUpAll(() {
+    registerFallbackValue(
+      ViolationEvent(
+        attemptPublicId: 'fallback',
+        type: ViolationType.shortcutBlocked,
+        severity: ViolationSeverity.warning,
+        timestamp: DateTime(2026),
+      ),
+    );
+  });
 
   Future<ForbiddenAppsConfig> Function({
     Future<String> Function(String)? assetLoader,
@@ -156,18 +185,19 @@ void main() {
       expect(service.isActive, isTrue);
     });
 
-    test('strict mode enumerates processes but does not call terminateProcess when none are forbidden',
+    test('strict mode skips process enumeration when no forbidden apps are configured',
         () async {
       when(() => processManager.getRunningProcesses())
           .thenAnswer((_) async => const ['system.exe', 'pte_app.exe']);
 
       service = build();
+      await service.initialize();
       await service.activateLockdown(
         mode: LockdownMode.strict,
         attemptPublicId: _attemptId,
       );
 
-      verify(() => processManager.getRunningProcesses()).called(1);
+      verifyNever(() => processManager.getRunningProcesses());
       verifyNever(() => processManager.terminateProcess(any()));
       verifyNever(() => reporter.reportViolation(any()));
     });
@@ -192,6 +222,7 @@ void main() {
           ),
         ),
       );
+      await service.initialize();
       await service.activateLockdown(
         mode: LockdownMode.strict,
         attemptPublicId: _attemptId,

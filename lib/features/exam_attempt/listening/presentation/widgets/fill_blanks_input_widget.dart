@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
@@ -19,13 +20,18 @@ class FillBlanksInputWidget extends StatelessWidget {
       child: TextField(
         controller: controller,
         maxLines: 1,
+        inputFormatters: [FilteringTextInputFormatter.deny(',')],
         textAlign: TextAlign.center,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.all(AppDimensions.fillBlanksGapPadding),
+          contentPadding: const EdgeInsets.all(
+            AppDimensions.fillBlanksGapPadding,
+          ),
           filled: true,
-          fillColor: AppColors.fillBlanksGapFilledBackground,
-          border: OutlineInputBorder(borderSide: BorderSide(color: AppColors.fillBlanksGapEmptyBorder)),
+          fillColor: AppColors.interactiveSelected,
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.border),
+          ),
         ),
       ),
     );

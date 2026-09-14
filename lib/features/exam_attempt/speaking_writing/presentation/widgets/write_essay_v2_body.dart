@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
+import 'package:pte_app/core/widgets/components/exam_textarea.dart';
+import 'package:pte_app/core/widgets/templates/free_text_template.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/passage_panel.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/text_editor_toolbar.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/writing_task_header.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
 
 /// Pure UI body for the Write Essay v2 task — header + prompt + editor +
 /// word-count footer. No `ExamScaffold` import so the Chrome dev preview
@@ -16,11 +17,7 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 /// The production screen [WriteEssayV2Screen] wraps this in
 /// `ExamScaffold`; the chrome dev preview mounts this directly.
 class WriteEssayV2Body extends StatefulWidget {
-  const WriteEssayV2Body({
-    super.key,
-    required this.task,
-    this.persistDraft,
-  });
+  const WriteEssayV2Body({super.key, required this.task, this.persistDraft});
 
   final TaskView task;
   final ValueChanged<String>? persistDraft;
@@ -32,7 +29,7 @@ class WriteEssayV2Body extends StatefulWidget {
 class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
   late final TextEditingController _controller;
   int _wordCount = 0;
-  bool _timeExpired = false;
+  final bool _timeExpired = false;
 
   @override
   void initState() {
@@ -44,11 +41,6 @@ class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
     final next = _countWords(_controller.text);
     widget.persistDraft?.call(_controller.text);
     if (next != _wordCount) setState(() => _wordCount = next);
-  }
-
-  void _handleTimeExpired() {
-    if (!mounted) return;
-    setState(() => _timeExpired = true);
   }
 
   int _countWords(String text) {
@@ -67,27 +59,23 @@ class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
       ? widget.task.promptText!
       : kWriteEssayPrompt;
 
-  int get _minWords => widget.task.minWordCount ?? int.parse(kWriteEssayMinWords);
-  int get _maxWords => widget.task.maxWordCount ?? int.parse(kWriteEssayMaxWords);
+  int get _minWords =>
+      widget.task.minWordCount ?? int.parse(kWriteEssayMinWords);
+  int get _maxWords =>
+      widget.task.maxWordCount ?? int.parse(kWriteEssayMaxWords);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return FreeTextTemplate(
+      title: AppStrings.writeEssayV2Title,
+      subtitle: widget.task.section,
+      instruction: AppStrings.writeEssayV2Instruction,
+      metadata: ['$_minWords–$_maxWords words'],
+      stimulus: Text(_prompt, style: AppTypography.bodyPassage),
+      response: Column(
         children: [
-          WritingTaskHeader(
-            title: AppStrings.writeEssayV2Title,
-            instruction: AppStrings.writeEssayV2Instruction,
-            totalSeconds: widget.task.responseSeconds,
-            onTimeExpired: _handleTimeExpired,
-          ),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          PassagePanel(body: _prompt),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          Expanded(child: _EditorBox(controller: _controller, timeExpired: _timeExpired)),
-          const SizedBox(height: AppDimensions.spacingMedium),
+          _EditorBox(controller: _controller, timeExpired: _timeExpired),
+          const SizedBox(height: AppDimensions.spacingMd),
           _WordCountFooter(
             count: _wordCount,
             min: _minWords,
@@ -110,25 +98,23 @@ class _EditorBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.passagePanelBorder),
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       ),
       child: Column(
         children: [
           TextEditorToolbar(controller: controller),
-          Expanded(
+          SizedBox(
+            height: 320,
             child: Padding(
               padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-              child: TextField(
+              child: ExamTextarea(
                 controller: controller,
+                enabled: !timeExpired,
+                minLines: null,
                 maxLines: null,
                 expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                enabled: !timeExpired,
-                decoration: const InputDecoration(
-                  labelText: AppStrings.writeEssayV2ResponseLabel,
-                  border: InputBorder.none,
-                ),
+                labelText: AppStrings.writeEssayV2ResponseLabel,
               ),
             ),
           ),
@@ -154,14 +140,20 @@ class _WordCountFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inRange = count >= min && count <= max;
-    final color = timeExpired && !inRange ? AppColors.error : AppColors.textPrimary;
+    final color = timeExpired && !inRange
+        ? AppColors.error
+        : AppColors.textPrimary;
     return Text(
       _wordCountFooter(count: count, min: min, max: max),
       style: TextStyle(color: color),
     );
   }
 
-  String _wordCountFooter({required int count, required int min, required int max}) {
+  String _wordCountFooter({
+    required int count,
+    required int min,
+    required int max,
+  }) {
     return '$count${AppStrings.wordCountSuffix}'
         '${AppStrings.wordCountBoundsOpen}'
         '${AppStrings.wordCountMinLabel}$min'

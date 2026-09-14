@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/domain/word_count.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/write_from_dictation_state.dart';
@@ -41,7 +42,7 @@ class WriteFromDictationCubit extends TaskAnswerCubit<WriteFromDictationState> {
     return _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: state.draftText,
+      payload: listeningFreeTextPayload(state.draftText),
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
+import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highlight_incorrect_words_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 
@@ -10,7 +11,8 @@ import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cub
 /// regardless of toggle order, same rationale as
 /// `McListeningMultipleCubit._sortedPayload` (phase-04 Design
 /// Constraints).
-class HighlightIncorrectWordsCubit extends TaskAnswerCubit<HighlightIncorrectWordsState> {
+class HighlightIncorrectWordsCubit
+    extends TaskAnswerCubit<HighlightIncorrectWordsState> {
   HighlightIncorrectWordsCubit({
     required AnswerOutboxDao outboxDao,
     required AudioPlayerService audioPlayerService,
@@ -41,13 +43,8 @@ class HighlightIncorrectWordsCubit extends TaskAnswerCubit<HighlightIncorrectWor
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: _sortedPayload(updated),
+      payload: listeningTranscriptWordIndicesPayload(updated),
     );
-  }
-
-  String _sortedPayload(Set<int> wordIndices) {
-    final sorted = wordIndices.toList()..sort();
-    return sorted.join(',');
   }
 
   /// Unconditional fallback write for an untouched task (client-side-exam-timer
@@ -57,7 +54,7 @@ class HighlightIncorrectWordsCubit extends TaskAnswerCubit<HighlightIncorrectWor
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: _sortedPayload(state.selectedWordIndices),
+      payload: listeningTranscriptWordIndicesPayload(state.selectedWordIndices),
     );
   }
 
