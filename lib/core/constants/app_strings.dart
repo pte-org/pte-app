@@ -11,14 +11,25 @@ class AppStrings {
 
   static const String appTitle = 'PTE Student';
 
-  static const String loginTitle = 'Sign in';
-  static const String loginEmailLabel = 'Email';
-  static const String loginPasswordLabel = 'Password';
-  static const String loginSubmit = 'Sign in';
-  static const String loginEmailRequired = 'Email is required';
-  static const String loginPasswordRequired = 'Password is required';
+  static const String loginBrand = 'Pearson';
+  static const String loginProduct = 'PTE Academic';
+  static const String loginTitle = 'Candidate Sign-In';
+  static const String loginUsernameLabel = 'Login username';
+  static const String loginPasswordLabel = 'Login password';
+  static const String loginSubmit = 'Log in';
+  static const String loginEmailLabel = loginUsernameLabel;
+  static const String loginEmailRequired = 'Login username is required';
+  static const String loginPasswordRequired = 'Login password is required';
   static const String loginFailure =
       'Sign-in failed. Check your credentials and try again.';
+  static const String loginHeaderSystem = 'Test Delivery System';
+  static const String loginFooterEnvironment =
+      'Secure Test Environment - Workstation #08';
+  static const String loginFooterCopyright =
+      'Pearson VUE © All rights reserved';
+  static const String loginHelp =
+      'Your username and password are on the sheet provided by the Test '
+      'Administrator. If you need assistance, please raise your hand.';
 
   static const String hostConsoleTitle = 'Host Console';
   static const String hostConsoleWelcome = 'Welcome to the Host workspace.';
@@ -183,7 +194,8 @@ class AppStrings {
   static const String examTaskCounterOf = ' / ';
 
   static const String taskAdvanceButtonLabel = 'Next';
-  static const String taskAdvanceUnansweredNote = 'Leaving this blank and clicking Next will be scored as incorrect.';
+  static const String taskAdvanceUnansweredNote =
+      'Leaving this blank and clicking Next will be scored as incorrect.';
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String wordCountSuffix = ' words';
   static const String wordCountBoundsOpen = ' (';
@@ -222,13 +234,19 @@ class AppStrings {
   static const String reportEnablingSkillsSectionTitle = 'Enabling skills';
   static const String reportInsufficientDataLabel = 'Insufficient data';
 
-  static const String readingHeaderTitleMcSingle = 'Reading: Multiple Choice, Single Answer';
-  static const String readingHeaderTitleMcMultiple = 'Reading: Multiple Choice, Multiple Answers';
-  static const String readingHeaderTitleReorderParagraphs = 'Reading: Re-order Paragraphs';
-  static const String readingHeaderTitleFillBlanksDragDrop = 'Reading: Fill in the Blanks';
-  static const String readingHeaderTitleFillBlanksDropdown = 'Reading & Writing: Fill in the Blanks';
+  static const String readingHeaderTitleMcSingle =
+      'Reading: Multiple Choice, Single Answer';
+  static const String readingHeaderTitleMcMultiple =
+      'Reading: Multiple Choice, Multiple Answers';
+  static const String readingHeaderTitleReorderParagraphs =
+      'Reading: Re-order Paragraphs';
+  static const String readingHeaderTitleFillBlanksDragDrop =
+      'Reading: Fill in the Blanks';
+  static const String readingHeaderTitleFillBlanksDropdown =
+      'Reading & Writing: Fill in the Blanks';
 
-  static const String readingInstructionMcSingle = 'Read the text and answer the question by selecting the one correct response.';
+  static const String readingInstructionMcSingle =
+      'Read the text and answer the question by selecting the one correct response.';
   static const String readingInstructionMcMultiple =
       'Read the text and answer the question by selecting all the correct responses. More than one response may be correct.';
   static const String readingInstructionReorderParagraphs =
@@ -240,7 +258,8 @@ class AppStrings {
   static const String fillBlanksWordBankSectionLabel = 'Word bank';
   static const String fillBlanksGapPlaceholder = '_____';
   static const String reorderParagraphsHintLabel = 'Drag to reorder';
-  static const String fillBlanksContentUnavailableTitle = 'Content being updated';
+  static const String fillBlanksContentUnavailableTitle =
+      'Content being updated';
   static const String fillBlanksContentUnavailableMessage =
       'This task isn\'t ready to display yet. Please check back later.';
 
@@ -259,8 +278,10 @@ class AppStrings {
   static const String sectionCompletedTimeUpTitle = 'Time is up';
   static const String sectionCompletedTimeUpMessage =
       'The time allowed for this section has ended. Your answers so far have been saved.';
-  static const String sectionCompletedNaturalTitle = 'Reading Section Completed';
-  static const String sectionCompletedNaturalMessage = 'You have answered every question in this section.';
+  static const String sectionCompletedNaturalTitle =
+      'Reading Section Completed';
+  static const String sectionCompletedNaturalMessage =
+      'You have answered every question in this section.';
   static const String sectionCompletedContinueButton = 'Continue';
 
   // Writing task — text-editor toolbar tooltips.
@@ -275,7 +296,8 @@ class AppStrings {
   static const String summarizeWrittenTextInstruction =
       'Read the passage below and summarize it in one sentence (5 to 75 words).'
       ' You will have 10 minutes to complete this task.';
-  static const String summarizeWrittenTextResponseLabel = 'Your response (one sentence)';
+  static const String summarizeWrittenTextResponseLabel =
+      'Your response (one sentence)';
 
   // Writing task — Write Essay (used when rendering without BLoC integration).
   static const String writeEssayV2Title = 'Write Essay';

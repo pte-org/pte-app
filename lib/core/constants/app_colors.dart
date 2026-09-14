@@ -46,6 +46,13 @@ class AppColors {
   static const Color interactiveSelected = Color(0xFFEBF3FC);
   static const Color interactiveFocus = Color(0xFF0B5FAE);
 
+  // Pearson candidate sign-in screen tokens.
+  static const Color loginCanvas = Color(0xFFF4F5F7);
+  static const Color loginHeaderBorder = Color(0xFFD9DEE6);
+  static const Color loginFieldBorder = Color(0xFFC7D1DD);
+  static const Color loginText = Color(0xFF123E6A);
+  static const Color loginMutedText = Color(0xFF45617E);
+
   // Offline fixture illustration colors. They are kept in the token file so
   // preview art cannot introduce ad-hoc color literals in feature code.
   static const Color previewSky = Color(0xFF6BA9D1);

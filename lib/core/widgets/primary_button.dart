@@ -8,21 +8,31 @@ import 'package:pte_app/core/constants/app_dimensions.dart';
 /// [onPressed] is ignored (button disabled) while [isLoading] is true,
 /// regardless of what's passed in.
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton({super.key, required this.label, required this.onPressed, this.isLoading = false});
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+    this.style,
+  });
 
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final ButtonStyle? style;
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
+      style: style,
       child: isLoading
           ? const SizedBox(
               width: AppDimensions.advanceButtonSpinnerSize,
               height: AppDimensions.advanceButtonSpinnerSize,
-              child: CircularProgressIndicator(strokeWidth: AppDimensions.advanceButtonSpinnerStrokeWidth),
+              child: CircularProgressIndicator(
+                strokeWidth: AppDimensions.advanceButtonSpinnerStrokeWidth,
+              ),
             )
           : Text(label),
     );
