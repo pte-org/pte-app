@@ -30,6 +30,36 @@ never lost**, even offline, even if the app is killed mid-exam.
   dart format lib/ test/ --check
   ```
 
+### Mock backend (UI testing without pte-api)
+
+Compile with `--dart-define=MOCK_BACKEND=true` to answer every gateway,
+media-upload and live-proctor call from an in-memory fake instead of pte-api
+(debug/profile only — `AppConfig.useMockBackend` is forced off in release):
+
+```
+flutter run -d windows --dart-define=MOCK_BACKEND=true
+```
+
+Log in with **any non-empty password**:
+
+| Email | Role | Lands on |
+|---|---|---|
+| `student@mock.local` | STUDENT | Session entry → exam tasks → report |
+| `host@mock.local` | HOST_ADMIN | Host console: questions, blueprints, sessions, participants, audit, scoring |
+| `author@mock.local` | HOST_AUTHOR | Host console (non-admin actions) |
+| `proctor@mock.local` | PROCTOR | Proctor workspace → live monitoring (a fake violation every 12s) |
+
+Session IDs for the student's session entry screen:
+
+- `mock-full-exam` — all 23 task types (Speaking & Writing → Reading → Listening)
+- `mock-speaking`, `mock-writing`, `mock-reading`, `mock-listening` — one section each
+- `mock-scheduled-next-week` (not open → 409), any unknown ID (404) — error states
+
+A session a host creates, composes and opens in the mock is takeable too.
+State is in memory only and re-seeds on every cold start. Seeds and routes
+live in `lib/dev/mock_backend/`; a request with no mock route logs a warning
+and returns 404. Describe Image still needs internet for its sample picture.
+
 ## Directory Structure
 
 ```

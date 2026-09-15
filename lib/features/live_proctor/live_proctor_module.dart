@@ -1,7 +1,9 @@
 import 'package:get_it/get_it.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/token_store.dart';
+import '../../dev/mock_backend/mock_live_proctor_transport.dart';
 import 'data/repositories/live_proctor_repository_impl.dart';
 import 'data/transport/stomp_live_proctor_transport.dart';
 import 'domain/live_proctor_transport.dart';
@@ -14,7 +16,11 @@ void setupLiveProctorModule() {
   getIt.registerLazySingleton<LiveProctorRepository>(
     () => LiveProctorRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
-  getIt.registerFactory<LiveProctorTransport>(StompLiveProctorTransport.new);
+  getIt.registerFactory<LiveProctorTransport>(
+    () => AppConfig.useMockBackend
+        ? MockLiveProctorTransport()
+        : StompLiveProctorTransport(),
+  );
   getIt.registerFactory<AssignedSessionsBloc>(
     () => AssignedSessionsBloc(repository: getIt<LiveProctorRepository>()),
   );

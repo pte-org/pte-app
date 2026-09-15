@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 
+import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/media_repository_impl.dart';
@@ -10,6 +12,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/dev/mock_backend/mock_backend_adapter.dart';
 import 'package:pte_app/features/exam_attempt/listening/data/audio_player_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/audio_prompt_repository_impl.dart';
@@ -70,7 +73,11 @@ void setupExamAttemptModule() {
   // No interceptors, ever — the presigned URL is the credential, not the
   // app's bearer token (phase-06 Design Constraints). Never share
   // ApiClient's gateway Dio instance for this.
-  getIt.registerLazySingleton<RawUploadClient>(() => RawUploadClient());
+  getIt.registerLazySingleton<RawUploadClient>(
+    () => AppConfig.useMockBackend
+        ? RawUploadClient(dio: Dio()..httpClientAdapter = MockBackendAdapter.shared)
+        : RawUploadClient(),
+  );
 
   getIt.registerLazySingleton<MediaUploadCoordinator>(
     () => MediaUploadCoordinator(

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Build-time app configuration. Swap [gatewayBaseUrl] for a compile-time
 /// env value when a staging/prod gateway exists — out of scope for
 /// Milestone 1 (spec.md Assumptions).
@@ -23,6 +25,13 @@ class AppConfig {
     'PTE_EXAM_ATTEMPTS_PATH',
     defaultValue: '/api/exam-delivery/attempts',
   );
+
+  /// Dev-only: answer every gateway/upload/live-proctor call from the
+  /// in-memory mock backend (`lib/dev/mock_backend/`) instead of pte-api, so
+  /// the full app can be UI-tested offline. Enable with
+  /// `--dart-define=MOCK_BACKEND=true`; always off in release builds.
+  static const bool useMockBackend =
+      bool.fromEnvironment('MOCK_BACKEND') && !kReleaseMode;
 
   /// Every gateway `Dio` instance must set these — an unbounded call can
   /// otherwise strand a caller (e.g. `AuthBloc` stuck in

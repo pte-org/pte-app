@@ -9,6 +9,7 @@ import 'package:pte_app/core/network/interceptors/token_refresh_interceptor.dart
 import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
 import 'package:pte_app/core/network/token_refresher.dart';
 import 'package:pte_app/core/storage/token_store.dart';
+import 'package:pte_app/dev/mock_backend/mock_backend_adapter.dart';
 import 'package:pte_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -16,12 +17,18 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
 /// GetIt registration for auth + the shared networking primitives every
 /// later feature module depends on (`ApiClient`, `TokenStore`). Real-module
 /// counterpart to Phase 0's `_example_module.dart` template.
-Dio _newGatewayDio() => Dio(BaseOptions(
-      baseUrl: AppConfig.gatewayBaseUrl,
-      connectTimeout: AppConfig.connectTimeout,
-      receiveTimeout: AppConfig.receiveTimeout,
-      sendTimeout: AppConfig.sendTimeout,
-    ));
+Dio _newGatewayDio() {
+  final dio = Dio(BaseOptions(
+    baseUrl: AppConfig.gatewayBaseUrl,
+    connectTimeout: AppConfig.connectTimeout,
+    receiveTimeout: AppConfig.receiveTimeout,
+    sendTimeout: AppConfig.sendTimeout,
+  ));
+  if (AppConfig.useMockBackend) {
+    dio.httpClientAdapter = MockBackendAdapter.shared;
+  }
+  return dio;
+}
 
 void setupAuthModule() {
   final getIt = GetIt.instance;
