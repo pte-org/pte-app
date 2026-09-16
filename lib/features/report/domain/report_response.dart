@@ -23,6 +23,14 @@ class SkillScoreResponse {
 /// implies the report is visible to this student — `published`/
 /// `publishedAt` are informational display fields only, not a second
 /// not-published check (phase-08 Design Constraints).
+///
+/// Since Phase 5 (plans/score-template-exam-generation): no more separate
+/// enabling-skills list on the wire (spec Out of Scope — the pinned
+/// ScoreTemplate has no weight column for them). `overall` is `null` when the exam
+/// didn't cover all 4 skills (FR-20 — "not applicable"), distinct from a
+/// present [SkillScoreResponse] with `sufficientData: false` ("not enough
+/// data yet"). `communicativeSkills` only ever contains skills that were
+/// actually tested (FR-19).
 class ReportResponse {
   const ReportResponse({
     required this.attemptPublicId,
@@ -31,16 +39,14 @@ class ReportResponse {
     required this.publishedAt,
     required this.overall,
     required this.communicativeSkills,
-    required this.enablingSkills,
   });
 
   final String attemptPublicId;
   final String sessionPublicId;
   final bool published;
   final DateTime? publishedAt;
-  final SkillScoreResponse overall;
+  final SkillScoreResponse? overall;
   final List<SkillScoreResponse> communicativeSkills;
-  final List<SkillScoreResponse> enablingSkills;
 
   factory ReportResponse.fromJson(Map<String, dynamic> json) {
     return ReportResponse(
@@ -48,11 +54,8 @@ class ReportResponse {
       sessionPublicId: json['sessionPublicId'] as String,
       published: json['published'] as bool,
       publishedAt: json['publishedAt'] == null ? null : DateTime.parse(json['publishedAt'] as String),
-      overall: SkillScoreResponse.fromJson(json['overall'] as Map<String, dynamic>),
+      overall: json['overall'] == null ? null : SkillScoreResponse.fromJson(json['overall'] as Map<String, dynamic>),
       communicativeSkills: (json['communicativeSkills'] as List<dynamic>)
-          .map((skill) => SkillScoreResponse.fromJson(skill as Map<String, dynamic>))
-          .toList(),
-      enablingSkills: (json['enablingSkills'] as List<dynamic>)
           .map((skill) => SkillScoreResponse.fromJson(skill as Map<String, dynamic>))
           .toList(),
     );

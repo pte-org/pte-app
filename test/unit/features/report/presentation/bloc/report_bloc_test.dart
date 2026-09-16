@@ -20,7 +20,6 @@ ReportResponse _report() {
     publishedAt: null,
     overall: overall,
     communicativeSkills: [],
-    enablingSkills: [],
   );
 }
 

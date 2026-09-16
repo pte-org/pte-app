@@ -10,6 +10,5 @@ class ReportStrings {
   static const String reportErrorMessage ='We couldn\'t load your report. Pull down to try again.';
   static const String reportOverallSectionTitle ='Overall';
   static const String reportCommunicativeSkillsSectionTitle ='Communicative skills';
-  static const String reportEnablingSkillsSectionTitle ='Enabling skills';
   static const String reportInsufficientDataLabel ='Insufficient data';
 }
