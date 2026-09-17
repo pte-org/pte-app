@@ -8,6 +8,13 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
   SchedulingRepositoryImpl({required ApiClient apiClient})
     : _apiClient = apiClient;
 
+  /// The `/api/scheduling` prefix IS required — `pte-api/deploy/api-routes.caddy`
+  /// strips it before forwarding to the monolith's bare `/sessions` mapping.
+  /// `AppConfig.gatewayBaseUrl` points at that Caddy instance (`:8080`), not
+  /// at the app directly (`:8091`) — every other module in this app
+  /// (`/api/iam/...`, `/api/media/...`, `/api/proctor/...`, ...) keeps the
+  /// same convention for the same reason. (An earlier Plan B pass removed
+  /// this prefix by mistake, having missed the Caddy layer — reverted.)
   static const _sessionsPath = '/api/scheduling/sessions';
   final ApiClient _apiClient;
 
@@ -36,32 +43,9 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
       _sessionsPath,
       data: {
         'name': input.name,
-        'snapshotPublicId': input.snapshotPublicId,
+        'skills': input.skills.map((skill) => skill.wireName).toList(growable: false),
         'opensAt': input.opensAt.toUtc().toIso8601String(),
         'closesAt': input.closesAt.toUtc().toIso8601String(),
-      },
-    );
-    return SessionModel.fromJson(response.data!).toEntity();
-  }
-
-  @override
-  Future<ExamSession> setComposition(
-    String publicId,
-    SetCompositionInput input,
-  ) async {
-    final response = await _apiClient.put<Map<String, dynamic>>(
-      '$_sessionsPath/$publicId/composition',
-      data: {
-        'items': input.items
-            .map(
-              (item) => {
-                'taskType': item.taskType,
-                'section': item.section,
-                'orderIndex': item.orderIndex,
-                'timingOverrideSeconds': item.timingOverrideSeconds,
-              },
-            )
-            .toList(growable: false),
       },
     );
     return SessionModel.fromJson(response.data!).toEntity();
@@ -83,28 +67,38 @@ class SchedulingRepositoryImpl implements SchedulingRepository {
   }
 
   @override
-  Future<List<SnapshotTaskOption>> loadSnapshotOptions(
-    String snapshotPublicId,
-  ) async {
-    final response = await _apiClient.get<Map<String, dynamic>>(
-      '/api/authoring/snapshots/$snapshotPublicId',
+  Future<List<AssignedClass>> loadAssignedClasses(String sessionPublicId) async {
+    final response = await _apiClient.get<List<dynamic>>(
+      '$_sessionsPath/$sessionPublicId/classes',
     );
-    final items = (response.data!['items'] as List<dynamic>?) ?? const [];
-    final options = <String, SnapshotTaskOption>{};
-    for (final value in items) {
-      final item = value as Map<String, dynamic>;
-      final taskType = item['taskType'] as String;
-      options.putIfAbsent(
-        taskType,
-        () => SnapshotTaskOption(
-          taskType: taskType,
-          section: item['section'] as String,
-          title: item['title'] as String,
-        ),
-      );
-    }
-    return List.unmodifiable(options.values);
+    return (response.data ?? const [])
+        .map((item) => _assignedClassFromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
   }
+
+  @override
+  Future<AssignedClass> assignClass(
+    String sessionPublicId,
+    String classPublicId,
+  ) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '$_sessionsPath/$sessionPublicId/classes',
+      data: {'classPublicId': classPublicId},
+    );
+    return _assignedClassFromJson(response.data!);
+  }
+
+  @override
+  Future<void> unassignClass(String sessionPublicId, String classPublicId) =>
+      _apiClient.delete<void>(
+        '$_sessionsPath/$sessionPublicId/classes/$classPublicId',
+      );
+
+  AssignedClass _assignedClassFromJson(Map<String, dynamic> json) =>
+      AssignedClass(
+        sessionPublicId: json['sessionPublicId'] as String,
+        classPublicId: json['classPublicId'] as String,
+      );
 
   @override
   Future<EnrollmentResult> enrollStudent(

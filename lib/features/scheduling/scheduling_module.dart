@@ -3,12 +3,13 @@ import 'package:get_it/get_it.dart';
 import '../../core/network/api_client.dart';
 import 'data/repositories/scheduling_repository_impl.dart';
 import 'domain/repositories/scheduling_repository.dart';
+import 'domain/usecases/assign_class.dart';
 import 'domain/usecases/create_session.dart';
+import 'domain/usecases/load_assigned_classes.dart';
 import 'domain/usecases/load_session.dart';
 import 'domain/usecases/load_sessions.dart';
-import 'domain/usecases/load_snapshot_options.dart';
 import 'domain/usecases/manage_participants.dart';
-import 'domain/usecases/update_session_composition.dart';
+import 'domain/usecases/unassign_class.dart';
 import 'domain/usecases/update_session_status.dart';
 import 'presentation/bloc/session_create_bloc.dart';
 import 'presentation/bloc/participant_command_bloc.dart';
@@ -29,11 +30,14 @@ void setupSchedulingModule() {
   getIt.registerLazySingleton<CreateSession>(
     () => CreateSession(repository: getIt<SchedulingRepository>()),
   );
-  getIt.registerLazySingleton<LoadSnapshotOptions>(
-    () => LoadSnapshotOptions(repository: getIt<SchedulingRepository>()),
+  getIt.registerLazySingleton<LoadAssignedClasses>(
+    () => LoadAssignedClasses(repository: getIt<SchedulingRepository>()),
   );
-  getIt.registerLazySingleton<UpdateSessionComposition>(
-    () => UpdateSessionComposition(repository: getIt<SchedulingRepository>()),
+  getIt.registerLazySingleton<AssignClass>(
+    () => AssignClass(repository: getIt<SchedulingRepository>()),
+  );
+  getIt.registerLazySingleton<UnassignClass>(
+    () => UnassignClass(repository: getIt<SchedulingRepository>()),
   );
   getIt.registerLazySingleton<OpenSession>(
     () => OpenSession(repository: getIt<SchedulingRepository>()),
@@ -62,8 +66,9 @@ void setupSchedulingModule() {
   getIt.registerFactory<SessionDetailBloc>(
     () => SessionDetailBloc(
       loadSession: getIt<LoadSession>(),
-      loadSnapshotOptions: getIt<LoadSnapshotOptions>(),
-      updateComposition: getIt<UpdateSessionComposition>(),
+      loadAssignedClasses: getIt<LoadAssignedClasses>(),
+      assignClass: getIt<AssignClass>(),
+      unassignClass: getIt<UnassignClass>(),
       openSession: getIt<OpenSession>(),
       closeSession: getIt<CloseSession>(),
     ),
