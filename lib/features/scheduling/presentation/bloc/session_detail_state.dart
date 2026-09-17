@@ -13,26 +13,21 @@ final class SessionDetailLoading extends SessionDetailState {
 }
 
 base class SessionDetailData extends SessionDetailState {
-  const SessionDetailData(this.session, this.options);
+  const SessionDetailData(this.session, this.assignedClasses);
   final ExamSession session;
-  final List<SnapshotTaskOption> options;
+  final List<AssignedClass> assignedClasses;
 }
 
 final class SessionDetailReady extends SessionDetailData {
-  const SessionDetailReady(super.session, super.options);
+  const SessionDetailReady(super.session, super.assignedClasses);
 }
 
 final class SessionDetailTransitioning extends SessionDetailData {
-  const SessionDetailTransitioning(super.session, super.options);
+  const SessionDetailTransitioning(super.session, super.assignedClasses);
 }
 
 final class SessionDetailConflict extends SessionDetailData {
-  const SessionDetailConflict(super.session, super.options, this.message);
-  final String message;
-}
-
-final class SessionDetailInvalid extends SessionDetailData {
-  const SessionDetailInvalid(super.session, super.options, this.message);
+  const SessionDetailConflict(super.session, super.assignedClasses, this.message);
   final String message;
 }
 

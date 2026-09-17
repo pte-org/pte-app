@@ -42,7 +42,6 @@ void main() {
           'publishedAt': '2026-07-20T10:00:00.000Z',
           'overall': skillJson('Overall', score: 65),
           'communicativeSkills': [skillJson('Reading', score: 70)],
-          'enablingSkills': [skillJson('Grammar', score: 80)],
         },
       ),
     );
@@ -51,7 +50,7 @@ void main() {
 
     expect(result, isNotNull);
     expect(result!.attemptPublicId, 'attempt-1');
-    expect(result.overall.score, 65);
+    expect(result.overall!.score, 65);
     expect(result.communicativeSkills.single.skill, 'Reading');
   });
 

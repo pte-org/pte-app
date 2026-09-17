@@ -4,11 +4,12 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/scheduling/domain/session_types.dart';
+import 'package:pte_app/features/scheduling/domain/usecases/assign_class.dart';
 import 'package:pte_app/features/scheduling/domain/usecases/create_session.dart';
+import 'package:pte_app/features/scheduling/domain/usecases/load_assigned_classes.dart';
 import 'package:pte_app/features/scheduling/domain/usecases/load_session.dart';
 import 'package:pte_app/features/scheduling/domain/usecases/load_sessions.dart';
-import 'package:pte_app/features/scheduling/domain/usecases/load_snapshot_options.dart';
-import 'package:pte_app/features/scheduling/domain/usecases/update_session_composition.dart';
+import 'package:pte_app/features/scheduling/domain/usecases/unassign_class.dart';
 import 'package:pte_app/features/scheduling/domain/usecases/update_session_status.dart';
 import 'package:pte_app/features/scheduling/presentation/bloc/session_create_bloc.dart';
 import 'package:pte_app/features/scheduling/presentation/bloc/session_create_event.dart';
@@ -26,9 +27,11 @@ class _MockCreateSession extends Mock implements CreateSession {}
 
 class _MockLoadSession extends Mock implements LoadSession {}
 
-class _MockLoadSnapshotOptions extends Mock implements LoadSnapshotOptions {}
+class _MockLoadAssignedClasses extends Mock implements LoadAssignedClasses {}
 
-class _MockUpdateComposition extends Mock implements UpdateSessionComposition {}
+class _MockAssignClass extends Mock implements AssignClass {}
+
+class _MockUnassignClass extends Mock implements UnassignClass {}
 
 class _MockOpenSession extends Mock implements OpenSession {}
 
@@ -42,14 +45,9 @@ final session = ExamSession(
   opensAt: DateTime.utc(2026, 7, 29, 8),
   closesAt: DateTime.utc(2026, 7, 29, 10),
   status: SessionStatus.scheduled,
-  composition: const [],
 );
-const options = [
-  SnapshotTaskOption(
-    taskType: 'READ_ALOUD',
-    section: 'SPEAKING',
-    title: 'Read aloud',
-  ),
+const assignedClasses = [
+  AssignedClass(sessionPublicId: 'session-1', classPublicId: 'class-1'),
 ];
 
 void main() {
@@ -57,12 +55,11 @@ void main() {
     registerFallbackValue(
       CreateSessionInput(
         name: 'Exam',
-        snapshotPublicId: 'snap-1',
+        skills: {ExamSkill.speaking},
         opensAt: DateTime.utc(2026, 7, 29),
         closesAt: DateTime.utc(2026, 7, 30),
       ),
     );
-    registerFallbackValue(SetCompositionInput(items: const []));
   });
 
   blocTest<SessionListBloc, SessionListState>(
@@ -87,7 +84,7 @@ void main() {
       SessionCreateSubmitted(
         CreateSessionInput(
           name: 'Exam',
-          snapshotPublicId: 'snap-1',
+          skills: {ExamSkill.speaking},
           opensAt: DateTime.utc(2026, 7, 27),
           closesAt: DateTime.utc(2026, 7, 29),
         ),
@@ -101,12 +98,15 @@ void main() {
     'reloads authoritative detail when open conflicts',
     setUp: () {
       loadSession = _MockLoadSession();
-      loadOptions = _MockLoadSnapshotOptions();
-      updateComposition = _MockUpdateComposition();
+      loadAssignedClasses = _MockLoadAssignedClasses();
+      assignClass = _MockAssignClass();
+      unassignClass = _MockUnassignClass();
       openSession = _MockOpenSession();
       closeSession = _MockCloseSession();
       when(() => loadSession('session-1')).thenAnswer((_) async => session);
-      when(() => loadOptions('snap-1')).thenAnswer((_) async => options);
+      when(
+        () => loadAssignedClasses('session-1'),
+      ).thenAnswer((_) async => assignedClasses);
       when(
         () => openSession('session-1'),
       ).thenThrow(const ConflictException('STALE_SESSION_STATE'));
@@ -125,12 +125,84 @@ void main() {
     ],
     verify: (_) => verify(() => loadSession('session-1')).called(2),
   );
+
+  blocTest<SessionDetailBloc, SessionDetailState>(
+    'assigns a Class and reloads the assigned-Classes list',
+    setUp: () {
+      loadSession = _MockLoadSession();
+      loadAssignedClasses = _MockLoadAssignedClasses();
+      assignClass = _MockAssignClass();
+      unassignClass = _MockUnassignClass();
+      openSession = _MockOpenSession();
+      closeSession = _MockCloseSession();
+      when(() => loadSession('session-1')).thenAnswer((_) async => session);
+      when(() => loadAssignedClasses('session-1')).thenAnswer(
+        (_) async => const [],
+      );
+      when(
+        () => assignClass('session-1', 'class-1'),
+      ).thenAnswer((_) async => assignedClasses.single);
+    },
+    build: buildDetailBloc,
+    act: (bloc) async {
+      bloc.add(const SessionDetailRequested('session-1'));
+      await bloc.stream.firstWhere((state) => state is SessionDetailReady);
+      when(
+        () => loadAssignedClasses('session-1'),
+      ).thenAnswer((_) async => assignedClasses);
+      bloc.add(const ClassAssignRequested('class-1'));
+    },
+    expect: () => [
+      isA<SessionDetailLoading>(),
+      isA<SessionDetailReady>(),
+      isA<SessionDetailTransitioning>(),
+      predicate<SessionDetailReady>(
+        (state) => state.assignedClasses.single.classPublicId == 'class-1',
+      ),
+    ],
+    verify: (_) => verify(() => assignClass('session-1', 'class-1')).called(1),
+  );
+
+  blocTest<SessionDetailBloc, SessionDetailState>(
+    'does not assign a Class once the session is no longer Scheduled',
+    setUp: () {
+      loadSession = _MockLoadSession();
+      loadAssignedClasses = _MockLoadAssignedClasses();
+      assignClass = _MockAssignClass();
+      unassignClass = _MockUnassignClass();
+      openSession = _MockOpenSession();
+      closeSession = _MockCloseSession();
+      when(() => loadSession('session-1')).thenAnswer(
+        (_) async => ExamSession(
+          publicId: 'session-1',
+          name: 'Mock exam',
+          tenantId: 'tenant-1',
+          snapshotPublicId: 'snap-1',
+          opensAt: DateTime.utc(2026, 7, 29, 8),
+          closesAt: DateTime.utc(2026, 7, 29, 10),
+          status: SessionStatus.open,
+        ),
+      );
+      when(
+        () => loadAssignedClasses('session-1'),
+      ).thenAnswer((_) async => const []);
+    },
+    build: buildDetailBloc,
+    act: (bloc) async {
+      bloc.add(const SessionDetailRequested('session-1'));
+      await bloc.stream.firstWhere((state) => state is SessionDetailReady);
+      bloc.add(const ClassAssignRequested('class-1'));
+    },
+    expect: () => [isA<SessionDetailLoading>(), isA<SessionDetailReady>()],
+    verify: (_) => verifyNever(() => assignClass(any(), any())),
+  );
 }
 
 SessionDetailBloc buildDetailBloc() => SessionDetailBloc(
   loadSession: loadSession,
-  loadSnapshotOptions: loadOptions,
-  updateComposition: updateComposition,
+  loadAssignedClasses: loadAssignedClasses,
+  assignClass: assignClass,
+  unassignClass: unassignClass,
   openSession: openSession,
   closeSession: closeSession,
 );
@@ -138,7 +210,8 @@ SessionDetailBloc buildDetailBloc() => SessionDetailBloc(
 late LoadSessions loadSessions;
 late CreateSession createSession;
 late LoadSession loadSession;
-late LoadSnapshotOptions loadOptions;
-late UpdateSessionComposition updateComposition;
+late LoadAssignedClasses loadAssignedClasses;
+late AssignClass assignClass;
+late UnassignClass unassignClass;
 late OpenSession openSession;
 late CloseSession closeSession;

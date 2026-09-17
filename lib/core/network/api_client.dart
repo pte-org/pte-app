@@ -36,6 +36,10 @@ class ApiClient {
     return _run<T>(() => _dio.put<dynamic>(path, data: data));
   }
 
+  Future<Response<T>> delete<T>(String path, {Object? data}) {
+    return _run<T>(() => _dio.delete<dynamic>(path, data: data));
+  }
+
   /// Submits one buffered answer. **Only `SyncEngine._flushOne` may call
   /// this** — no widget or UI-facing `Bloc` submits an answer directly; the
   /// outbox DAO's `upsertAnswer` is the only write path available to them

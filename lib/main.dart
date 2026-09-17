@@ -6,7 +6,6 @@ import 'app.dart';
 import 'package:pte_app/core/di/security_module.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/storage/storage_module.dart';
-import 'package:pte_app/features/authoring/authoring_module.dart';
 import 'package:pte_app/features/auth/auth_module.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
 import 'package:pte_app/features/host_console/host_console_module.dart';
@@ -45,7 +44,6 @@ Future<void> main() async {
   setupHostAuditModule();
   setupHostUsersModule();
   setupLiveProctorModule();
-  setupAuthoringModule();
   setupSchedulingModule();
   setupScoringReviewModule();
   runApp(const PteApp());

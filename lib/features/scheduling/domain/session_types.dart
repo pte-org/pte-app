@@ -19,27 +19,39 @@ enum SessionStatus {
   String get wireName => name.toUpperCase();
   bool get canOpen => this == scheduled;
   bool get canClose => this == open;
+  /// Assign/unassign a Class is only allowed while the exam hasn't opened yet (Plan B, Phase 4).
+  bool get isScheduled => this == scheduled;
+}
+
+/// The 4 PTE sections a host picks from to generate an exam (Plan B) — the
+/// backend randomly draws the question set for these skills from the bank.
+enum ExamSkill {
+  speaking,
+  writing,
+  reading,
+  listening;
+
+  String get wireName => name.toUpperCase();
 }
 
 class CreateSessionInput {
-  const CreateSessionInput({
+  CreateSessionInput({
     required this.name,
-    required this.snapshotPublicId,
+    required Set<ExamSkill> skills,
     required this.opensAt,
     required this.closesAt,
-  });
+  }) : skills = Set.unmodifiable(skills);
 
   final String name;
-  final String snapshotPublicId;
+  final Set<ExamSkill> skills;
   final DateTime opensAt;
   final DateTime closesAt;
 
   CreateSessionInput normalized({required DateTime now}) {
     final normalizedName = name.trim();
-    final normalizedSnapshotId = snapshotPublicId.trim();
-    if (normalizedName.isEmpty || normalizedSnapshotId.isEmpty) {
+    if (normalizedName.isEmpty || skills.isEmpty || skills.length > 4) {
       throw const SchedulingValidationException(
-        'Session name and snapshot ID are required.',
+        'Session name and 1 to 4 skills are required.',
       );
     }
     if (!opensAt.isAfter(now) || !closesAt.isAfter(opensAt)) {
@@ -49,79 +61,15 @@ class CreateSessionInput {
     }
     return CreateSessionInput(
       name: normalizedName,
-      snapshotPublicId: normalizedSnapshotId,
+      skills: skills,
       opensAt: opensAt.toUtc(),
       closesAt: closesAt.toUtc(),
     );
   }
 }
 
-class CompositionItemInput {
-  const CompositionItemInput({
-    required this.taskType,
-    required this.section,
-    required this.orderIndex,
-    this.timingOverrideSeconds,
-  });
-
-  final String taskType;
-  final String section;
-  final int orderIndex;
-  final int? timingOverrideSeconds;
-}
-
-class SetCompositionInput {
-  SetCompositionInput({required List<CompositionItemInput> items})
-    : items = List.unmodifiable(items);
-
-  final List<CompositionItemInput> items;
-
-  SetCompositionInput normalized() {
-    if (items.isEmpty) {
-      throw const SchedulingValidationException(
-        'Composition needs at least one task type.',
-      );
-    }
-    final taskTypes = items.map((item) => item.taskType.trim()).toSet();
-    if (taskTypes.length != items.length) {
-      throw const SchedulingValidationException(
-        'A task type can appear only once in a composition.',
-      );
-    }
-    for (var index = 0; index < items.length; index++) {
-      final item = items[index];
-      final invalidTiming =
-          item.timingOverrideSeconds != null &&
-          item.timingOverrideSeconds! <= 0;
-      if (item.taskType.trim().isEmpty ||
-          item.section.trim().isEmpty ||
-          item.orderIndex != index ||
-          invalidTiming) {
-        throw const SchedulingValidationException(
-          'Composition items must be complete and contiguously ordered.',
-        );
-      }
-    }
-    return SetCompositionInput(items: items);
-  }
-}
-
-class SessionCompositionItem {
-  const SessionCompositionItem({
-    required this.taskType,
-    required this.section,
-    required this.orderIndex,
-    this.timingOverrideSeconds,
-  });
-
-  final String taskType;
-  final String section;
-  final int orderIndex;
-  final int? timingOverrideSeconds;
-}
-
 class ExamSession {
-  ExamSession({
+  const ExamSession({
     required this.publicId,
     required this.name,
     required this.tenantId,
@@ -129,8 +77,7 @@ class ExamSession {
     required this.opensAt,
     required this.closesAt,
     required this.status,
-    required List<SessionCompositionItem> composition,
-  }) : composition = List.unmodifiable(composition);
+  });
 
   final String publicId;
   final String name;
@@ -139,17 +86,16 @@ class ExamSession {
   final DateTime opensAt;
   final DateTime closesAt;
   final SessionStatus status;
-  final List<SessionCompositionItem> composition;
 }
 
-class SnapshotTaskOption {
-  const SnapshotTaskOption({
-    required this.taskType,
-    required this.section,
-    required this.title,
-  });
+/// A Class (from `enrollment`, referenced by `publicId`) assigned to a
+/// session — matches the backend's `SessionClassAssignmentResponse`
+/// exactly. `pte-app` has no Class-browsing screen of its own (unlike
+/// `tenant-web`), so the host enters the target `classPublicId` directly,
+/// same input style as the pre-existing session/snapshot ID fields.
+class AssignedClass {
+  const AssignedClass({required this.sessionPublicId, required this.classPublicId});
 
-  final String taskType;
-  final String section;
-  final String title;
+  final String sessionPublicId;
+  final String classPublicId;
 }

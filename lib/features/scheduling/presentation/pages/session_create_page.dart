@@ -18,15 +18,14 @@ class SessionCreatePage extends StatefulWidget {
 
 class _SessionCreatePageState extends State<SessionCreatePage> {
   final _nameController = TextEditingController();
-  final _snapshotController = TextEditingController();
   final _opensController = TextEditingController();
   final _closesController = TextEditingController();
+  final Set<ExamSkill> _selectedSkills = {};
   String? _localError;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _snapshotController.dispose();
     _opensController.dispose();
     _closesController.dispose();
     super.dispose();
@@ -50,11 +49,25 @@ class _SessionCreatePageState extends State<SessionCreatePage> {
               controller: _nameController,
               label: AppStrings.sessionNameLabel,
             ),
-            _field(
-              key: const ValueKey('snapshot-id'),
-              controller: _snapshotController,
-              label: AppStrings.snapshotIdLabel,
+            Text(
+              AppStrings.examSkillsLabel,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
+            const Text(AppStrings.examSkillsHint),
+            for (final skill in ExamSkill.values)
+              CheckboxListTile(
+                key: ValueKey('skill-${skill.wireName}'),
+                value: _selectedSkills.contains(skill),
+                title: Text(_skillLabel(skill)),
+                onChanged: (selected) => setState(() {
+                  if (selected ?? false) {
+                    _selectedSkills.add(skill);
+                  } else {
+                    _selectedSkills.remove(skill);
+                  }
+                }),
+              ),
+            const SizedBox(height: AppDimensions.spacingMedium),
             _field(
               key: const ValueKey('opens-at'),
               controller: _opensController,
@@ -84,6 +97,13 @@ class _SessionCreatePageState extends State<SessionCreatePage> {
       ),
     );
   }
+
+  String _skillLabel(ExamSkill skill) => switch (skill) {
+    ExamSkill.speaking => AppStrings.examSkillSpeaking,
+    ExamSkill.writing => AppStrings.examSkillWriting,
+    ExamSkill.reading => AppStrings.examSkillReading,
+    ExamSkill.listening => AppStrings.examSkillListening,
+  };
 
   Widget _field({
     required Key key,
@@ -117,7 +137,7 @@ class _SessionCreatePageState extends State<SessionCreatePage> {
       SessionCreateSubmitted(
         CreateSessionInput(
           name: _nameController.text,
-          snapshotPublicId: _snapshotController.text,
+          skills: _selectedSkills,
           opensAt: opensAt,
           closesAt: closesAt,
         ),

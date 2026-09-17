@@ -102,17 +102,21 @@ class _ReportReadyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final overall = report.overall;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(ReportStrings.reportOverallSectionTitle, style: Theme.of(context).textTheme.titleMedium),
-        SkillScoreRow(skillScore: report.overall),
-        const SizedBox(height: AppDimensions.spacingMedium),
+        // `overall == null` means "not applicable" (FR-20: fewer than 4
+        // skills tested) — the whole section is hidden, not just the score,
+        // distinct from a present SkillScoreResponse with
+        // sufficientData:false ("insufficient data" still renders).
+        if (overall != null) ...[
+          Text(ReportStrings.reportOverallSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+          SkillScoreRow(skillScore: overall),
+          const SizedBox(height: AppDimensions.spacingMedium),
+        ],
         Text(ReportStrings.reportCommunicativeSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
         for (final skill in report.communicativeSkills) SkillScoreRow(skillScore: skill),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        Text(ReportStrings.reportEnablingSkillsSectionTitle, style: Theme.of(context).textTheme.titleMedium),
-        for (final skill in report.enablingSkills) SkillScoreRow(skillScore: skill),
       ],
     );
   }

@@ -20,7 +20,6 @@ void main() {
     'opensAt': '2026-07-29T08:00:00Z',
     'closesAt': '2026-07-29T10:00:00Z',
     'status': 'SCHEDULED',
-    'composition': <Map<String, dynamic>>[],
   };
 
   setUp(() {
@@ -40,9 +39,7 @@ void main() {
         ),
       );
       when(
-        () => apiClient.get<Map<String, dynamic>>(
-          '/api/scheduling/sessions/session-1',
-        ),
+        () => apiClient.get<Map<String, dynamic>>('/api/scheduling/sessions/session-1'),
       ).thenAnswer(
         (_) async => Response(
           requestOptions: RequestOptions(path: ''),
@@ -71,7 +68,7 @@ void main() {
       await repository.createSession(
         CreateSessionInput(
           name: 'Mock exam',
-          snapshotPublicId: 'snap-1',
+          skills: {ExamSkill.speaking, ExamSkill.writing},
           opensAt: DateTime.parse('2026-07-29T08:00:00Z'),
           closesAt: DateTime.parse('2026-07-29T10:00:00Z'),
         ),
@@ -79,98 +76,76 @@ void main() {
 
       expect(payload, {
         'name': 'Mock exam',
-        'snapshotPublicId': 'snap-1',
+        'skills': ['SPEAKING', 'WRITING'],
         'opensAt': '2026-07-29T08:00:00.000Z',
         'closesAt': '2026-07-29T10:00:00.000Z',
       });
     },
   );
 
-  test(
-    'composition and lifecycle mutations use exact methods and paths',
-    () async {
-      Object? compositionPayload;
+  test('lifecycle mutations use exact methods and paths', () async {
+    for (final action in ['open', 'close']) {
       when(
-        () => apiClient.put<Map<String, dynamic>>(
-          '/api/scheduling/sessions/session-1/composition',
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer((invocation) async {
-        compositionPayload = invocation.namedArguments[#data];
-        return Response(
-          requestOptions: RequestOptions(path: ''),
-          data: sessionJson,
-        );
-      });
-      for (final action in ['open', 'close']) {
-        when(
-          () => apiClient.post<Map<String, dynamic>>(
-            '/api/scheduling/sessions/session-1/$action',
-          ),
-        ).thenAnswer(
-          (_) async => Response(
-            requestOptions: RequestOptions(path: ''),
-            data: sessionJson,
-          ),
-        );
-      }
-
-      await repository.setComposition(
-        'session-1',
-        SetCompositionInput(
-          items: const [
-            CompositionItemInput(
-              taskType: 'READ_ALOUD',
-              section: 'SPEAKING',
-              orderIndex: 0,
-              timingOverrideSeconds: 60,
-            ),
-          ],
-        ),
-      );
-      await repository.openSession('session-1');
-      await repository.closeSession('session-1');
-
-      expect(compositionPayload, {
-        'items': [
-          {
-            'taskType': 'READ_ALOUD',
-            'section': 'SPEAKING',
-            'orderIndex': 0,
-            'timingOverrideSeconds': 60,
-          },
-        ],
-      });
-    },
-  );
-
-  test(
-    'snapshot options are read without importing authoring models',
-    () async {
-      when(
-        () => apiClient.get<Map<String, dynamic>>(
-          '/api/authoring/snapshots/snap-1',
+        () => apiClient.post<Map<String, dynamic>>(
+          '/api/scheduling/sessions/session-1/$action',
         ),
       ).thenAnswer(
         (_) async => Response(
           requestOptions: RequestOptions(path: ''),
-          data: {
-            'items': [
-              {
-                'taskType': 'READ_ALOUD',
-                'section': 'SPEAKING',
-                'title': 'Read this aloud',
-                'orderIndex': 0,
-              },
-            ],
-          },
+          data: sessionJson,
         ),
       );
+    }
 
-      final options = await repository.loadSnapshotOptions('snap-1');
+    await repository.openSession('session-1');
+    await repository.closeSession('session-1');
+  });
 
-      expect(options.single.taskType, 'READ_ALOUD');
-      expect(options.single.section, 'SPEAKING');
+  test(
+    'assign/unassign/list Class use exact /sessions/{id}/classes contracts',
+    () async {
+      final assignmentJson = <String, dynamic>{
+        'sessionPublicId': 'session-1',
+        'classPublicId': 'class-1',
+      };
+      when(
+        () => apiClient.get<List<dynamic>>('/api/scheduling/sessions/session-1/classes'),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ''),
+          data: [assignmentJson],
+        ),
+      );
+      Object? assignPayload;
+      when(
+        () => apiClient.post<Map<String, dynamic>>(
+          '/api/scheduling/sessions/session-1/classes',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((invocation) async {
+        assignPayload = invocation.namedArguments[#data];
+        return Response(
+          requestOptions: RequestOptions(path: ''),
+          data: assignmentJson,
+        );
+      });
+      when(
+        () => apiClient.delete<void>('/api/scheduling/sessions/session-1/classes/class-1'),
+      ).thenAnswer(
+        (_) async => Response(requestOptions: RequestOptions(path: '')),
+      );
+
+      final assigned = await repository.loadAssignedClasses('session-1');
+      expect(assigned.single.classPublicId, 'class-1');
+
+      final assignment = await repository.assignClass('session-1', 'class-1');
+      expect(assignment.classPublicId, 'class-1');
+      expect(assignPayload, {'classPublicId': 'class-1'});
+
+      await repository.unassignClass('session-1', 'class-1');
+      verify(
+        () => apiClient.delete<void>('/api/scheduling/sessions/session-1/classes/class-1'),
+      ).called(1);
     },
   );
 }
