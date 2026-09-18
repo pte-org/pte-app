@@ -1,5 +1,3 @@
-import '../../domain/session_types.dart';
-
 sealed class SessionDetailEvent {
   const SessionDetailEvent();
 }
@@ -9,15 +7,20 @@ final class SessionDetailRequested extends SessionDetailEvent {
   final String publicId;
 }
 
-final class SessionCompositionSubmitted extends SessionDetailEvent {
-  const SessionCompositionSubmitted(this.input);
-  final SetCompositionInput input;
-}
-
 final class SessionOpenRequested extends SessionDetailEvent {
   const SessionOpenRequested();
 }
 
 final class SessionCloseRequested extends SessionDetailEvent {
   const SessionCloseRequested();
+}
+
+final class ClassAssignRequested extends SessionDetailEvent {
+  const ClassAssignRequested(this.classPublicId);
+  final String classPublicId;
+}
+
+final class ClassUnassignRequested extends SessionDetailEvent {
+  const ClassUnassignRequested(this.classPublicId);
+  final String classPublicId;
 }

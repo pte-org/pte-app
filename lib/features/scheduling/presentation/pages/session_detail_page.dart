@@ -5,12 +5,10 @@ import 'package:get_it/get_it.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/loading_view.dart';
-import '../../../../core/widgets/primary_button.dart';
 import '../../../host_users/domain/usecases/load_host_users.dart';
 import '../../../host_audit/presentation/pages/violation_audit_page.dart';
 import '../../../live_proctor/presentation/pages/live_proctor_page.dart';
 import '../../../scoring_review/presentation/pages/session_scoring_page.dart';
-import '../../domain/session_types.dart';
 import '../bloc/session_detail_bloc.dart';
 import '../bloc/participant_command_bloc.dart';
 import '../bloc/session_detail_event.dart';
@@ -64,30 +62,19 @@ class _SessionDetailBody extends StatefulWidget {
 }
 
 class _SessionDetailBodyState extends State<_SessionDetailBody> {
-  late Set<String> _selected;
+  final _classPublicIdController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _selected = widget.data.session.composition
-        .map((item) => item.taskType)
-        .toSet();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SessionDetailBody oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.data.session.composition != widget.data.session.composition) {
-      _selected = widget.data.session.composition
-          .map((item) => item.taskType)
-          .toSet();
-    }
+  void dispose() {
+    _classPublicIdController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final session = widget.data.session;
     final busy = widget.data is SessionDetailTransitioning;
+    final canModifyClasses = session.status.isScheduled;
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.spacingMedium),
       children: [
@@ -101,39 +88,50 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
         Text(
-          AppStrings.compositionTitle,
+          AppStrings.assignedClassesTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        const Text(AppStrings.compositionHint),
-        if (widget.data.options.isEmpty)
-          const Text(AppStrings.compositionEmpty)
+        if (!canModifyClasses) const Text(AppStrings.classAssignmentLocked),
+        if (widget.data.assignedClasses.isEmpty)
+          const Text(AppStrings.assignedClassesEmpty)
         else
-          for (final option in widget.data.options)
-            CheckboxListTile(
-              value: _selected.contains(option.taskType),
-              title: Text(option.title),
-              subtitle: Text('${option.taskType} · ${option.section}'),
-              onChanged: busy
-                  ? null
-                  : (selected) => setState(() {
-                      if (selected ?? false) {
-                        _selected.add(option.taskType);
-                      } else {
-                        _selected.remove(option.taskType);
-                      }
-                    }),
+          for (final assignedClass in widget.data.assignedClasses)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(assignedClass.classPublicId),
+              trailing: canModifyClasses
+                  ? IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: busy
+                          ? null
+                          : () => _unassignClass(assignedClass.classPublicId),
+                    )
+                  : null,
             ),
+        if (canModifyClasses)
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('class-public-id'),
+                  controller: _classPublicIdController,
+                  decoration: const InputDecoration(
+                    labelText: AppStrings.classPublicIdLabel,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.spacingSm),
+              ElevatedButton(
+                onPressed: busy ? null : _assignClass,
+                child: const Text(AppStrings.assignClass),
+              ),
+            ],
+          ),
         if (widget.data is SessionDetailConflict)
           const Text(AppStrings.sessionConflict),
-        if (widget.data is SessionDetailInvalid)
-          Text((widget.data as SessionDetailInvalid).message),
         if (widget.mutationFailed)
           const Text(AppStrings.sessionMutationFailure),
-        PrimaryButton(
-          label: AppStrings.saveComposition,
-          isLoading: busy,
-          onPressed: widget.data.options.isEmpty ? null : _saveComposition,
-        ),
+        const SizedBox(height: AppDimensions.spacingMedium),
         if (session.status.canOpen)
           ElevatedButton(
             onPressed: busy ? null : () => _confirmLifecycle(open: true),
@@ -166,23 +164,16 @@ class _SessionDetailBodyState extends State<_SessionDetailBody> {
     );
   }
 
-  void _saveComposition() {
-    final selectedOptions = widget.data.options
-        .where((option) => _selected.contains(option.taskType))
-        .toList(growable: false);
+  void _assignClass() {
+    final classPublicId = _classPublicIdController.text.trim();
+    if (classPublicId.isEmpty) return;
+    context.read<SessionDetailBloc>().add(ClassAssignRequested(classPublicId));
+    _classPublicIdController.clear();
+  }
+
+  void _unassignClass(String classPublicId) {
     context.read<SessionDetailBloc>().add(
-      SessionCompositionSubmitted(
-        SetCompositionInput(
-          items: [
-            for (var index = 0; index < selectedOptions.length; index++)
-              CompositionItemInput(
-                taskType: selectedOptions[index].taskType,
-                section: selectedOptions[index].section,
-                orderIndex: index,
-              ),
-          ],
-        ),
-      ),
+      ClassUnassignRequested(classPublicId),
     );
   }
 

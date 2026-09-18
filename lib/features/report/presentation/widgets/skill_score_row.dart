@@ -5,8 +5,8 @@ import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/features/report/domain/report_response.dart';
 import 'package:pte_app/features/report/constants/report_strings.dart';
 
-/// Shared by both `communicativeSkills` and `enablingSkills` sections
-/// (phase-08 Design Constraints) — one implementation, not two
+/// Shared by both the Overall row and every `communicativeSkills` entry
+/// (phase-08 Design Constraints) — one implementation, not several
 /// near-duplicates. `sufficientData` is checked directly, never `score`'s
 /// nullness, and a present `score` alongside `sufficientData: false` still
 /// renders "insufficient data" (phase-08 Design Constraints, Step 9's

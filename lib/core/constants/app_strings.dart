@@ -36,56 +36,12 @@ class AppStrings {
   static const String logout = 'Log out';
   static const String studentWorkspacePlaceholder = 'PTE Student';
 
-  static const String questionsTitle = 'Question bank';
-  static const String questionsEmpty = 'No accessible questions yet.';
-  static const String questionsLoadFailure = 'Questions could not be loaded.';
   static const String retry = 'Retry';
-  static const String createQuestion = 'Create question';
-  static const String createQuestionTitle = 'Create MC Reading Single';
-  static const String questionTitleLabel = 'Question title';
-  static const String questionPromptLabel = 'Prompt';
-  static const String questionOptionLabel = 'Option';
-  static const String correctOptionLabel = 'Correct answer';
-  static const String addOption = 'Add option';
-  static const String removeOption = 'Remove option';
-  static const String createQuestionSubmit = 'Create';
-  static const String authoringFieldRequired = 'This field is required';
-  static const String authoringValidationFailure =
-      'Enter a title, prompt, at least two options, and select exactly one correct answer.';
-  static const String createQuestionFailure =
-      'Question could not be created. Try again.';
-  static const String selectQuestionType = 'Select question type';
-  static const String mcReadingSingleLabel = 'MC Reading Single';
-  static const String readAloudLabel = 'Read Aloud';
-  static const String writeEssayLabel = 'Write Essay';
-  static const String createReadAloudTitle = 'Create Read Aloud';
-  static const String createWriteEssayTitle = 'Create Write Essay';
-  static const String referenceAnswerLabel = 'Reference answer';
-  static const String minWordCountLabel = 'Minimum word count';
-  static const String maxWordCountLabel = 'Maximum word count';
-  static const String wordCountInvalid =
-      'Use positive word counts with minimum not greater than maximum';
-  static const String blueprintsTitle = 'Exam blueprints';
-  static const String blueprintsEmpty = 'No blueprints yet.';
-  static const String blueprintsLoadFailure = 'Blueprints could not be loaded.';
-  static const String createBlueprint = 'Create blueprint';
-  static const String blueprintNameLabel = 'Blueprint name';
-  static const String blueprintQuestionsLabel = 'Select questions in order';
-  static const String blueprintValidationFailure =
-      'Enter a name and select at least one question.';
-  static const String blueprintCreateFailure =
-      'Blueprint could not be created. Try again.';
-  static const String blueprintDetailTitle = 'Blueprint detail';
-  static const String publishBlueprint = 'Publish snapshot';
-  static const String publishConfirmationTitle = 'Publish immutable snapshot?';
-  static const String publishConfirmationBody =
-      'The snapshot is read-only. Create a new blueprint for later changes.';
   static const String cancel = 'Cancel';
-  static const String publish = 'Publish';
-  static const String publishFailure = 'Snapshot could not be published.';
-  static const String snapshotTitle = 'Immutable snapshot';
-  static const String snapshotVersion = 'Version';
-  static const String snapshotSource = 'Source blueprint';
+  // `edit`/`delete` are otherwise unused (their one caller, the old
+  // question-authoring module, was deleted in Plan B Phase 8) but stay
+  // defined: host_audit's own widget tests assert these labels are absent
+  // from its pages.
   static const String edit = 'Edit';
   static const String delete = 'Delete';
   static const String sessionsTitle = 'Exam sessions';
@@ -94,25 +50,30 @@ class AppStrings {
   static const String createSession = 'Create session';
   static const String createSessionTitle = 'Schedule exam session';
   static const String sessionNameLabel = 'Session name';
-  static const String snapshotIdLabel = 'Published snapshot ID';
+  static const String examSkillsLabel = 'Skills';
+  static const String examSkillsHint =
+      'The system randomly generates the exam from the question bank for the skills you pick (1 to 4).';
+  static const String examSkillSpeaking = 'Speaking';
+  static const String examSkillWriting = 'Writing';
+  static const String examSkillReading = 'Reading';
+  static const String examSkillListening = 'Listening';
   static const String opensAtLabel = 'Opens at (ISO-8601)';
   static const String closesAtLabel = 'Closes at (ISO-8601)';
   static const String sessionWindowHint = 'Example: 2026-07-29T08:00:00Z';
   static const String sessionValidationFailure =
-      'Enter a name, snapshot ID, and a valid future session window.';
+      'Enter a name, select 1 to 4 skills, and a valid future session window.';
   static const String sessionCreateFailure =
       'Session could not be created. Try again.';
   static const String sessionDetailTitle = 'Session detail';
   static const String sessionStatusLabel = 'Status';
   static const String sessionSnapshotLabel = 'Snapshot';
   static const String sessionWindowLabel = 'Availability';
-  static const String compositionTitle = 'Task composition';
-  static const String compositionHint =
-      'Select all task types for a full mock, or a subset for practice.';
-  static const String compositionEmpty = 'This snapshot has no task types.';
-  static const String saveComposition = 'Save composition';
-  static const String compositionValidationFailure =
-      'Select at least one task type.';
+  static const String assignedClassesTitle = 'Assigned Classes';
+  static const String assignedClassesEmpty = 'No Classes assigned yet.';
+  static const String classAssignmentLocked =
+      'Classes can only be assigned or unassigned while this exam is Scheduled.';
+  static const String classPublicIdLabel = 'Class public ID';
+  static const String assignClass = 'Assign Class';
   static const String openSession = 'Open session';
   static const String closeSession = 'Close session';
   static const String sessionTransitionConfirmation = 'Confirm session action?';
@@ -231,7 +192,6 @@ class AppStrings {
   static const String reportOverallSectionTitle = 'Overall';
   static const String reportCommunicativeSkillsSectionTitle =
       'Communicative skills';
-  static const String reportEnablingSkillsSectionTitle = 'Enabling skills';
   static const String reportInsufficientDataLabel = 'Insufficient data';
 
   static const String readingHeaderTitleMcSingle =
