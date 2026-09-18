@@ -1,4 +1,4 @@
-/// `POST /api/media/objects` response — a fresh presigned upload target.
+/// `POST /api/v1/objects` response — a fresh presigned upload target.
 /// Re-requested (never cached across a retry-after-expiry) whenever the
 /// coordinator needs a new one (phase-06 Design Constraints).
 class MediaPresignResponse {

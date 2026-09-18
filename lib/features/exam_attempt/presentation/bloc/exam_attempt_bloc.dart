@@ -34,14 +34,14 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required MediaUploadCoordinator mediaUploadCoordinator,
     required LockdownService lockdownService,
     required HeartbeatService heartbeatService,
-  })  : _repository = repository,
-        _sessionEntryRepository = sessionEntryRepository,
-        _syncEngine = syncEngine,
-        _timerService = timerService,
-        _mediaUploadCoordinator = mediaUploadCoordinator,
-        _lockdownService = lockdownService,
-        _heartbeatService = heartbeatService,
-        super(const AttemptIdle()) {
+  }) : _repository = repository,
+       _sessionEntryRepository = sessionEntryRepository,
+       _syncEngine = syncEngine,
+       _timerService = timerService,
+       _mediaUploadCoordinator = mediaUploadCoordinator,
+       _lockdownService = lockdownService,
+       _heartbeatService = heartbeatService,
+       super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
     on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
@@ -50,7 +50,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     on<ForceSubmitRequested>(_onForceSubmitRequested);
     on<DevPreviewAttemptSeeded>(_onDevPreviewAttemptSeeded);
     on<AppResumed>(_onAppResumed);
-    _timerTicksSubscription = _timerService.ticks.listen((snapshot) => add(TimerSnapshotUpdated(snapshot)));
+    _timerTicksSubscription = _timerService.ticks.listen(
+      (snapshot) => add(TimerSnapshotUpdated(snapshot)),
+    );
     _taskAdvancedSubscription = _timerService.taskAdvancedExternally.listen(
       (_) => add(const TimerTaskAdvancedExternally()),
     );
@@ -100,9 +102,17 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) async {
     emit(const AttemptStarting());
+    String? sessionPublicId;
     try {
-      final sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId(event.rawInput);
-      final response = await _repository.startOrResumeAttempt(sessionPublicId);
+      sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId(
+        event.rawInput,
+      );
+      final response = event.deviceCheckConfirmed
+          ? await _repository.startOrResumeAttempt(
+              sessionPublicId,
+              deviceCheckConfirmed: true,
+            )
+          : await _repository.startOrResumeAttempt(sessionPublicId);
       // Guarded by `response.task != null` too, not just `!completed` —
       // a contract-violating completed:false/task:null response must
       // never arm SyncEngine, or it's left running for an attempt that
@@ -123,7 +133,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         // or periodic tick (phase-03 Design Constraints). startSync alone
         // only arms future triggers; flushNow is what makes the attempt
         // actually immediate.
-        _syncEngine.startSync(response.attemptPublicId, encryptionPublicKey: response.encryptionPublicKey);
+        _syncEngine.startSync(
+          response.attemptPublicId,
+          encryptionPublicKey: response.encryptionPublicKey,
+        );
         await _syncEngine.flushNow(response.attemptPublicId);
       }
       await _emitFromResponse(response, emit);
@@ -138,7 +151,14 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // response — must still reach AttemptError; otherwise the bloc is
       // stranded in AttemptStarting forever (QUAL-301, Phase 3 quality
       // gate, mirroring Phase 1's AuthBloc QUAL-103 fix).
-      emit(AttemptError(_asAttemptException(e)));
+      if (e is ConflictException &&
+          e.message == 'DEVICE_CHECK_REQUIRED' &&
+          !event.deviceCheckConfirmed &&
+          sessionPublicId != null) {
+        emit(DeviceCheckRequired(sessionPublicId));
+      } else {
+        emit(AttemptError(_asAttemptException(e)));
+      }
     }
   }
 
@@ -146,9 +166,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// service's [LockdownMode] enum and activates accordingly. `none` /
   /// null are silent no-ops. Anything else surfaces as a
   /// [LockdownActivationException] the caller catches.
-  Future<void> _activateLockdownForResponse(AttemptTaskResponse response) async {
+  Future<void> _activateLockdownForResponse(
+    AttemptTaskResponse response,
+  ) async {
     final wire = response.lockdownMode;
-    final mode = wire == null ? LockdownMode.none : LockdownMode.fromString(wire);
+    final mode = wire == null
+        ? LockdownMode.none
+        : LockdownMode.fromString(wire);
     if (mode == LockdownMode.none) return;
     await _lockdownService.activateLockdown(
       mode: mode,
@@ -156,7 +180,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
   }
 
-  Future<void> _onNextTaskRequested(NextTaskRequested event, Emitter<ExamAttemptState> emit) async {
+  Future<void> _onNextTaskRequested(
+    NextTaskRequested event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null) return;
     _lastAdvanceReason = event.reason;
@@ -168,7 +195,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     }
   }
 
-  Exception _asAttemptException(Object error) => error is Exception ? error : UnknownApiException(error.toString());
+  Exception _asAttemptException(Object error) =>
+      error is Exception ? error : UnknownApiException(error.toString());
 
   /// Also wires the whole-attempt local countdown reaching zero to the same
   /// force-submit path a manual tap uses (client-side-exam-timer Phase 4,
@@ -179,12 +207,22 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// subsequent zero tick — also correctly never fires at all for an
   /// attempt predating `examEndTime` (its `examRemaining` is always zero
   /// from the very first tick, so this transition never happens).
-  void _onTimerSnapshotUpdated(TimerSnapshotUpdated event, Emitter<ExamAttemptState> emit) {
+  void _onTimerSnapshotUpdated(
+    TimerSnapshotUpdated event,
+    Emitter<ExamAttemptState> emit,
+  ) {
     final currentState = state;
     if (currentState is! AttemptInProgress) return;
     final examJustExpired =
-        event.snapshot.examRemaining == Duration.zero && currentState.timerSnapshot.examRemaining > Duration.zero;
-    emit(AttemptInProgress(currentState.attemptPublicId, currentState.task, event.snapshot));
+        event.snapshot.examRemaining == Duration.zero &&
+        currentState.timerSnapshot.examRemaining > Duration.zero;
+    emit(
+      AttemptInProgress(
+        currentState.attemptPublicId,
+        currentState.task,
+        event.snapshot,
+      ),
+    );
     if (examJustExpired) {
       add(const ForceSubmitRequested());
     }
@@ -212,7 +250,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     return _onNextTaskRequested(const NextTaskRequested(), emit);
   }
 
-  Future<void> _onForceSubmitRequested(ForceSubmitRequested event, Emitter<ExamAttemptState> emit) async {
+  Future<void> _onForceSubmitRequested(
+    ForceSubmitRequested event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null || _forceSubmitInFlight) return;
     _forceSubmitInFlight = true;
@@ -247,7 +288,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// ([_emitFromResponse]) and [_onForceSubmitRequested] — kept as one
   /// place so the two paths can't drift out of sync (phase-07 Design
   /// Constraints: force-submit must reach the identical terminal state).
-  Future<void> _completeAttempt(String attemptPublicId, Emitter<ExamAttemptState> emit) async {
+  Future<void> _completeAttempt(
+    String attemptPublicId,
+    Emitter<ExamAttemptState> emit,
+  ) async {
     _attemptPublicId = null;
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
@@ -271,7 +315,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     emit(AttemptCompleted(attemptPublicId, timeExpired: timeExpired));
   }
 
-  Future<void> _emitFromResponse(AttemptTaskResponse response, Emitter<ExamAttemptState> emit) async {
+  Future<void> _emitFromResponse(
+    AttemptTaskResponse response,
+    Emitter<ExamAttemptState> emit,
+  ) async {
     if (response.completed) {
       await _completeAttempt(response.attemptPublicId, emit);
       return;
@@ -281,7 +328,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     if (task == null) {
       // Contract violation (completed:false with no task) — surfaced as
       // an error rather than crash-dereferencing a null task.
-      emit(const AttemptError(UnknownApiException('Attempt response missing task while not completed.')));
+      emit(
+        const AttemptError(
+          UnknownApiException(
+            'Attempt response missing task while not completed.',
+          ),
+        ),
+      );
       return;
     }
 
@@ -302,7 +355,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // but HeartbeatService.start is itself idempotent for the same attempt
     // (its own doc comment), so this never restarts the cadence per task.
     _heartbeatService.start(response.attemptPublicId);
-    emit(AttemptInProgress(response.attemptPublicId, task, _timerService.currentSnapshot));
+    emit(
+      AttemptInProgress(
+        response.attemptPublicId,
+        task,
+        _timerService.currentSnapshot,
+      ),
+    );
   }
 
   /// `kDebugMode`-only path (see [DevPreviewAttemptSeeded]'s doc) — same
@@ -312,7 +371,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// (client-side-exam-timer Phase 3): `TimerService` no longer makes any
   /// network call — `startPolling` just arms the local tick/phase-transition
   /// timers against whatever `seedFromTask` already computed.
-  void _onDevPreviewAttemptSeeded(DevPreviewAttemptSeeded event, Emitter<ExamAttemptState> emit) {
+  void _onDevPreviewAttemptSeeded(
+    DevPreviewAttemptSeeded event,
+    Emitter<ExamAttemptState> emit,
+  ) {
     const attemptPublicId = 'dev-preview-attempt';
     _attemptPublicId = attemptPublicId;
     _syncEngine.setActiveTask(event.task.pinnedItemPublicId);
@@ -323,7 +385,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // a fake, backend-less fixture id (code review finding: pinging the real
     // endpoint every 15s for an attempt that doesn't exist just produces
     // recurring warning-log noise during dev preview, with no upside).
-    emit(AttemptInProgress(attemptPublicId, event.task, _timerService.currentSnapshot));
+    emit(
+      AttemptInProgress(
+        attemptPublicId,
+        event.task,
+        _timerService.currentSnapshot,
+      ),
+    );
   }
 
   @override

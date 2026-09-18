@@ -17,9 +17,17 @@ enum AdvanceReason { manual, timeExpired }
 /// (raw manual text today; a deep-link URI or a picked list item's ID
 /// later) — this event only carries it through untouched.
 final class SessionResolutionRequested extends ExamAttemptEvent {
-  const SessionResolutionRequested({required this.rawInput});
+  const SessionResolutionRequested({
+    required this.rawInput,
+    this.deviceCheckConfirmed = false,
+  });
 
   final String rawInput;
+
+  /// True only after the real pre-exam microphone and sound check has been
+  /// completed. The first request stays false so the server remains the
+  /// authority on whether a session requires that check.
+  final bool deviceCheckConfirmed;
 }
 
 /// Advances to the next task for the currently running attempt. A no-op
@@ -36,7 +44,8 @@ final class NextTaskRequested extends ExamAttemptEvent {
   // `const NextTaskRequested()` literal with the same reason — mocktail's
   // `verify` and bloc_test's `expectLater(bloc, emits(...))` both rely on `==`.
   @override
-  bool operator ==(Object other) => other is NextTaskRequested && other.reason == reason;
+  bool operator ==(Object other) =>
+      other is NextTaskRequested && other.reason == reason;
 
   @override
   int get hashCode => reason.hashCode;

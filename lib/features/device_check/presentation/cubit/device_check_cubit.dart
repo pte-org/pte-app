@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/device_check/constants/device_check_strings.dart';
 import 'package:pte_app/features/device_check/domain/device_check_audio_player.dart';
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_state.dart';
 
@@ -68,10 +69,24 @@ class DeviceCheckCubit extends Cubit<DeviceCheckState> {
       final path = await _resolveRecordingFilePath();
       await _recorder.start(path);
       emit(_withMic(phase: MicCheckPhase.recording, confirmed: null));
+    } on AudioInputUnavailableException {
+      emit(
+        _withMic(
+          phase: MicCheckPhase.idle,
+          confirmed: null,
+          error: DeviceCheckStrings.microphoneUnavailableMessage,
+        ),
+      );
     } catch (_) {
       // Mic permission denied or similar — stay in idle rather than
       // getting stuck showing "recording" with no way back.
-      emit(_withMic(phase: MicCheckPhase.idle, confirmed: null));
+      emit(
+        _withMic(
+          phase: MicCheckPhase.idle,
+          confirmed: null,
+          error: DeviceCheckStrings.microphoneCheckFailedMessage,
+        ),
+      );
     }
   }
 
@@ -151,10 +166,12 @@ class DeviceCheckCubit extends Cubit<DeviceCheckState> {
   DeviceCheckState _withMic({
     required MicCheckPhase phase,
     required bool? confirmed,
+    String? error,
   }) {
     return DeviceCheckState(
       micPhase: phase,
       micConfirmedHeardClearly: confirmed,
+      micErrorMessage: error,
       soundPhase: state.soundPhase,
       soundConfirmedHeardClearly: state.soundConfirmedHeardClearly,
     );

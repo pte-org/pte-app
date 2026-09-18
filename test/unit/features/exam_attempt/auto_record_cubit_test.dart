@@ -13,9 +13,11 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 
 class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 
-class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
+class _MockPendingMediaUploadDao extends Mock
+    implements PendingMediaUploadDao {}
 
-class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+class _MockMediaUploadCoordinator extends Mock
+    implements MediaUploadCoordinator {}
 
 // AutoRecordCubit is shared by every auto-record speaking task's screen
 // (Read Aloud, Repeat Sentence, Describe Image) — nothing here is
@@ -33,7 +35,9 @@ void main() {
     recorder = _MockAudioRecorderService();
     mediaDao = _MockPendingMediaUploadDao();
     coordinator = _MockMediaUploadCoordinator();
-    when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+    when(
+      () => mediaDao.watchRow(any(), any()),
+    ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(
       () => mediaDao.upsertRecorded(
         attemptPublicId: any(named: 'attemptPublicId'),
@@ -41,7 +45,9 @@ void main() {
         localFilePath: any(named: 'localFilePath'),
       ),
     ).thenAnswer((_) async {});
-    when(() => coordinator.attemptUpload(any(), any())).thenAnswer((_) async {});
+    when(
+      () => coordinator.attemptUpload(any(), any()),
+    ).thenAnswer((_) async {});
   });
 
   AutoRecordCubit buildCubit() => AutoRecordCubit(
@@ -50,7 +56,8 @@ void main() {
     coordinator: coordinator,
     attemptPublicId: 'attempt-1',
     pinnedItemPublicId: 'item-1',
-    resolveFilePath: (attemptPublicId, pinnedItemPublicId) async => '/tmp/${attemptPublicId}_$pinnedItemPublicId.wav',
+    resolveFilePath: (attemptPublicId, pinnedItemPublicId) async =>
+        '/tmp/${attemptPublicId}_$pinnedItemPublicId.wav',
   );
 
   group('AutoRecordCubit — recording phase transitions', () {
@@ -59,15 +66,33 @@ void main() {
       setUp: () => when(() => recorder.start(any())).thenAnswer((_) async {}),
       build: buildCubit,
       act: (cubit) => cubit.startRecording(),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recording)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      ],
+    );
+
+    blocTest<AutoRecordCubit, AutoRecordState>(
+      'startRecording reports an unavailable microphone instead of leaking the native error',
+      setUp: () => when(
+        () => recorder.start(any()),
+      ).thenThrow(const AudioInputUnavailableException()),
+      build: buildCubit,
+      act: (cubit) => cubit.startRecording(),
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.unavailable),
+      ],
     );
 
     blocTest<AutoRecordCubit, AutoRecordState>(
       'stopRecording with a successful file path emits recorded, upserts the DAO row, and triggers upload',
-      setUp: () => when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
+      setUp: () => when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
       build: buildCubit,
       act: (cubit) => cubit.stopRecording(),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recorded)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+      ],
       verify: (_) {
         verify(
           () => mediaDao.upsertRecorded(
@@ -76,7 +101,9 @@ void main() {
             localFilePath: '/tmp/attempt-1_item-1.wav',
           ),
         ).called(1);
-        verify(() => coordinator.attemptUpload('attempt-1', 'item-1')).called(1);
+        verify(
+          () => coordinator.attemptUpload('attempt-1', 'item-1'),
+        ).called(1);
       },
     );
 
@@ -85,7 +112,9 @@ void main() {
       setUp: () => when(() => recorder.stop()).thenAnswer((_) async => null),
       build: buildCubit,
       act: (cubit) => cubit.stopRecording(),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.idle)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.idle),
+      ],
       verify: (_) {
         verifyNever(
           () => mediaDao.upsertRecorded(
@@ -100,7 +129,9 @@ void main() {
     blocTest<AutoRecordCubit, AutoRecordState>(
       'a failed re-record (stop() returns null after an earlier successful recording) preserves the '
       'recorded phase instead of regressing to idle',
-      setUp: () => when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
+      setUp: () => when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
       build: buildCubit,
       act: (cubit) async {
         // First recording succeeds.
@@ -118,9 +149,21 @@ void main() {
   });
 
   group('AutoRecordCubit — onTimerSnapshot auto-record', () {
-    const responseSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 20), currentOrderIndex: 1);
-    const responseExpiredSnapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1);
-    const prepSnapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 5), currentOrderIndex: 1);
+    const responseSnapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 20),
+      currentOrderIndex: 1,
+    );
+    const responseExpiredSnapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration.zero,
+      currentOrderIndex: 1,
+    );
+    const prepSnapshot = TimerSnapshot(
+      phase: TimerPhase.prep,
+      remaining: Duration(seconds: 5),
+      currentOrderIndex: 1,
+    );
 
     blocTest<AutoRecordCubit, AutoRecordState>(
       'idle + response phase starts recording',
@@ -128,18 +171,25 @@ void main() {
       build: buildCubit,
       act: (cubit) => cubit.onTimerSnapshot(responseSnapshot),
       wait: const Duration(milliseconds: 1),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recording)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      ],
       verify: (_) => verify(() => recorder.start(any())).called(1),
     );
 
     blocTest<AutoRecordCubit, AutoRecordState>(
       'recording + response phase + remaining expired stops recording',
-      setUp: () => when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
-      seed: () => const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      setUp: () => when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
+      seed: () =>
+          const AutoRecordState(recordingPhase: RecordingPhase.recording),
       build: buildCubit,
       act: (cubit) => cubit.onTimerSnapshot(responseExpiredSnapshot),
       wait: const Duration(milliseconds: 1),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recorded)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+      ],
       verify: (_) => verify(() => recorder.stop()).called(1),
     );
 
@@ -157,7 +207,8 @@ void main() {
 
     blocTest<AutoRecordCubit, AutoRecordState>(
       'already recorded — repeated snapshots are a no-op, never re-stops',
-      seed: () => const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+      seed: () =>
+          const AutoRecordState(recordingPhase: RecordingPhase.recorded),
       build: buildCubit,
       act: (cubit) {
         cubit.onTimerSnapshot(responseSnapshot);
@@ -178,7 +229,9 @@ void main() {
       build: buildCubit,
       act: (cubit) => cubit.onTimerSnapshot(responseExpiredSnapshot),
       wait: const Duration(milliseconds: 1),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recording)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      ],
       verify: (_) {
         verify(() => recorder.start(any())).called(1);
         verifyNever(() => recorder.stop());
@@ -188,11 +241,18 @@ void main() {
     blocTest<AutoRecordCubit, AutoRecordState>(
       'recording + response phase + non-expired remaining on a repeated mid-recording tick is a no-op '
       '(neither starts again nor stops)',
-      seed: () => const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      seed: () =>
+          const AutoRecordState(recordingPhase: RecordingPhase.recording),
       build: buildCubit,
       act: (cubit) {
         cubit.onTimerSnapshot(responseSnapshot);
-        cubit.onTimerSnapshot(const TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 10), currentOrderIndex: 1));
+        cubit.onTimerSnapshot(
+          const TimerSnapshot(
+            phase: TimerPhase.response,
+            remaining: Duration(seconds: 10),
+            currentOrderIndex: 1,
+          ),
+        );
       },
       wait: const Duration(milliseconds: 1),
       expect: () => <AutoRecordState>[],
@@ -218,7 +278,9 @@ void main() {
         cubit.onTimerSnapshot(responseSnapshot);
       },
       wait: const Duration(milliseconds: 1),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recording)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      ],
       verify: (_) => verify(() => recorder.start(any())).called(1),
     );
 
@@ -226,8 +288,11 @@ void main() {
       'two response-expired snapshots delivered back-to-back with no await between them while already '
       'recording still only stops recording once — guards against a synchronous re-entrant double-stop '
       'before the first stopRecording() await resolves (mirrors the double-start guard above for _stopInFlight)',
-      setUp: () => when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
-      seed: () => const AutoRecordState(recordingPhase: RecordingPhase.recording),
+      setUp: () => when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav'),
+      seed: () =>
+          const AutoRecordState(recordingPhase: RecordingPhase.recording),
       build: buildCubit,
       act: (cubit) {
         // Deliberately no `await`/`wait` between these two synchronous calls
@@ -239,7 +304,9 @@ void main() {
         cubit.onTimerSnapshot(responseExpiredSnapshot);
       },
       wait: const Duration(milliseconds: 1),
-      expect: () => [const AutoRecordState(recordingPhase: RecordingPhase.recorded)],
+      expect: () => [
+        const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+      ],
       verify: (_) => verify(() => recorder.stop()).called(1),
     );
   });

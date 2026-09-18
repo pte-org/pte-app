@@ -16,6 +16,15 @@ final class AttemptStarting extends ExamAttemptState {
   const AttemptStarting();
 }
 
+/// The server requires the student's pre-exam microphone/sound check before
+/// the attempt can be created. The UI uses the carried session ID to retry
+/// the same request after both checks are confirmed.
+final class DeviceCheckRequired extends ExamAttemptState {
+  const DeviceCheckRequired(this.sessionPublicId);
+
+  final String sessionPublicId;
+}
+
 final class AttemptInProgress extends ExamAttemptState {
   const AttemptInProgress(this.attemptPublicId, this.task, this.timerSnapshot);
 

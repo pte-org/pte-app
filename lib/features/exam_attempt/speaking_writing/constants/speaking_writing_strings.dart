@@ -3,14 +3,16 @@
 class SpeakingWritingStrings {
   const SpeakingWritingStrings._();
 
-// Shared chrome labels for read-aloud / write-essay v1 (from HEAD).
+  // Shared chrome labels for read-aloud / write-essay v1 (from HEAD).
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String readAloudStartRecordingLabel = 'Start recording';
   static const String readAloudStopRecordingLabel = 'Stop recording';
   static const String readAloudRecordingIndicator = 'Recording…';
-  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
+  static const String readAloudNotRecordedYetLabel =
+      'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
-  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+  static const String readAloudUploadReadyLabel =
+      'Uploaded — ready to continue.';
 
   // Dev preview title (from origin/dev).
   static const String devSpeakingWritingPreviewTitle =
@@ -35,6 +37,8 @@ class SpeakingWritingStrings {
   static const String recordingStillUploadingLabel = 'Still uploading…';
   static const String recordingUploadReadyLabel =
       'Uploaded — ready to continue.';
+  static const String recordingMicrophoneUnavailableLabel =
+      'Microphone unavailable. Connect one before continuing.';
 
   // Describe-image instruction + image fallback labels (from origin/dev).
   static const String describeImageInstructionPrefix =

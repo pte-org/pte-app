@@ -12,28 +12,31 @@ import 'package:pte_app/features/device_check/domain/device_check_audio_player.d
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_cubit.dart';
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_state.dart';
 
-/// A standalone, non-exam screen where a candidate checks their microphone
+/// A pre-exam screen where a candidate checks their microphone
 /// (record + play back their own voice, confirm Yes/No) and separately
 /// checks their sound (play a bundled test clip, confirm Yes/No) before an
 /// exam. No timer, no `ExamScaffold`, no exam-attempt machinery — every
 /// transition is a direct response to a button tap. `kDebugMode`-gated dev
-/// entry point only for now (see `lib/app.dart`) — not wired into the real
-/// pre-exam flow (`SessionEntryPage`) yet, per explicit user decision.
+/// entry point (see `lib/app.dart`).
 ///
 /// [player] is taken as a constructor param (like [recorder]) rather than
-/// constructed internally, so widget tests can substitute a mock — the
-/// caller (`lib/app.dart`'s builder) constructs the real
-/// `DeviceCheckAudioPlayerImpl`, not GetIt-registered since this is a
-/// single-screen, dev-only feature with no second call site.
+/// constructed internally, so widget tests can substitute a mock. Callers
+/// construct the real `DeviceCheckAudioPlayerImpl`; it is not GetIt-registered
+/// because the player is a screen-scoped resource.
 class TestMicAndSoundScreen extends StatefulWidget {
   const TestMicAndSoundScreen({
     super.key,
     required this.recorder,
     required this.player,
+    this.onComplete,
   });
 
   final AudioRecorderService recorder;
   final DeviceCheckAudioPlayer player;
+
+  /// Called once after the student confirms both the microphone and sound
+  /// checks. Null for the standalone developer preview.
+  final VoidCallback? onComplete;
 
   @override
   State<TestMicAndSoundScreen> createState() => _TestMicAndSoundScreenState();
@@ -59,26 +62,143 @@ class _TestMicAndSoundScreenState extends State<TestMicAndSoundScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cubit,
-      child: Scaffold(
-        appBar: AppBar(title: const Text(DeviceCheckStrings.screenTitle)),
-        body: Padding(
-          padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-          child: BlocBuilder<DeviceCheckCubit, DeviceCheckState>(
-            builder: (context, state) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _MicSection(state: state),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  const Divider(),
-                  const SizedBox(height: AppDimensions.spacingMedium),
-                  _SoundSection(state: state),
-                ],
-              );
-            },
+      child: BlocListener<DeviceCheckCubit, DeviceCheckState>(
+        listenWhen: (previous, state) =>
+            !previous.isComplete && state.isComplete,
+        listener: (_, _) => widget.onComplete?.call(),
+        child: Scaffold(
+          appBar: AppBar(title: const Text(DeviceCheckStrings.screenTitle)),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppDimensions.spacingMedium),
+              child: BlocBuilder<DeviceCheckCubit, DeviceCheckState>(
+                builder: (context, state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _DeviceCheckHeader(state: state),
+                      const SizedBox(height: AppDimensions.spacingMedium),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(
+                            AppDimensions.spacingMedium,
+                          ),
+                          child: _MicSection(state: state),
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.spacingMedium),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(
+                            AppDimensions.spacingMedium,
+                          ),
+                          child: _SoundSection(state: state),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DeviceCheckHeader extends StatelessWidget {
+  const _DeviceCheckHeader({required this.state});
+
+  final DeviceCheckState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final completedChecks = [
+      state.micConfirmedHeardClearly == true,
+      state.soundConfirmedHeardClearly == true,
+    ].where((completed) => completed).length;
+    final progress = completedChecks / 2;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: AppColors.surfaceSubtle,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DeviceCheckStrings.screenSubtitle,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppDimensions.spacingMedium),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  DeviceCheckStrings.progressLabel,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$completedChecks/2',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.spacingSm),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: AppDimensions.spacingMedium),
+            Wrap(
+              spacing: AppDimensions.spacingMd,
+              runSpacing: AppDimensions.spacingSm,
+              children: [
+                _CheckStatus(
+                  label: DeviceCheckStrings.microphoneReadyLabel,
+                  complete: state.micConfirmedHeardClearly == true,
+                ),
+                _CheckStatus(
+                  label: DeviceCheckStrings.soundReadyLabel,
+                  complete: state.soundConfirmedHeardClearly == true,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckStatus extends StatelessWidget {
+  const _CheckStatus({required this.label, required this.complete});
+
+  final String label;
+  final bool complete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          complete ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: complete ? AppColors.success : AppColors.textMuted,
+        ),
+        const SizedBox(width: AppDimensions.spacingSm),
+        Text(
+          label,
+          style: TextStyle(
+            color: complete ? AppColors.success : AppColors.textSecondary,
+            fontWeight: complete ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -137,6 +257,13 @@ class _MicSection extends StatelessWidget {
             ),
           ],
         ),
+        if (state.micErrorMessage != null) ...[
+          const SizedBox(height: AppDimensions.spacingSm),
+          Text(
+            state.micErrorMessage!,
+            style: const TextStyle(color: AppColors.error),
+          ),
+        ],
         if (micPhase == MicCheckPhase.playedBack &&
             state.micConfirmedHeardClearly == null) ...[
           const SizedBox(height: AppDimensions.spacingMedium),

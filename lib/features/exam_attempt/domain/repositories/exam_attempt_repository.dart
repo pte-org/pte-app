@@ -9,7 +9,10 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 /// outbox DAO itself rather than asking this repository to (phase-03
 /// Design Constraints).
 abstract class ExamAttemptRepository {
-  Future<AttemptTaskResponse> startOrResumeAttempt(String sessionPublicId);
+  Future<AttemptTaskResponse> startOrResumeAttempt(
+    String sessionPublicId, {
+    bool deviceCheckConfirmed = false,
+  });
 
   Future<AttemptTaskResponse> fetchNextTask(String attemptPublicId);
 

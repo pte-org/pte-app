@@ -10,7 +10,7 @@ class MediaRepositoryImpl implements MediaRepository {
   @override
   Future<MediaPresignResponse> requestPresign(String contentType) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
-      '/api/media/objects',
+      '/api/v1/objects',
       data: {'contentType': contentType},
     );
     return MediaPresignResponse.fromJson(response.data!);
@@ -18,6 +18,6 @@ class MediaRepositoryImpl implements MediaRepository {
 
   @override
   Future<void> completeUpload(String mediaPublicId) {
-    return _apiClient.post<void>('/api/media/objects/$mediaPublicId/complete');
+    return _apiClient.post<void>('/api/v1/objects/$mediaPublicId/complete');
   }
 }

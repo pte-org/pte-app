@@ -100,7 +100,7 @@ void main() {
   });
 
   test('post supports a standard envelope whose inner data is null', () async {
-    final requestOptions = RequestOptions(path: '/api/iam/auth/logout');
+    final requestOptions = RequestOptions(path: '/api/v1/auth/logout');
     when(() => dio.post<dynamic>(any(), data: any(named: 'data'))).thenAnswer(
       (_) async => Response<dynamic>(
         requestOptions: requestOptions,
@@ -110,7 +110,7 @@ void main() {
     );
 
     final result = await apiClient.post<void>(
-      '/api/iam/auth/logout',
+      '/api/v1/auth/logout',
       data: {'refreshToken': 'refresh-token'},
     );
 
@@ -286,14 +286,14 @@ void main() {
       final captured = verify(
         () => dio.post<dynamic>(captureAny(), data: captureAny(named: 'data')),
       ).captured;
-      expect(captured[0], '/api/exam-delivery/attempts/attempt-1/answers');
+      expect(captured[0], '/api/v1/attempts/attempt-1/answers');
       expect(captured[1], {'pinnedItemPublicId': 'item-1', 'payload': 'hello'});
     },
   );
 
   DioException conflictWithMessage(String message) {
     final requestOptions = RequestOptions(
-      path: '/api/exam-delivery/attempts/attempt-1/answers',
+      path: '/api/v1/attempts/attempt-1/answers',
     );
     return DioException(
       requestOptions: requestOptions,
@@ -395,7 +395,7 @@ void main() {
       'a 409 on this endpoint with no recognized message field still falls back to generic ConflictException',
       () async {
         final requestOptions = RequestOptions(
-          path: '/api/exam-delivery/attempts/attempt-1/answers',
+          path: '/api/v1/attempts/attempt-1/answers',
         );
         when(
           () => dio.post<dynamic>(any(), data: any(named: 'data')),
@@ -449,7 +449,7 @@ void main() {
         ).captured;
         expect(
           captured[0],
-          '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+          '/api/v1/attempts/attempt-1/answers/encrypted',
         );
         expect(captured[1], {
           'pinnedItemPublicId': 'item-1',
@@ -464,7 +464,7 @@ void main() {
       'submitEncryptedAnswer() with 409 NOT_CURRENT_TASK maps to NotCurrentTaskException',
       () async {
         final requestOptions = RequestOptions(
-          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+          path: '/api/v1/attempts/attempt-1/answers/encrypted',
         );
         when(
           () => dio.post<dynamic>(any(), data: any(named: 'data')),
@@ -508,7 +508,7 @@ void main() {
       'submitEncryptedAnswer() with 409 unknown message falls back to generic ConflictException',
       () async {
         final requestOptions = RequestOptions(
-          path: '/api/exam-delivery/attempts/attempt-1/answers/encrypted',
+          path: '/api/v1/attempts/attempt-1/answers/encrypted',
         );
         when(
           () => dio.post<dynamic>(any(), data: any(named: 'data')),

@@ -16,7 +16,10 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 /// Resolves the local temp-file path a recording for `(attemptPublicId,
 /// pinnedItemPublicId)` is written to — deterministic per key so a
 /// restart can locate the same file (phase-06 Design Constraints).
-Future<String> resolveRecordingFilePath(String attemptPublicId, String pinnedItemPublicId) async {
+Future<String> resolveRecordingFilePath(
+  String attemptPublicId,
+  String pinnedItemPublicId,
+) async {
   final dir = await getTemporaryDirectory();
   return p.join(dir.path, '${attemptPublicId}_$pinnedItemPublicId.wav');
 }
@@ -38,15 +41,24 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
     required MediaUploadCoordinator coordinator,
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
-    Future<String> Function(String attemptPublicId, String pinnedItemPublicId)? resolveFilePath,
+    Future<String> Function(String attemptPublicId, String pinnedItemPublicId)?
+    resolveFilePath,
   }) : _recorder = recorder,
        _mediaDao = mediaDao,
        _coordinator = coordinator,
        _resolveFilePath = resolveFilePath ?? resolveRecordingFilePath,
        super(const AutoRecordState()) {
-    _rowSubscription = _mediaDao.watchRow(attemptPublicId, pinnedItemPublicId).listen((row) {
-      emit(state.copyWith(uploadStatus: row == null ? null : PendingMediaUploadStatus.values.byName(row.status)));
-    });
+    _rowSubscription = _mediaDao
+        .watchRow(attemptPublicId, pinnedItemPublicId)
+        .listen((row) {
+          emit(
+            state.copyWith(
+              uploadStatus: row == null
+                  ? null
+                  : PendingMediaUploadStatus.values.byName(row.status),
+            ),
+          );
+        });
   }
 
   final AudioRecorderService _recorder;
@@ -54,7 +66,11 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   final MediaUploadCoordinator _coordinator;
   final String attemptPublicId;
   final String pinnedItemPublicId;
-  final Future<String> Function(String attemptPublicId, String pinnedItemPublicId) _resolveFilePath;
+  final Future<String> Function(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  )
+  _resolveFilePath;
 
   late final StreamSubscription<PendingMediaUpload?> _rowSubscription;
 
@@ -92,7 +108,8 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
       if (_startInFlight) return;
       _startInFlight = true;
       unawaited(startRecording().whenComplete(() => _startInFlight = false));
-    } else if (state.recordingPhase == RecordingPhase.recording && snapshot.remaining <= Duration.zero) {
+    } else if (state.recordingPhase == RecordingPhase.recording &&
+        snapshot.remaining <= Duration.zero) {
       if (_stopInFlight) return;
       _stopInFlight = true;
       unawaited(stopRecording().whenComplete(() => _stopInFlight = false));
@@ -100,9 +117,15 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   }
 
   Future<void> startRecording() async {
-    final path = await _resolveFilePath(attemptPublicId, pinnedItemPublicId);
-    await _recorder.start(path);
-    emit(state.copyWith(recordingPhase: RecordingPhase.recording));
+    try {
+      final path = await _resolveFilePath(attemptPublicId, pinnedItemPublicId);
+      await _recorder.start(path);
+      emit(state.copyWith(recordingPhase: RecordingPhase.recording));
+    } on AudioInputUnavailableException {
+      emit(state.copyWith(recordingPhase: RecordingPhase.unavailable));
+    } catch (_) {
+      emit(state.copyWith(recordingPhase: RecordingPhase.unavailable));
+    }
   }
 
   Future<void> stopRecording() async {

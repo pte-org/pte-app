@@ -12,7 +12,7 @@ class ReportRepositoryImpl implements ReportRepository {
   Future<ReportResponse?> fetchReport(String attemptPublicId) async {
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
-        '/api/reporting/reports/attempts/$attemptPublicId',
+        '/api/v1/reports/attempts/$attemptPublicId',
       );
       return ReportResponse.fromJson(response.data!);
     } on NotFoundException {

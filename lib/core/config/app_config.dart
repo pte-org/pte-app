@@ -5,7 +5,7 @@ class AppConfig {
   const AppConfig._();
 
   /// No `/api` suffix — every call site passes the full gateway-relative
-  /// path (e.g. `/api/iam/auth/login`), so concatenation never
+  /// path (e.g. `/api/v1/auth/login`), so concatenation never
   /// double-prefixes it. See phase-01 Design Constraints.
   ///
   /// The default is the API gateway's own port (`8080`), not an individual
@@ -18,10 +18,10 @@ class AppConfig {
   );
 
   /// Full path prefix for attempt lifecycle/audio calls. The mock API uses
-  /// `/api/exam-delivery/mock-attempts`; the default is the real route.
+  /// `/api/v1/attempts`; the default is the real route.
   static const String examAttemptsPath = String.fromEnvironment(
     'PTE_EXAM_ATTEMPTS_PATH',
-    defaultValue: '/api/exam-delivery/attempts',
+    defaultValue: '/api/v1/attempts',
   );
 
   /// Every gateway `Dio` instance must set these — an unbounded call can

@@ -11,3 +11,9 @@ abstract class AudioRecorderService {
 
   Future<bool> isRecording();
 }
+
+/// Raised before entering the native recorder when the platform reports no
+/// usable input device or denies microphone access.
+final class AudioInputUnavailableException implements Exception {
+  const AudioInputUnavailableException();
+}

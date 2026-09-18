@@ -49,9 +49,13 @@ void main() {
 
   tearDown(() => playbackController.close());
 
-  Widget buildSubject() {
+  Widget buildSubject({VoidCallback? onComplete}) {
     return MaterialApp(
-      home: TestMicAndSoundScreen(recorder: recorder, player: player),
+      home: TestMicAndSoundScreen(
+        recorder: recorder,
+        player: player,
+        onComplete: onComplete,
+      ),
     );
   }
 
@@ -194,6 +198,42 @@ void main() {
       // mic confirm prompt.
       expect(find.text('Record'), findsOneWidget);
       expect(find.text('Did you hear yourself clearly?'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'calls onComplete only after both mic and sound checks are confirmed',
+    (tester) async {
+      when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/device_check_test.wav');
+      var completed = false;
+      await tester.pumpWidget(buildSubject(onComplete: () => completed = true));
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Record'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
+      await tester.pump();
+      await tester.tap(
+        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      );
+      await tester.pump();
+      playbackController.add(true);
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Yes').first);
+      await tester.pump();
+
+      expect(completed, isFalse);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Play test sound'));
+      await tester.pump();
+      playbackController.add(true);
+      await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Yes'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Yes'));
+      await tester.pump();
+
+      expect(completed, isTrue);
     },
   );
 

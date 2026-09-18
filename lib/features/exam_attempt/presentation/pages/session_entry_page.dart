@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/network/friendly_error_message.dart';
@@ -9,6 +10,9 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/device_check/data/device_check_audio_player_impl.dart';
+import 'package:pte_app/features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/lockdown_activation_failure_dialog.dart';
 
 /// Placeholder manual session-ID entry screen — the only thing that
@@ -45,8 +49,8 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
                 context,
                 failedChecks: error.failedChecks,
                 onRetry: () => context.read<ExamAttemptBloc>().add(
-                      SessionResolutionRequested(rawInput: _controller.text),
-                    ),
+                  SessionResolutionRequested(rawInput: _controller.text),
+                ),
               );
               return;
             }
@@ -56,6 +60,18 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
           }
         },
         builder: (context, state) {
+          if (state is DeviceCheckRequired) {
+            return TestMicAndSoundScreen(
+              recorder: GetIt.instance<AudioRecorderService>(),
+              player: DeviceCheckAudioPlayerImpl(),
+              onComplete: () => context.read<ExamAttemptBloc>().add(
+                SessionResolutionRequested(
+                  rawInput: state.sessionPublicId,
+                  deviceCheckConfirmed: true,
+                ),
+              ),
+            );
+          }
           return Padding(
             padding: const EdgeInsets.all(AppDimensions.spacingMedium),
             child: Column(
@@ -63,15 +79,17 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
               children: [
                 TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(labelText: ExamAttemptStrings.sessionEntryFieldLabel),
+                  decoration: const InputDecoration(
+                    labelText: ExamAttemptStrings.sessionEntryFieldLabel,
+                  ),
                 ),
                 const SizedBox(height: AppDimensions.spacingMedium),
                 PrimaryButton(
                   label: ExamAttemptStrings.sessionEntryStartButton,
                   isLoading: state is AttemptStarting,
-                  onPressed: () => context
-                      .read<ExamAttemptBloc>()
-                      .add(SessionResolutionRequested(rawInput: _controller.text)),
+                  onPressed: () => context.read<ExamAttemptBloc>().add(
+                    SessionResolutionRequested(rawInput: _controller.text),
+                  ),
                 ),
               ],
             ),

@@ -183,6 +183,12 @@ class RecordedAnswerPrepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (recordingState.recordingPhase == RecordingPhase.unavailable) {
+      return const RecordedAnswerStatusCard(
+        statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
+        progress: 0.0,
+      );
+    }
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
       return RecordedAnswerStatusCard(
         statusLabel: _uploadStatusLabel(),

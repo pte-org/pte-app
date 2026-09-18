@@ -4,7 +4,7 @@ import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
-/// the **full** gateway-relative path (e.g. `/api/iam/auth/login`) — the
+/// the **full** gateway-relative path (e.g. `/api/v1/auth/login`) — the
 /// underlying Dio instance's base URL intentionally excludes `/api`, so
 /// omitting it here would 404 at the gateway. Errors are mapped to
 /// [ApiException] subtypes here so every call site branches on type, never

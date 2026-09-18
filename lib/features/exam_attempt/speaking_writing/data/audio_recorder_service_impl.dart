@@ -3,18 +3,26 @@ import 'package:record/record.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 
 /// `audio/wav` — matches [AudioEncoder.wav] below, one of the three
-/// `contentType` values `POST /api/media/objects` accepts (phase-06
+/// `contentType` values `POST /api/v1/objects` accepts (phase-06
 /// Design Constraints).
 const String readAloudContentType = 'audio/wav';
 
 class AudioRecorderServiceImpl implements AudioRecorderService {
-  AudioRecorderServiceImpl({AudioRecorder? recorder}) : _recorder = recorder ?? AudioRecorder();
+  AudioRecorderServiceImpl({AudioRecorder? recorder})
+    : _recorder = recorder ?? AudioRecorder();
 
   final AudioRecorder _recorder;
 
   @override
-  Future<void> start(String filePath) {
-    return _recorder.start(const RecordConfig(encoder: AudioEncoder.wav), path: filePath);
+  Future<void> start(String filePath) async {
+    if (!await _recorder.hasPermission() ||
+        (await _recorder.listInputDevices()).isEmpty) {
+      throw const AudioInputUnavailableException();
+    }
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.wav),
+      path: filePath,
+    );
   }
 
   @override

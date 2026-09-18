@@ -21,6 +21,7 @@ class DeviceCheckState extends Equatable {
   const DeviceCheckState({
     this.micPhase = MicCheckPhase.idle,
     this.micConfirmedHeardClearly,
+    this.micErrorMessage,
     this.soundPhase = SoundCheckPhase.idle,
     this.soundConfirmedHeardClearly,
   });
@@ -31,16 +32,22 @@ class DeviceCheckState extends Equatable {
   /// answer to "Did you hear yourself clearly?".
   final bool? micConfirmedHeardClearly;
 
+  final String? micErrorMessage;
+
   final SoundCheckPhase soundPhase;
 
   /// `null` = not yet answered, `true`/`false` = the candidate's Yes/No
   /// answer to "Can you hear this clearly?".
   final bool? soundConfirmedHeardClearly;
 
+  bool get isComplete =>
+      micConfirmedHeardClearly == true && soundConfirmedHeardClearly == true;
+
   @override
   List<Object?> get props => [
     micPhase,
     micConfirmedHeardClearly,
+    micErrorMessage,
     soundPhase,
     soundConfirmedHeardClearly,
   ];

@@ -4,6 +4,15 @@ class DeviceCheckStrings {
   const DeviceCheckStrings._();
 
   static const String screenTitle = 'Test Mic and Sound';
+  static const String screenSubtitle =
+      'Complete both checks before starting the exam.';
+  static const String progressLabel = 'Device readiness';
+  static const String microphoneReadyLabel = 'Microphone ready';
+  static const String soundReadyLabel = 'Sound ready';
+  static const String microphoneUnavailableMessage =
+      'No microphone was detected. Connect a microphone and try again.';
+  static const String microphoneCheckFailedMessage =
+      'We could not access your microphone. Check the permission and try again.';
 
   // Microphone section.
   static const String micSectionTitle = 'Test your microphone';
