@@ -1,6 +1,6 @@
 # pte_app
 
-Flutter exam-taking client for the PTE LMS platform. Offline-resilient,
+Flutter exam-taking client for the PTE Prep platform. Offline-resilient,
 server-authoritative exam delivery: the exam is the highest-stakes flow on
 the platform, so the architecture is built around one rule — **answers are
 never lost**, even offline, even if the app is killed mid-exam.
