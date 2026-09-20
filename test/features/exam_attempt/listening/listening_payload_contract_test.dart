@@ -12,7 +12,7 @@ const _taskTypes = <String>{
   'MC_LISTENING_MULTIPLE',
   'HIGHLIGHT_CORRECT_SUMMARY',
   'SELECT_MISSING_WORD',
-  'FILL_BLANKS_LISTENING',
+  'FILL_IN_THE_BLANKS_TYPE_IN',
   'HIGHLIGHT_INCORRECT_WORDS',
   'MC_LISTENING_SINGLE',
 };
@@ -92,7 +92,7 @@ void main() {
           listeningMultipleSelectionPayload(const ['3', '0', '2']),
       'HIGHLIGHT_CORRECT_SUMMARY': () => listeningSingleSelectionPayload('1'),
       'SELECT_MISSING_WORD': () => listeningSingleSelectionPayload('2'),
-      'FILL_BLANKS_LISTENING': () =>
+      'FILL_IN_THE_BLANKS_TYPE_IN': () =>
           listeningPositionalTextPayload(const ['rapid', null, 'forest', null]),
       'HIGHLIGHT_INCORRECT_WORDS': () =>
           listeningTranscriptWordIndicesPayload(const [11, 3, 7]),

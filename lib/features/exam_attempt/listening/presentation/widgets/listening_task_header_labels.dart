@@ -13,7 +13,7 @@ String listeningTaskHeaderTitle(String taskType) {
     'SELECT_MISSING_WORD' => ListeningStrings.headerTitleSelectMissingWord,
     'HIGHLIGHT_INCORRECT_WORDS' => ListeningStrings.headerTitleHighlightIncorrectWords,
     'HIGHLIGHT_CORRECT_SUMMARY' => ListeningStrings.headerTitleHighlightCorrectSummary,
-    'FILL_BLANKS_LISTENING' => ListeningStrings.headerTitleFillBlanksListening,
+    'FILL_IN_THE_BLANKS_TYPE_IN' => ListeningStrings.headerTitleFillBlanksListening,
     _ => '',
   };
 }

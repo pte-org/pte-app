@@ -23,7 +23,7 @@ class FillBlanksDropdownCubit extends TaskAnswerCubit<FillBlanksDropdownState> {
   /// [orderIndex] must come from `task.blankGroups![gapIndex].options` —
   /// each gap's own distinct list, never another gap's or the shared
   /// `options` field (this is the defining property of this task type vs.
-  /// `FILL_BLANKS_READING`'s shared word bank).
+  /// `FILL_IN_THE_BLANKS_DRAG_AND_DROP`'s shared word bank).
   Future<void> selectOption(int gapIndex, String orderIndex) async {
     final updated = List<String?>.of(state.selectedOrderIndexes);
     updated[gapIndex] = orderIndex;

@@ -225,7 +225,7 @@ class AppStrings {
 
   static const String devReadingPreviewTitle = 'Reading task preview';
   static const String devReadingPreviewBlankGroupsUnavailableLabel =
-      'FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+      'FILL_IN_THE_BLANKS_DROPDOWN (blankGroups unavailable)';
 
   static const String readingInstructionsTitle = 'Reading';
   static const String readingInstructionsBody =

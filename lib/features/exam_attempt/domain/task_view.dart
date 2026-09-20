@@ -18,9 +18,9 @@ class TaskOption {
   }
 }
 
-/// One independently-choosable blank within a `FILL_BLANKS_READING_WRITING`
+/// One independently-choosable blank within a `FILL_IN_THE_BLANKS_DROPDOWN`
 /// task — its [options] are distinct from every other blank's, unlike the
-/// shared word bank [TaskView.options] carries for `FILL_BLANKS_READING`.
+/// shared word bank [TaskView.options] carries for `FILL_IN_THE_BLANKS_DRAG_AND_DROP`.
 class BlankGroup {
   const BlankGroup({required this.blankIndex, required this.options});
 
@@ -44,13 +44,13 @@ class BlankGroup {
 ///
 /// [options] is reused across several reading task types beyond its
 /// original MC-choice purpose: for `MC_READING_MULTIPLE` it's the checkbox
-/// choices, for `FILL_BLANKS_READING` it's the shared drag-and-drop word
+/// choices, for `FILL_IN_THE_BLANKS_DRAG_AND_DROP` it's the shared drag-and-drop word
 /// bank, and for `RE_ORDER_PARAGRAPHS` it's the shuffled paragraph list
 /// (`TaskOption.text` = a paragraph's full text, `TaskOption.orderIndex` =
 /// its stable correct-position identity — **never** its current on-screen
 /// position, which is exactly what the student is rearranging). [options]
 /// and [blankGroups] are mutually exclusive per task — only
-/// `FILL_BLANKS_READING_WRITING` ever populates [blankGroups], where every
+/// `FILL_IN_THE_BLANKS_DROPDOWN` ever populates [blankGroups], where every
 /// blank needs its own distinct option list that a flat [options] list
 /// can't express.
 class TaskView {
