@@ -78,6 +78,7 @@ class TaskView {
     this.imageUrl,
     this.taskTypeCode,
     this.runtime,
+    this.taskTypeDisplayName,
   });
 
   final String pinnedItemPublicId;
@@ -94,6 +95,7 @@ class TaskView {
   /// Immutable server runtime metadata for new snapshots. Null means this is
   /// an older response and the app must use the alias-aware legacy registry.
   final TaskRuntimeProfile? runtime;
+  final String? taskTypeDisplayName;
 
   String get canonicalTaskType =>
       TaskTypeCodes.canonicalize(taskTypeCode ?? taskType) ?? taskType;
@@ -159,6 +161,7 @@ class TaskView {
       taskType: json['taskType'] as String,
       taskTypeCode: json['taskTypeCode'] as String?,
       runtime: _readRuntime(json['runtime']),
+      taskTypeDisplayName: json['taskTypeDisplayName'] as String?,
       title: json['title'] as String,
       promptText: json['promptText'] as String?,
       audioPromptRef: json['audioPromptRef'] as String?,

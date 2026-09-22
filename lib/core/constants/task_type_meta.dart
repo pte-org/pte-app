@@ -63,6 +63,9 @@ class TaskTypeCodes {
 class TaskRuntimeProfile {
   const TaskRuntimeProfile({
     this.taskTypeCode,
+    this.taskTypeKey,
+    this.screenKey,
+    this.contractVersion,
     this.profileKey,
     this.profileVersion,
     this.behaviorKey,
@@ -70,11 +73,18 @@ class TaskRuntimeProfile {
     this.answerSchemaVersion,
     this.scoringProfileKey,
     this.scoringProfileVersion,
+    this.scoringMode,
+    this.minSupportedAppVersion,
+    this.authoringContractKey,
+    this.authoringContractVersion,
     this.requiredClientCapabilities = const <String>[],
     this.status,
   });
 
   final String? taskTypeCode;
+  final String? taskTypeKey;
+  final String? screenKey;
+  final int? contractVersion;
   final String? profileKey;
   final int? profileVersion;
   final String? behaviorKey;
@@ -82,6 +92,10 @@ class TaskRuntimeProfile {
   final int? answerSchemaVersion;
   final String? scoringProfileKey;
   final int? scoringProfileVersion;
+  final String? scoringMode;
+  final String? minSupportedAppVersion;
+  final String? authoringContractKey;
+  final int? authoringContractVersion;
   final List<String> requiredClientCapabilities;
   final String? status;
 
@@ -94,12 +108,32 @@ class TaskRuntimeProfile {
       answerSchemaVersion != null &&
       scoringProfileKey != null &&
       scoringProfileVersion != null &&
-      status != null;
+      status != null &&
+      effectiveScreenKey != null &&
+      effectiveContractVersion != null &&
+      effectiveScoringMode != null;
+
+  /// New snapshots provide these fields explicitly. Older runtime payloads
+  /// are still readable through the legacy profile/renderer projection.
+  String? get effectiveScreenKey => screenKey ?? rendererKey;
+
+  int? get effectiveContractVersion => contractVersion ?? profileVersion;
+
+  String? get effectiveScoringMode =>
+      scoringMode ??
+      (scoringProfileKey == null
+          ? null
+          : scoringProfileKey == 'UNSCORED'
+          ? 'NONE'
+          : 'SCORED');
 
   factory TaskRuntimeProfile.fromJson(Map<String, dynamic> json) {
     final rawCapabilities = json['requiredClientCapabilities'];
     return TaskRuntimeProfile(
       taskTypeCode: json['taskTypeCode'] as String?,
+      taskTypeKey: json['taskTypeKey'] as String?,
+      screenKey: json['screenKey'] as String?,
+      contractVersion: _readInt(json['contractVersion']),
       profileKey: json['profileKey'] as String?,
       profileVersion: _readInt(json['profileVersion']),
       behaviorKey: json['behaviorKey'] as String?,
@@ -107,6 +141,10 @@ class TaskRuntimeProfile {
       answerSchemaVersion: _readInt(json['answerSchemaVersion']),
       scoringProfileKey: json['scoringProfileKey'] as String?,
       scoringProfileVersion: _readInt(json['scoringProfileVersion']),
+      scoringMode: json['scoringMode'] as String?,
+      minSupportedAppVersion: json['minSupportedAppVersion'] as String?,
+      authoringContractKey: json['authoringContractKey'] as String?,
+      authoringContractVersion: _readInt(json['authoringContractVersion']),
       requiredClientCapabilities: rawCapabilities is List
           ? rawCapabilities.whereType<String>().toList(growable: false)
           : const <String>[],
@@ -145,6 +183,7 @@ class TaskTypeRendererRegistration {
     required this.scoringProfileKey,
     required this.requiredClientCapabilities,
     this.supportedProfileVersions = const {1},
+    this.supportedContractVersions = const {1},
     this.supportedSchemaVersions = const {1},
     this.supportedScoringProfileVersions = const {1},
     this.answerCodec = TaskAnswerCodec.identity,
@@ -155,12 +194,15 @@ class TaskTypeRendererRegistration {
   final String behaviorKey;
   final String scoringProfileKey;
   final Set<int> supportedProfileVersions;
+  final Set<int> supportedContractVersions;
   final Set<int> supportedSchemaVersions;
   final Set<int> supportedScoringProfileVersions;
   final List<String> requiredClientCapabilities;
   final TaskAnswerCodec answerCodec;
 
   String get taskTypeCode => meta.taskType;
+
+  String get screenKey => rendererKey;
 }
 
 enum TaskTypeResolutionFailure {
@@ -485,7 +527,7 @@ class TaskTypeRendererRegistry {
     );
 
     if (runtime != null) {
-      final rendererKey = runtime.rendererKey;
+      final rendererKey = runtime.effectiveScreenKey;
       final registration = rendererKey == null
           ? null
           : _byRendererKey[rendererKey];
@@ -515,13 +557,16 @@ class TaskTypeRendererRegistry {
           '$rendererKey/schema-${runtime.answerSchemaVersion ?? 'unknown'}',
         );
       }
-      final runtimeTaskType = TaskTypeCodes.canonicalize(runtime.taskTypeCode);
+      final runtimeTaskType = TaskTypeCodes.canonicalize(
+        runtime.taskTypeKey ?? runtime.taskTypeCode,
+      );
       if (canonicalTaskType == null ||
           runtimeTaskType != canonicalTaskType ||
-          registration.taskTypeCode != runtimeTaskType ||
-          runtime.profileKey != 'PTE.${registration.taskTypeCode}' ||
           !registration.supportedProfileVersions.contains(
             runtime.profileVersion,
+          ) ||
+          !registration.supportedContractVersions.contains(
+            runtime.effectiveContractVersion,
           ) ||
           runtime.behaviorKey != registration.behaviorKey ||
           runtime.scoringProfileKey != registration.scoringProfileKey ||

@@ -15,7 +15,13 @@ class TaskViewUiAdapter {
     final canonicalTaskType =
         TaskTypeCodes.canonicalize(task.taskTypeCode ?? task.taskType) ??
         task.taskType;
-    final meta = TaskTypeMeta.forTaskType(canonicalTaskType);
+    final meta =
+        TaskTypeMeta.forTaskType(canonicalTaskType) ??
+        TaskTypeRendererRegistry.resolve(
+          taskTypeCode: task.taskTypeCode,
+          legacyTaskType: task.taskType,
+          runtime: task.runtime,
+        ).registration?.meta;
     if (meta == null) {
       throw ArgumentError.value(
         canonicalTaskType,
@@ -74,7 +80,11 @@ class TaskViewUiAdapter {
     return ExamTaskUiModel(
       taskType: canonicalTaskType,
       meta: meta,
-      title: task.title.trim().isEmpty ? meta.title : task.title,
+      title: task.title.trim().isEmpty
+          ? (task.taskTypeDisplayName?.trim().isNotEmpty == true
+                ? task.taskTypeDisplayName!
+                : meta.title)
+          : task.title,
       section: task.section,
       instruction: meta.instruction,
       stimulus: StimulusSpec(parts: parts),
