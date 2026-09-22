@@ -1,3 +1,5 @@
+import 'package:pte_app/core/constants/task_type_meta.dart';
+
 /// A single reorderable option within a task (e.g. one word-bank tile, one
 /// heading choice). `orderIndex` is a decimal string, not an int — matches
 /// the same reordering convention used by the outbox's submit payload
@@ -74,6 +76,8 @@ class TaskView {
     this.preListenSeconds,
     this.preRecordSeconds,
     this.imageUrl,
+    this.taskTypeCode,
+    this.runtime,
   });
 
   final String pinnedItemPublicId;
@@ -81,9 +85,22 @@ class TaskView {
   final int totalTasks;
   final String section;
   final String taskType;
+
+  /// Additive canonical code. [taskType] remains populated for legacy wire
+  /// compatibility; [canonicalTaskType] is the alias-normalized identity
+  /// used by the registry and presentation adapters.
+  final String? taskTypeCode;
+
+  /// Immutable server runtime metadata for new snapshots. Null means this is
+  /// an older response and the app must use the alias-aware legacy registry.
+  final TaskRuntimeProfile? runtime;
+
+  String get canonicalTaskType =>
+      TaskTypeCodes.canonicalize(taskTypeCode ?? taskType) ?? taskType;
   final String title;
   final String? promptText;
   final String? audioPromptRef;
+
   /// The raw MediaObject public ID — never a directly-loadable URL. Kept
   /// for parity with the backend DTO (`imagePromptRef` stays present there
   /// too, unchanged), but no screen should read this to display an image;
@@ -94,6 +111,7 @@ class TaskView {
   final int? maxWordCount;
   final List<TaskOption>? options;
   final List<BlankGroup>? blankGroups;
+
   /// The client-side-exam-timer refactor's ONLY timing signal per task
   /// (FR-01) — [TimerService.seedFromTask] computes its own local wall-clock
   /// deadlines directly from these two ints, anchored to `DateTime.now()` at
@@ -139,6 +157,8 @@ class TaskView {
       totalTasks: json['totalTasks'] as int,
       section: json['section'] as String,
       taskType: json['taskType'] as String,
+      taskTypeCode: json['taskTypeCode'] as String?,
+      runtime: _readRuntime(json['runtime']),
       title: json['title'] as String,
       promptText: json['promptText'] as String?,
       audioPromptRef: json['audioPromptRef'] as String?,
@@ -153,11 +173,24 @@ class TaskView {
           .toList(),
       prepSeconds: json['prepSeconds'] as int,
       responseSeconds: json['responseSeconds'] as int,
-      examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
+      examEndTime: json['examEndTime'] == null
+          ? null
+          : DateTime.parse(json['examEndTime'] as String),
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,
       imageUrl: json['imageUrl'] as String?,
     );
+  }
+
+  static TaskRuntimeProfile? _readRuntime(Object? rawRuntime) {
+    if (rawRuntime == null) return null;
+    if (rawRuntime is Map) {
+      return TaskRuntimeProfile.fromJson(Map<String, dynamic>.from(rawRuntime));
+    }
+    // A present but malformed runtime object is deliberately represented as
+    // an invalid profile so the dispatcher fails closed instead of falling
+    // back to a mutable/legacy task-type guess.
+    return const TaskRuntimeProfile();
   }
 }
 
@@ -203,7 +236,9 @@ class AttemptTaskResponse {
       attemptPublicId: json['attemptPublicId'] as String,
       attemptStatus: json['attemptStatus'] as String,
       completed: json['completed'] as bool,
-      task: json['task'] == null ? null : TaskView.fromJson(json['task'] as Map<String, dynamic>),
+      task: json['task'] == null
+          ? null
+          : TaskView.fromJson(json['task'] as Map<String, dynamic>),
       encryptionPublicKey: json['encryptionPublicKey'] as String?,
       lockdownMode: json['lockdownMode'] as String?,
     );

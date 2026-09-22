@@ -12,10 +12,13 @@ class TaskViewUiAdapter {
     TaskView task, {
     DataOrigin origin = DataOrigin.api,
   }) {
-    final meta = TaskTypeMeta.forTaskType(task.taskType);
+    final canonicalTaskType =
+        TaskTypeCodes.canonicalize(task.taskTypeCode ?? task.taskType) ??
+        task.taskType;
+    final meta = TaskTypeMeta.forTaskType(canonicalTaskType);
     if (meta == null) {
       throw ArgumentError.value(
-        task.taskType,
+        canonicalTaskType,
         'task.taskType',
         'Unknown task type',
       );
@@ -32,7 +35,7 @@ class TaskViewUiAdapter {
     final audioSource =
         task.audioPromptRef ??
         (origin == DataOrigin.fixture &&
-                audioFallbackTypes.contains(task.taskType)
+                audioFallbackTypes.contains(canonicalTaskType)
             ? 'assets/audio/listening_sample_summarize.wav'
             : null);
     if (audioSource != null) {
@@ -69,7 +72,7 @@ class TaskViewUiAdapter {
     }
 
     return ExamTaskUiModel(
-      taskType: task.taskType,
+      taskType: canonicalTaskType,
       meta: meta,
       title: task.title.trim().isEmpty ? meta.title : task.title,
       section: task.section,

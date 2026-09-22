@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
@@ -36,8 +37,10 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 const String _taskTypeMcReadingSingle = 'MC_READING_SINGLE';
 const String _taskTypeMcReadingMultiple = 'MC_READING_MULTIPLE';
 const String _taskTypeReOrderParagraphs = 'RE_ORDER_PARAGRAPHS';
-const String _taskTypeFillBlanksReading = 'FILL_BLANKS_READING';
-const String _taskTypeFillBlanksReadingWriting = 'FILL_BLANKS_READING_WRITING';
+const String _taskTypeFillBlanksReading =
+    TaskTypeCodes.fillInTheBlanksDragAndDrop;
+const String _taskTypeFillBlanksReadingWriting =
+    TaskTypeCodes.fillInTheBlanksDropdown;
 const String _taskTypeWriteEssay = 'WRITE_ESSAY';
 const String _taskTypeSummarizeWrittenText = 'SUMMARIZE_WRITTEN_TEXT';
 const String _taskTypePersonalIntroduction = 'PERSONAL_INTRODUCTION';
@@ -56,7 +59,7 @@ const String _taskTypeRespondToASituation = 'RESPOND_TO_A_SITUATION';
 const String _taskTypeWriteFromDictation = 'WRITE_FROM_DICTATION';
 const String _taskTypeSummarizeSpokenText = 'SUMMARIZE_SPOKEN_TEXT';
 const String _taskTypeHighlightIncorrectWords = 'HIGHLIGHT_INCORRECT_WORDS';
-const String _taskTypeFillBlanksListening = 'FILL_BLANKS_LISTENING';
+const String _taskTypeFillBlanksListening = TaskTypeCodes.fillInTheBlanksTypeIn;
 const String _taskTypeMcListeningMultiple = 'MC_LISTENING_MULTIPLE';
 const String _taskTypeMcListeningSingle = 'MC_LISTENING_SINGLE';
 const String _taskTypeSelectMissingWord = 'SELECT_MISSING_WORD';
@@ -108,7 +111,17 @@ class TaskTypeDispatcher extends StatelessWidget {
     // the new task (phase-05 Design Constraints: "a stale value here would
     // silently misfile an answer against the wrong task").
     final key = ValueKey(task.pinnedItemPublicId);
-    return switch (task.taskType) {
+    final resolution = TaskTypeRendererRegistry.resolve(
+      taskTypeCode: task.taskTypeCode,
+      legacyTaskType: task.taskType,
+      runtime: task.runtime,
+    );
+    final registration = resolution.registration;
+    if (registration == null) {
+      return _UnsupportedTaskScreen(key: key, resolution: resolution);
+    }
+
+    return switch (registration.taskTypeCode) {
       _taskTypeMcReadingSingle => McReadingSingleScreen(
         key: key,
         task: task,
@@ -304,20 +317,51 @@ class TaskTypeDispatcher extends StatelessWidget {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
       ),
-      _ => _UnsupportedTaskTypePlaceholder(key: key, taskType: task.taskType),
+      _ => _UnsupportedTaskScreen(key: key, resolution: resolution),
     };
   }
 }
 
-class _UnsupportedTaskTypePlaceholder extends StatelessWidget {
-  const _UnsupportedTaskTypePlaceholder({super.key, required this.taskType});
+/// A terminal delivery state for an unsupported frozen task. It deliberately
+/// has no answer control and no next-task action: advancing would silently
+/// change the exam's item count and misfile the student's attempt.
+class _UnsupportedTaskScreen extends StatelessWidget {
+  const _UnsupportedTaskScreen({super.key, required this.resolution});
 
-  final String taskType;
+  final TaskTypeResolution resolution;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('${ExamAttemptStrings.unsupportedTaskTypePrefix}$taskType'),
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.system_update_alt, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  ExamAttemptStrings.unsupportedTaskTitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  ExamAttemptStrings.unsupportedTaskMessage,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  ExamAttemptStrings.unsupportedTaskContactHost,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

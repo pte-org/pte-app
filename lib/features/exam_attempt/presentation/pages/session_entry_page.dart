@@ -3,13 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/network/friendly_error_message.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_error_message.dart';
 import 'package:pte_app/features/device_check/data/device_check_audio_player_impl.dart';
 import 'package:pte_app/features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
@@ -55,7 +55,9 @@ class _SessionEntryPageState extends State<SessionEntryPage> {
               return;
             }
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(friendlyErrorMessage(state.error))),
+              SnackBar(
+                content: Text(examAttemptFriendlyErrorMessage(state.error)),
+              ),
             );
           }
         },
