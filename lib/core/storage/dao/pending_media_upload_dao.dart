@@ -1,13 +1,15 @@
 import 'package:drift/drift.dart';
 
 import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/network/cloudinary_upload_result.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/storage/tables/pending_media_upload_table.dart';
 
 part 'pending_media_upload_dao.g.dart';
 
 @DriftAccessor(tables: [PendingMediaUploadTable])
-class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase> with _$PendingMediaUploadDaoMixin {
+class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase>
+    with _$PendingMediaUploadDaoMixin {
   PendingMediaUploadDao(super.db);
 
   /// Idempotent upsert on `(attemptPublicId, pinnedItemPublicId)` — a
@@ -27,17 +29,34 @@ class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase> with _$Pending
         mediaPublicId: const Value(null),
         uploadUrl: const Value(null),
         uploadUrlExpiresAt: const Value(null),
+        cloudinaryApiKey: const Value(null),
+        cloudinaryTimestamp: const Value(null),
+        cloudinaryUploadSignature: const Value(null),
+        cloudinaryFolder: const Value(null),
+        cloudinaryResourceType: const Value(null),
+        cloudinaryPublicId: const Value(null),
+        cloudinaryAssetId: const Value(null),
+        cloudinarySecureUrl: const Value(null),
+        cloudinaryFormat: const Value(null),
+        cloudinaryBytes: const Value(null),
+        cloudinaryDurationSeconds: const Value(null),
+        cloudinaryVersion: const Value(null),
+        cloudinarySignature: const Value(null),
         status: Value(PendingMediaUploadStatus.recorded.name),
         lastError: const Value(null),
       ),
     );
   }
 
-  Future<PendingMediaUpload?> getRow(String attemptPublicId, String pinnedItemPublicId) {
-    return (select(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+  Future<PendingMediaUpload?> getRow(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  ) {
+    return (select(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .getSingleOrNull();
   }
 
@@ -45,20 +64,25 @@ class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase> with _$Pending
   /// instead of polling, so it reflects the coordinator's background
   /// (canary/periodic) progress on this row without any manual refresh
   /// call.
-  Stream<PendingMediaUpload?> watchRow(String attemptPublicId, String pinnedItemPublicId) {
-    return (select(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+  Stream<PendingMediaUpload?> watchRow(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  ) {
+    return (select(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .watchSingleOrNull();
   }
 
   /// Every row not yet [PendingMediaUploadStatus.ready] — the coordinator's
   /// scan set on every canary/periodic trigger.
   Future<List<PendingMediaUpload>> queryNonReady() {
-    return (select(
-      pendingMediaUploadTable,
-    )..where((t) => t.status.equals(PendingMediaUploadStatus.ready.name).not())).get();
+    return (select(pendingMediaUploadTable)..where(
+          (t) => t.status.equals(PendingMediaUploadStatus.ready.name).not(),
+        ))
+        .get();
   }
 
   Future<void> markUploading(
@@ -67,29 +91,82 @@ class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase> with _$Pending
     required String mediaPublicId,
     required String uploadUrl,
     required int uploadUrlExpiresAt,
+    String apiKey = '',
+    String timestamp = '',
+    String signature = '',
+    String folder = '',
+    String resourceType = 'video',
+    String publicId = '',
   }) {
-    return (update(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+    return (update(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .write(
           PendingMediaUploadTableCompanion(
             mediaPublicId: Value(mediaPublicId),
             uploadUrl: Value(uploadUrl),
             uploadUrlExpiresAt: Value(uploadUrlExpiresAt),
+            cloudinaryApiKey: Value(apiKey),
+            cloudinaryTimestamp: Value(timestamp),
+            cloudinaryUploadSignature: Value(signature),
+            cloudinaryFolder: Value(folder),
+            cloudinaryResourceType: Value(resourceType),
+            cloudinaryPublicId: Value(publicId),
             status: Value(PendingMediaUploadStatus.uploading.name),
           ),
         );
   }
 
-  Future<void> markUploaded(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, PendingMediaUploadStatus.uploaded);
+  Future<void> markUploaded(
+    String attemptPublicId,
+    String pinnedItemPublicId, {
+    CloudinaryUploadResult? result,
+  }) {
+    if (result == null) {
+      return _updateStatus(
+        attemptPublicId,
+        pinnedItemPublicId,
+        PendingMediaUploadStatus.uploaded,
+      );
+    }
+    return (update(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
+        .write(
+          PendingMediaUploadTableCompanion(
+            cloudinaryPublicId: Value(result.publicId),
+            cloudinaryAssetId: Value(result.assetId),
+            cloudinarySecureUrl: Value(result.secureUrl),
+            cloudinaryResourceType: Value(result.resourceType),
+            cloudinaryFormat: Value(result.format),
+            cloudinaryBytes: Value(result.bytes),
+            cloudinaryDurationSeconds: Value(result.durationSeconds),
+            cloudinaryVersion: Value(result.version),
+            cloudinarySignature: Value(result.signature),
+            status: Value(PendingMediaUploadStatus.uploaded.name),
+          ),
+        );
+  }
 
-  Future<void> markCompleting(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, PendingMediaUploadStatus.completing);
+  Future<void> markCompleting(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  ) => _updateStatus(
+    attemptPublicId,
+    pinnedItemPublicId,
+    PendingMediaUploadStatus.completing,
+  );
 
   Future<void> markReady(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, PendingMediaUploadStatus.ready);
+      _updateStatus(
+        attemptPublicId,
+        pinnedItemPublicId,
+        PendingMediaUploadStatus.ready,
+      );
 
   /// Records the failure for diagnostics without changing [status] — the
   /// row is retried from wherever it currently sits on the next
@@ -97,27 +174,38 @@ class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase> with _$Pending
   /// leave-pending-on-transient-failure behavior (phase-06 Design
   /// Constraints: `complete` failures have no terminal-rejected
   /// equivalent, unbounded retry is correct here).
-  Future<void> markError(String attemptPublicId, String pinnedItemPublicId, String error) {
-    return (update(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+  Future<void> markError(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    String error,
+  ) {
+    return (update(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .write(PendingMediaUploadTableCompanion(lastError: Value(error)));
   }
 
   Future<void> deleteRow(String attemptPublicId, String pinnedItemPublicId) {
-    return (delete(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+    return (delete(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .go();
   }
 
-  Future<void> _updateStatus(String attemptPublicId, String pinnedItemPublicId, PendingMediaUploadStatus status) {
-    return (update(pendingMediaUploadTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+  Future<void> _updateStatus(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    PendingMediaUploadStatus status,
+  ) {
+    return (update(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .write(PendingMediaUploadTableCompanion(status: Value(status.name)));
   }
 }

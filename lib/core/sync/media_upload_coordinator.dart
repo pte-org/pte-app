@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:logger/logger.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/network/cloudinary_upload_result.dart';
 import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/network_canary.dart';
 import 'package:pte_app/core/network/raw_upload_client.dart';
@@ -83,7 +84,10 @@ class MediaUploadCoordinator {
   void start() {
     if (_canarySubscription != null || _periodicTimer != null) return;
     _canarySubscription = _canary.available.listen((_) => unawaited(scanAll()));
-    _periodicTimer = _createPeriodicTimer(_periodicInterval, (_) => unawaited(scanAll()));
+    _periodicTimer = _createPeriodicTimer(
+      _periodicInterval,
+      (_) => unawaited(scanAll()),
+    );
   }
 
   void stop() {
@@ -95,10 +99,14 @@ class MediaUploadCoordinator {
 
   /// Immediate one-off attempt for a specific row — called right after
   /// recording stops, independent of the scan loop's cadence.
-  Future<void> attemptUpload(String attemptPublicId, String pinnedItemPublicId) async {
+  Future<void> attemptUpload(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  ) async {
     if (_backoff.isActive) return;
     final row = await _mediaDao.getRow(attemptPublicId, pinnedItemPublicId);
-    if (row == null || row.status == PendingMediaUploadStatus.ready.name) return;
+    if (row == null || row.status == PendingMediaUploadStatus.ready.name)
+      return;
     await _advance(row);
   }
 
@@ -129,10 +137,13 @@ class MediaUploadCoordinator {
       var current = initial;
       try {
         while (current.status != PendingMediaUploadStatus.ready.name) {
-          current = await switch (PendingMediaUploadStatus.values.byName(current.status)) {
+          current = await switch (PendingMediaUploadStatus.values.byName(
+            current.status,
+          )) {
             PendingMediaUploadStatus.recorded => _presign(current),
             PendingMediaUploadStatus.uploading => _upload(current),
-            PendingMediaUploadStatus.uploaded || PendingMediaUploadStatus.completing => _complete(current),
+            PendingMediaUploadStatus.uploaded ||
+            PendingMediaUploadStatus.completing => _complete(current),
             PendingMediaUploadStatus.ready => current,
           };
         }
@@ -157,7 +168,11 @@ class MediaUploadCoordinator {
           error: e,
           stackTrace: stackTrace,
         );
-        await _mediaDao.markError(current.attemptPublicId, current.pinnedItemPublicId, e.toString());
+        await _mediaDao.markError(
+          current.attemptPublicId,
+          current.pinnedItemPublicId,
+          e.toString(),
+        );
       }
     } finally {
       _inFlightRows.remove(key);
@@ -165,14 +180,26 @@ class MediaUploadCoordinator {
   }
 
   Future<PendingMediaUpload> _presign(PendingMediaUpload row) async {
-    final presign = await _mediaRepository.requestPresign(_contentType);
-    final expiresAt = DateTime.now().add(Duration(seconds: presign.expiresInSeconds)).millisecondsSinceEpoch;
+    final fileSize = await File(row.localFilePath).length();
+    final presign = await _mediaRepository.requestPresign(
+      _contentType,
+      sizeBytes: fileSize,
+    );
+    final expiresAt = DateTime.now()
+        .add(Duration(seconds: presign.expiresInSeconds))
+        .millisecondsSinceEpoch;
     await _mediaDao.markUploading(
       row.attemptPublicId,
       row.pinnedItemPublicId,
       mediaPublicId: presign.mediaPublicId,
       uploadUrl: presign.uploadUrl,
       uploadUrlExpiresAt: expiresAt,
+      apiKey: presign.apiKey,
+      timestamp: presign.timestamp,
+      signature: presign.signature,
+      folder: presign.folder,
+      resourceType: presign.resourceType,
+      publicId: presign.publicId,
     );
     // Built locally rather than re-queried — every field just written is
     // already known here, and nothing else can write to this row
@@ -181,6 +208,12 @@ class MediaUploadCoordinator {
       mediaPublicId: Value(presign.mediaPublicId),
       uploadUrl: Value(presign.uploadUrl),
       uploadUrlExpiresAt: Value(expiresAt),
+      cloudinaryApiKey: Value(presign.apiKey),
+      cloudinaryTimestamp: Value(presign.timestamp),
+      cloudinaryUploadSignature: Value(presign.signature),
+      cloudinaryFolder: Value(presign.folder),
+      cloudinaryResourceType: Value(presign.resourceType),
+      cloudinaryPublicId: Value(presign.publicId),
       status: PendingMediaUploadStatus.uploading.name,
     );
   }
@@ -189,12 +222,25 @@ class MediaUploadCoordinator {
     final file = File(row.localFilePath);
     var current = row;
 
+    // Rows written by an older app version, or a process killed before the
+    // presign fields were committed, must obtain a complete fresh signature
+    // before talking to Cloudinary.
+    if (current.cloudinaryApiKey == null ||
+        current.cloudinaryTimestamp == null ||
+        current.cloudinaryUploadSignature == null ||
+        current.cloudinaryFolder == null ||
+        current.cloudinaryResourceType == null ||
+        current.cloudinaryPublicId == null) {
+      current = await _presign(current);
+    }
+
     // Proactive check to avoid a doomed request — the failure-driven
     // fallback below still exists regardless, since a URL can expire in
     // the gap between this check and the request actually landing
     // (phase-06 Design Constraints).
     final expiresAt = current.uploadUrlExpiresAt;
-    if (expiresAt != null && DateTime.now().millisecondsSinceEpoch >= expiresAt) {
+    if (expiresAt != null &&
+        DateTime.now().millisecondsSinceEpoch >= expiresAt) {
       current = await _presign(current);
     }
 
@@ -202,23 +248,80 @@ class MediaUploadCoordinator {
     // Never re-record — only the PUT is repeated, against the same local file.
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        await _rawUploadClient.putFile(current.uploadUrl!, file, contentType: _contentType);
-        break;
+        final result = await _rawUploadClient.upload(
+          uploadUrl: current.uploadUrl!,
+          file: file,
+          contentType: _contentType,
+          apiKey: current.cloudinaryApiKey!,
+          timestamp: current.cloudinaryTimestamp!,
+          signature: current.cloudinaryUploadSignature!,
+          folder: current.cloudinaryFolder!,
+          publicId: current.cloudinaryPublicId!.split('/').last,
+        );
+        await _mediaDao.markUploaded(
+          current.attemptPublicId,
+          current.pinnedItemPublicId,
+          result: result,
+        );
+        return current.copyWith(
+          cloudinaryPublicId: Value(result.publicId),
+          cloudinaryAssetId: Value(result.assetId),
+          cloudinarySecureUrl: Value(result.secureUrl),
+          cloudinaryResourceType: Value(result.resourceType),
+          cloudinaryFormat: Value(result.format),
+          cloudinaryBytes: Value(result.bytes),
+          cloudinaryDurationSeconds: Value(result.durationSeconds),
+          cloudinaryVersion: Value(result.version),
+          cloudinarySignature: Value(result.signature),
+          status: PendingMediaUploadStatus.uploaded.name,
+        );
       } on RawUploadException catch (e) {
         if (!e.looksExpired || attempt == 1) rethrow;
         current = await _presign(current);
       }
     }
 
-    await _mediaDao.markUploaded(current.attemptPublicId, current.pinnedItemPublicId);
     return current.copyWith(status: PendingMediaUploadStatus.uploaded.name);
   }
 
   Future<PendingMediaUpload> _complete(PendingMediaUpload row) async {
     await _mediaDao.markCompleting(row.attemptPublicId, row.pinnedItemPublicId);
-    await _mediaRepository.completeUpload(row.mediaPublicId!);
+    await _mediaRepository.completeUpload(
+      row.mediaPublicId!,
+      _completionFrom(row),
+    );
     await _mediaDao.markReady(row.attemptPublicId, row.pinnedItemPublicId);
     return row.copyWith(status: PendingMediaUploadStatus.ready.name);
+  }
+
+  CloudinaryUploadResult _completionFrom(PendingMediaUpload row) {
+    final publicId = row.cloudinaryPublicId;
+    final assetId = row.cloudinaryAssetId;
+    final secureUrl = row.cloudinarySecureUrl;
+    final resourceType = row.cloudinaryResourceType;
+    final bytes = row.cloudinaryBytes;
+    final version = row.cloudinaryVersion;
+    final signature = row.cloudinarySignature;
+    if (publicId == null ||
+        assetId == null ||
+        secureUrl == null ||
+        resourceType == null ||
+        bytes == null ||
+        version == null ||
+        signature == null) {
+      throw StateError('Cloudinary completion metadata is missing');
+    }
+    return CloudinaryUploadResult(
+      publicId: publicId,
+      assetId: assetId,
+      secureUrl: secureUrl,
+      resourceType: resourceType,
+      format: row.cloudinaryFormat,
+      bytes: bytes,
+      durationSeconds: row.cloudinaryDurationSeconds,
+      version: version,
+      signature: signature,
+    );
   }
 
   Future<void> _submitToOutbox(PendingMediaUpload row) async {

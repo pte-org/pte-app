@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import 'package:pte_app/core/config/app_config.dart';
+import 'package:pte_app/core/network/cloudinary_upload_result.dart';
 
-/// Thin, deliberately uninterceptored `PUT` client for presigned MinIO
-/// uploads. The presigned URL itself is the credential (900s TTL) —
-/// attaching the app's bearer `Authorization` header would send it to a
-/// different origin than the API gateway for no reason (phase-06 Design
-/// Constraints). Never reuse `ApiClient`'s gateway `Dio` instance for this
-/// call; this class's [Dio] carries zero interceptors, always.
+/// Unauthenticated multipart client for direct signed Cloudinary uploads.
+///
+/// The short-lived Cloudinary signature is the credential for this request.
+/// The app bearer token must never be sent to Cloudinary, so this client uses
+/// its own Dio instance without the gateway interceptors.
 class RawUploadClient {
   RawUploadClient({Dio? dio})
     : _dio =
@@ -24,38 +24,56 @@ class RawUploadClient {
 
   final Dio _dio;
 
-  /// Exposed so tests can assert directly on the interceptor list (e.g.
-  /// confirming no auth interceptor was ever attached) rather than only
-  /// inferring it from a successful mocked response.
   List<Interceptor> get interceptors => List.unmodifiable(_dio.interceptors);
 
-  /// Throws [RawUploadException] on any non-2xx response. [file] is
-  /// re-read from disk on every call (including a retry after re-presign)
-  /// rather than buffered — the recording is never held only in memory
-  /// (phase-06 Design Constraints).
-  Future<void> putFile(String uploadUrl, File file, {required String contentType}) async {
+  /// Reads [file] from disk for every call, including retries after a stale
+  /// signature, instead of keeping the recording in memory.
+  Future<CloudinaryUploadResult> upload({
+    required String uploadUrl,
+    required File file,
+    required String contentType,
+    required String apiKey,
+    required String timestamp,
+    required String signature,
+    required String folder,
+    required String publicId,
+  }) async {
     try {
-      await _dio.put<void>(
+      final response = await _dio.post<Map<String, dynamic>>(
         uploadUrl,
-        data: file.openRead(),
-        options: Options(
-          headers: {Headers.contentTypeHeader: contentType, Headers.contentLengthHeader: await file.length()},
-        ),
+        data: FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            file.path,
+            filename: file.uri.pathSegments.last,
+            contentType: DioMediaType.parse(contentType),
+          ),
+          'api_key': apiKey,
+          'timestamp': timestamp,
+          'signature': signature,
+          'folder': folder,
+          'public_id': publicId,
+        }),
+        options: Options(contentType: Headers.multipartFormDataContentType),
       );
+      final body = response.data;
+      if (body == null) {
+        throw const RawUploadException(
+          looksExpired: false,
+          message: 'Cloudinary returned an empty response',
+        );
+      }
+      return CloudinaryUploadResult.fromJson(body);
     } on DioException catch (e) {
-      throw RawUploadException(looksExpired: _looksLikeExpiredUrl(e), message: e.message ?? 'Upload failed');
+      throw RawUploadException(
+        looksExpired: _looksLikeExpiredUrl(e),
+        message: e.message ?? 'Upload failed',
+      );
     }
   }
 
-  /// MinIO returns its own error body for a stale/invalid presigned URL —
-  /// distinct from `pte-api`'s `ApiResponse` envelope, since this request
-  /// never touches the gateway. 403 (SignatureDoesNotMatch/AccessDenied)
-  /// and 400 (expired request) are the shapes a stale presign takes; any
-  /// other failure (including no response at all) is a generic upload
-  /// failure, not an expiry signal.
   bool _looksLikeExpiredUrl(DioException e) {
     final statusCode = e.response?.statusCode;
-    return statusCode == 403 || statusCode == 400;
+    return statusCode == 400 || statusCode == 401 || statusCode == 403;
   }
 }
 
@@ -66,5 +84,6 @@ class RawUploadException implements Exception {
   final String message;
 
   @override
-  String toString() => 'RawUploadException: $message (looksExpired=$looksExpired)';
+  String toString() =>
+      'RawUploadException: $message (looksExpired=$looksExpired)';
 }
