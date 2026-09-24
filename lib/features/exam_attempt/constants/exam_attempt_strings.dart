@@ -28,6 +28,9 @@ class ExamAttemptStrings {
       'This exam is not ready to run on the current configuration. Please contact your exam host for assistance.';
   static const String attemptStartFailureTitle = 'Unable to start exam';
   static const String attemptContinueFailureTitle = 'Unable to continue exam';
+  static const String retryLimitReachedCode = 'RETRY_LIMIT_REACHED';
+  static const String retryLimitReachedMessage =
+      'You have used all attempts for this exam. Please contact your host if you need help.';
   static const String attemptStartRetry = 'Try again';
   static const String attemptStartChangeSession = 'Use a different session';
   static const String sessionResolutionFailureMessage =

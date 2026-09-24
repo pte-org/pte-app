@@ -186,10 +186,14 @@ class _AppAuthGateState extends State<AppAuthGate> {
           return switch (state) {
             AuthIdle() ||
             AuthUnauthenticated() ||
-            AuthError() => LoginPage(onSessionIdProvided: _rememberSessionId),
-            // Keep the login form mounted while authenticating so credentials
-            // and an optional session ID survive the student session-ID follow-up.
+            AuthError() => LoginPage(
+              requireSessionId: true,
+              onSessionIdProvided: _rememberSessionId,
+            ),
+            // Keep the same required-session login form mounted while the
+            // authentication request is in progress.
             AuthAuthenticating() => LoginPage(
+              requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
             AuthAuthenticated(:final claims)
@@ -231,6 +235,7 @@ class StudentExamGate extends StatefulWidget {
 class StudentExamGateState extends State<StudentExamGate> {
   late ExamAttemptBloc _bloc = GetIt.instance<ExamAttemptBloc>();
   bool _attemptStarted = false;
+  bool _deviceCheckConfirmed = false;
 
   /// Gates `ReportScreen` behind `SectionCompletedScreen` (Screen 7) once
   /// per `AttemptCompleted` — reset alongside `_bloc` on
@@ -255,13 +260,17 @@ class StudentExamGateState extends State<StudentExamGate> {
     );
     _bloc = getIt<ExamAttemptBloc>();
     _attemptStarted = false;
+    _deviceCheckConfirmed = false;
     _reportRevealed = false;
     context.read<AuthBloc>().add(const LogoutRequested());
   }
 
   void _retrySession() {
     _bloc.add(
-      SessionResolutionRequested(rawInput: widget.initialSessionId.trim()),
+      SessionResolutionRequested(
+        rawInput: widget.initialSessionId.trim(),
+        deviceCheckConfirmed: _deviceCheckConfirmed,
+      ),
     );
   }
 
@@ -274,6 +283,10 @@ class StudentExamGateState extends State<StudentExamGate> {
         listener: (context, state) {
           if (state is AttemptInProgress || state is AttemptCompleted) {
             _attemptStarted = true;
+          }
+          if (state is AttemptInProgress) {
+            _deviceCheckConfirmed = true;
+            _reportRevealed = false;
           }
           final error = state is AttemptError ? state.error : null;
           if (error is LockdownActivationException) {
@@ -314,7 +327,14 @@ class StudentExamGateState extends State<StudentExamGate> {
             if (!_reportRevealed) {
               return SectionCompletedScreen(
                 timeExpired: state.timeExpired,
+                attemptNumber: state.attemptNumber,
+                remainingRetries: state.remainingRetries,
+                canRetry: state.canRetry,
                 onContinue: () => setState(() => _reportRevealed = true),
+                onRetry: () {
+                  _reportRevealed = false;
+                  _retrySession();
+                },
               );
             }
             return ReportScreen(

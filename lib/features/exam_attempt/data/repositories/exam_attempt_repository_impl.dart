@@ -55,9 +55,10 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   }
 
   @override
-  Future<void> forceSubmit(String attemptPublicId) {
-    return _apiClient.post<void>(
+  Future<AttemptTaskResponse> forceSubmit(String attemptPublicId) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '${AppConfig.examAttemptsPath}/$attemptPublicId/submit',
     );
+    return AttemptTaskResponse.fromJson(response.data!);
   }
 }

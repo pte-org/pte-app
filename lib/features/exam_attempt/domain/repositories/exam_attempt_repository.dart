@@ -22,5 +22,5 @@ abstract class ExamAttemptRepository {
   /// Stubbed for shape-completeness now so Phase 7 (force-submit, FR-10)
   /// doesn't need to touch this repository — intentionally unwired to any
   /// `ExamAttemptBloc` event in this phase.
-  Future<void> forceSubmit(String attemptPublicId);
+  Future<AttemptTaskResponse> forceSubmit(String attemptPublicId);
 }

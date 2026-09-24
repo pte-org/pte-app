@@ -20,6 +20,8 @@ String examAttemptFriendlyErrorMessage(Object error) {
         ExamAttemptStrings.examRequiresAppUpdateMessage,
       ExamAttemptStrings.examConfigurationNotCompatibleCode =>
         ExamAttemptStrings.examConfigurationNotCompatibleMessage,
+      ExamAttemptStrings.retryLimitReachedCode =>
+        ExamAttemptStrings.retryLimitReachedMessage,
       _ => friendlyErrorMessage(error),
     };
   }

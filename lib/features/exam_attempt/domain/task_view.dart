@@ -211,6 +211,9 @@ class AttemptTaskResponse {
     this.task,
     this.encryptionPublicKey,
     this.lockdownMode,
+    this.attemptNumber = 1,
+    this.remainingRetries = 0,
+    this.canRetry = false,
   });
 
   final String attemptPublicId;
@@ -234,6 +237,12 @@ class AttemptTaskResponse {
   /// (phase-04 Design Constraints).
   final String? lockdownMode;
 
+  /// Server-assigned sequence and quota metadata; retry authorization never
+  /// relies on a client-side counter.
+  final int attemptNumber;
+  final int remainingRetries;
+  final bool canRetry;
+
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {
     return AttemptTaskResponse(
       attemptPublicId: json['attemptPublicId'] as String,
@@ -244,6 +253,9 @@ class AttemptTaskResponse {
           : TaskView.fromJson(json['task'] as Map<String, dynamic>),
       encryptionPublicKey: json['encryptionPublicKey'] as String?,
       lockdownMode: json['lockdownMode'] as String?,
+      attemptNumber: json['attemptNumber'] as int? ?? 1,
+      remainingRetries: json['remainingRetries'] as int? ?? 0,
+      canRetry: json['canRetry'] as bool? ?? false,
     );
   }
 }

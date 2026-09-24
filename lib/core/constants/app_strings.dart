@@ -242,11 +242,13 @@ class AppStrings {
 
   static const String sectionCompletedTimeUpTitle = 'Time is up';
   static const String sectionCompletedTimeUpMessage =
-      'The time allowed for this section has ended. Your answers so far have been saved.';
-  static const String sectionCompletedNaturalTitle =
-      'Reading Section Completed';
+      'The time allowed for this exam has ended. Your answers so far have been saved.';
+  static const String sectionCompletedNaturalTitle = 'Exam completed';
   static const String sectionCompletedNaturalMessage =
-      'You have answered every question in this section.';
+      'You have completed every question in this exam.';
+  static const String examAttemptNumberLabel = 'Attempt';
+  static const String examRetriesRemainingMessage = 'Retries remaining';
+  static const String examRetryButton = 'Try again';
   static const String sectionCompletedContinueButton = 'Continue';
 
   // Writing task — text-editor toolbar tooltips.
