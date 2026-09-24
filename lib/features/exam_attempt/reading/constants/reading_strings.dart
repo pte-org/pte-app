@@ -14,5 +14,5 @@ class ReadingStrings {
   static const String fillBlanksContentUnavailableTitle ='Content being updated';
   static const String fillBlanksContentUnavailableMessage ='This task isn\'t ready to display yet. Please check back later.';
   static const String devReadingPreviewTitle ='Reading task preview';
-  static const String devReadingPreviewBlankGroupsUnavailableLabel ='FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+  static const String devReadingPreviewBlankGroupsUnavailableLabel ='FILL_IN_THE_BLANKS_DROPDOWN (blankGroups unavailable)';
 }

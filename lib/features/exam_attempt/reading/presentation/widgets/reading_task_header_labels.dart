@@ -9,8 +9,8 @@ String readingTaskHeaderTitle(String taskType) {
     'MC_READING_SINGLE' => ReadingStrings.readingHeaderTitleMcSingle,
     'MC_READING_MULTIPLE' => ReadingStrings.readingHeaderTitleMcMultiple,
     'RE_ORDER_PARAGRAPHS' => ReadingStrings.readingHeaderTitleReorderParagraphs,
-    'FILL_BLANKS_READING' => ReadingStrings.readingHeaderTitleFillBlanksDragDrop,
-    'FILL_BLANKS_READING_WRITING' => ReadingStrings.readingHeaderTitleFillBlanksDropdown,
+    'FILL_IN_THE_BLANKS_DRAG_AND_DROP' => ReadingStrings.readingHeaderTitleFillBlanksDragDrop,
+    'FILL_IN_THE_BLANKS_DROPDOWN' => ReadingStrings.readingHeaderTitleFillBlanksDropdown,
     _ => '',
   };
 }
@@ -29,8 +29,8 @@ String readingTaskInstruction(String taskType) {
     'MC_READING_SINGLE' => AppStrings.readingInstructionMcSingle,
     'MC_READING_MULTIPLE' => AppStrings.readingInstructionMcMultiple,
     'RE_ORDER_PARAGRAPHS' => AppStrings.readingInstructionReorderParagraphs,
-    'FILL_BLANKS_READING' => AppStrings.readingInstructionFillBlanksDragDrop,
-    'FILL_BLANKS_READING_WRITING' => AppStrings.readingInstructionFillBlanksDropdown,
+    'FILL_IN_THE_BLANKS_DRAG_AND_DROP' => AppStrings.readingInstructionFillBlanksDragDrop,
+    'FILL_IN_THE_BLANKS_DROPDOWN' => AppStrings.readingInstructionFillBlanksDropdown,
     _ => '',
   };
 }

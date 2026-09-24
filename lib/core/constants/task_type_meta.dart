@@ -143,7 +143,7 @@ class TaskTypeMeta {
       designReference: '33-write-from-dictation-listening',
     ),
     TaskTypeMeta(
-      taskType: 'FILL_BLANKS_READING_WRITING',
+      taskType: 'FILL_IN_THE_BLANKS_DROPDOWN',
       section: 'READING',
       title: 'Reading and Writing: Fill in the Blanks',
       instruction: 'Select the best word for each blank.',
@@ -170,7 +170,7 @@ class TaskTypeMeta {
       designReference: '22-re-order-paragraphs',
     ),
     TaskTypeMeta(
-      taskType: 'FILL_BLANKS_READING',
+      taskType: 'FILL_IN_THE_BLANKS_DRAG_AND_DROP',
       section: 'READING',
       title: 'Reading: Fill in the Blanks',
       instruction: 'Drag the words into the correct blanks.',
@@ -197,7 +197,7 @@ class TaskTypeMeta {
       designReference: '27-multiple-choice-multiple-answer-listening',
     ),
     TaskTypeMeta(
-      taskType: 'FILL_BLANKS_LISTENING',
+      taskType: 'FILL_IN_THE_BLANKS_TYPE_IN',
       section: 'LISTENING',
       title: 'Listening: Fill in the Blanks',
       instruction: 'Type the missing words as you listen.',
