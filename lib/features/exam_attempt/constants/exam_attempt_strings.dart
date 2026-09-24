@@ -4,9 +4,6 @@
 class ExamAttemptStrings {
   const ExamAttemptStrings._();
 
-  static const String sessionEntryTitle = 'Enter session ID';
-  static const String sessionEntryFieldLabel = 'Session ID';
-  static const String sessionEntryStartButton = 'Start';
   static const String examPhasePrepLabel = 'Preparation';
   static const String examPhaseResponseLabel = 'Response';
   static const String examTaskCounterOf = ' / ';
@@ -29,6 +26,14 @@ class ExamAttemptStrings {
       'This exam needs a newer app version. Please update the app and try again, or contact your exam host for help.';
   static const String examConfigurationNotCompatibleMessage =
       'This exam is not ready to run on the current configuration. Please contact your exam host for assistance.';
+  static const String attemptStartFailureTitle = 'Unable to start exam';
+  static const String attemptContinueFailureTitle = 'Unable to continue exam';
+  static const String attemptStartRetry = 'Try again';
+  static const String attemptStartChangeSession = 'Use a different session';
+  static const String sessionResolutionFailureMessage =
+      'We could not open this exam session. Check the session ID from your host and try again.';
+  static const String lockdownStartFailureMessage =
+      'Some required security checks could not be completed. Review the details and retry after fixing them.';
   static const String forceSubmitButtonLabel = 'Submit exam';
   static const String forceSubmitDialogTitle = 'Submit exam now?';
   static const String forceSubmitDialogMessage =
