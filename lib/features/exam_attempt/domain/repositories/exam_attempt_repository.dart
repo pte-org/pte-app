@@ -1,3 +1,4 @@
+import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 /// Attempt lifecycle only (start/resume/advance/force-submit) — depends on
@@ -9,6 +10,8 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 /// outbox DAO itself rather than asking this repository to (phase-03
 /// Design Constraints).
 abstract class ExamAttemptRepository {
+  Future<AttemptPreflight> preflight(String sessionPublicId);
+
   Future<AttemptTaskResponse> startOrResumeAttempt(
     String sessionPublicId, {
     bool deviceCheckConfirmed = false,
@@ -19,5 +22,5 @@ abstract class ExamAttemptRepository {
   /// Stubbed for shape-completeness now so Phase 7 (force-submit, FR-10)
   /// doesn't need to touch this repository — intentionally unwired to any
   /// `ExamAttemptBloc` event in this phase.
-  Future<void> forceSubmit(String attemptPublicId);
+  Future<AttemptTaskResponse> forceSubmit(String attemptPublicId);
 }

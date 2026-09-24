@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/cloudinary_upload_result.dart';
 import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/network_canary.dart';
 import 'package:pte_app/core/network/raw_upload_client.dart';
@@ -32,7 +33,8 @@ class _FakeCanary implements NetworkCanary {
   Future<void> dispose() async {}
 }
 
-Response<void> _okResponse() => Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
+Response<void> _okResponse() =>
+    Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
 
 /// This phase's centerpiece verification (phase-07 Steps 6-7, Design
 /// Constraints, Risks): a genuinely OS-level "kill -9 the process, relaunch,
@@ -60,7 +62,9 @@ void main() {
   });
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pte_app_kill_recovery_test');
+    tempDir = await Directory.systemTemp.createTemp(
+      'pte_app_kill_recovery_test',
+    );
     dbPath = p.join(tempDir.path, 'recovery_test.sqlite');
   });
 
@@ -96,8 +100,16 @@ void main() {
       final secondDb = AppDatabase(NativeDatabase(File(dbPath)));
       addTearDown(secondDb.close);
 
-      final recovered = await secondDb.answerOutboxDao.getAnswer(attemptPublicId, pinnedItemPublicId);
-      expect(recovered, isNotNull, reason: 'the selection must have reached disk before "kill", not just memory');
+      final recovered = await secondDb.answerOutboxDao.getAnswer(
+        attemptPublicId,
+        pinnedItemPublicId,
+      );
+      expect(
+        recovered,
+        isNotNull,
+        reason:
+            'the selection must have reached disk before "kill", not just memory',
+      );
       expect(recovered!.status, AnswerSyncStatus.pending.name);
       expect(recovered.payload, '2');
 
@@ -113,15 +125,26 @@ void main() {
         ),
       ).thenAnswer((_) async => _okResponse());
 
-      final syncEngine = SyncEngine(outboxDao: secondDb.answerOutboxDao, apiClient: apiClient, canary: _FakeCanary());
+      final syncEngine = SyncEngine(
+        outboxDao: secondDb.answerOutboxDao,
+        apiClient: apiClient,
+        canary: _FakeCanary(),
+      );
       syncEngine.startSync(attemptPublicId);
       await syncEngine.flushNow(attemptPublicId);
       syncEngine.stopSync();
 
       verify(
-        () => apiClient.submitAnswer(attemptPublicId: attemptPublicId, pinnedItemPublicId: pinnedItemPublicId, payload: '2'),
+        () => apiClient.submitAnswer(
+          attemptPublicId: attemptPublicId,
+          pinnedItemPublicId: pinnedItemPublicId,
+          payload: '2',
+        ),
       ).called(1);
-      final synced = await secondDb.answerOutboxDao.getAnswer(attemptPublicId, pinnedItemPublicId);
+      final synced = await secondDb.answerOutboxDao.getAnswer(
+        attemptPublicId,
+        pinnedItemPublicId,
+      );
       expect(synced!.status, AnswerSyncStatus.synced.name);
     },
   );
@@ -149,24 +172,57 @@ void main() {
         pinnedItemPublicId,
         mediaPublicId: 'media-1',
         uploadUrl: 'https://minio.example.com/bucket/object?sig=abc',
-        uploadUrlExpiresAt: DateTime.now().add(const Duration(minutes: 15)).millisecondsSinceEpoch,
+        uploadUrlExpiresAt: DateTime.now()
+            .add(const Duration(minutes: 15))
+            .millisecondsSinceEpoch,
       );
-      await firstDb.pendingMediaUploadDao.markUploaded(attemptPublicId, pinnedItemPublicId);
+      await firstDb.pendingMediaUploadDao.markUploaded(
+        attemptPublicId,
+        pinnedItemPublicId,
+        result: const CloudinaryUploadResult(
+          publicId: 'pte/submissions/media-1',
+          assetId: 'asset-1',
+          secureUrl:
+              'https://res.cloudinary.com/test/video/upload/v1/media-1.wav',
+          resourceType: 'video',
+          format: 'wav',
+          bytes: 1024,
+          durationSeconds: 1,
+          version: 1,
+          signature: 'provider-signature',
+        ),
+      );
       await firstDb.close();
 
       final secondDb = AppDatabase(NativeDatabase(File(dbPath)));
       addTearDown(secondDb.close);
 
-      final recovered = await secondDb.pendingMediaUploadDao.getRow(attemptPublicId, pinnedItemPublicId);
+      final recovered = await secondDb.pendingMediaUploadDao.getRow(
+        attemptPublicId,
+        pinnedItemPublicId,
+      );
       expect(recovered, isNotNull);
       expect(recovered!.status, PendingMediaUploadStatus.uploaded.name);
 
       final mediaRepository = _MockMediaRepository();
       final rawUploadClient = _MockRawUploadClient();
-      when(() => mediaRepository.completeUpload(any())).thenAnswer((_) async {});
       when(
-        () => rawUploadClient.putFile(any(), any(), contentType: any(named: 'contentType')),
+        () => mediaRepository.completeUpload(any(), any()),
       ).thenAnswer((_) async {});
+      when(
+        () => rawUploadClient.upload(
+          uploadUrl: any(named: 'uploadUrl'),
+          file: any(named: 'file'),
+          contentType: any(named: 'contentType'),
+          apiKey: any(named: 'apiKey'),
+          timestamp: any(named: 'timestamp'),
+          signature: any(named: 'signature'),
+          folder: any(named: 'folder'),
+          publicId: any(named: 'publicId'),
+        ),
+      ).thenAnswer(
+        (_) async => throw StateError('must not upload a recovered row'),
+      );
 
       final coordinator = MediaUploadCoordinator(
         mediaDao: secondDb.pendingMediaUploadDao,
@@ -179,14 +235,31 @@ void main() {
 
       // Never re-uploaded — only `completeUpload` should have been called,
       // confirming resumption picked up at `completing`, not `uploading`.
-      verifyNever(() => rawUploadClient.putFile(any(), any(), contentType: any(named: 'contentType')));
-      verify(() => mediaRepository.completeUpload('media-1')).called(1);
+      verifyNever(
+        () => rawUploadClient.upload(
+          uploadUrl: any(named: 'uploadUrl'),
+          file: any(named: 'file'),
+          contentType: any(named: 'contentType'),
+          apiKey: any(named: 'apiKey'),
+          timestamp: any(named: 'timestamp'),
+          signature: any(named: 'signature'),
+          folder: any(named: 'folder'),
+          publicId: any(named: 'publicId'),
+        ),
+      );
+      verify(() => mediaRepository.completeUpload('media-1', any())).called(1);
 
       // Reaching `ready` hands off to the ordinary answer outbox and
       // deletes the media-pipeline row (phase-06 Design Constraints).
-      final mediaRow = await secondDb.pendingMediaUploadDao.getRow(attemptPublicId, pinnedItemPublicId);
+      final mediaRow = await secondDb.pendingMediaUploadDao.getRow(
+        attemptPublicId,
+        pinnedItemPublicId,
+      );
       expect(mediaRow, isNull);
-      final outboxRow = await secondDb.answerOutboxDao.getAnswer(attemptPublicId, pinnedItemPublicId);
+      final outboxRow = await secondDb.answerOutboxDao.getAnswer(
+        attemptPublicId,
+        pinnedItemPublicId,
+      );
       expect(outboxRow, isNotNull);
       expect(outboxRow!.payload, 'media-1');
       expect(outboxRow.status, AnswerSyncStatus.pending.name);

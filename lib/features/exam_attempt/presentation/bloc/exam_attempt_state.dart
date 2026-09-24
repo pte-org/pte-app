@@ -34,7 +34,13 @@ final class AttemptInProgress extends ExamAttemptState {
 }
 
 final class AttemptCompleted extends ExamAttemptState {
-  const AttemptCompleted(this.attemptPublicId, {this.timeExpired = false});
+  const AttemptCompleted(
+    this.attemptPublicId, {
+    this.timeExpired = false,
+    this.attemptNumber = 1,
+    this.remainingRetries = 0,
+    this.canRetry = false,
+  });
 
   final String attemptPublicId;
 
@@ -44,6 +50,9 @@ final class AttemptCompleted extends ExamAttemptState {
   /// server-confirmed (only affects which message `SectionCompletedScreen`
   /// shows, never scoring).
   final bool timeExpired;
+  final int attemptNumber;
+  final int remainingRetries;
+  final bool canRetry;
 }
 
 /// Carries either a Phase 1 [ApiException] (attempt-lifecycle call

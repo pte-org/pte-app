@@ -259,12 +259,18 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _forceSubmitInFlight = true;
     _lastAdvanceReason = AdvanceReason.manual;
     try {
-      await _repository.forceSubmit(attemptPublicId);
+      final response = await _repository.forceSubmit(attemptPublicId);
       // Same terminal outcome as the natural end-of-tasks path in
       // _emitFromResponse — force-submit and running out of tasks are
       // indistinguishable from the UI's perspective (phase-07 Design
       // Constraints).
-      await _completeAttempt(attemptPublicId, emit);
+      await _completeAttempt(
+        attemptPublicId,
+        emit,
+        attemptNumber: response.attemptNumber,
+        remainingRetries: response.remainingRetries,
+        canRetry: response.canRetry,
+      );
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));
     } finally {
@@ -290,8 +296,11 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   /// Constraints: force-submit must reach the identical terminal state).
   Future<void> _completeAttempt(
     String attemptPublicId,
-    Emitter<ExamAttemptState> emit,
-  ) async {
+    Emitter<ExamAttemptState> emit, {
+    int attemptNumber = 1,
+    int remainingRetries = 0,
+    bool canRetry = false,
+  }) async {
     _attemptPublicId = null;
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
@@ -312,7 +321,15 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     }
     final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
     _lastAdvanceReason = AdvanceReason.manual;
-    emit(AttemptCompleted(attemptPublicId, timeExpired: timeExpired));
+    emit(
+      AttemptCompleted(
+        attemptPublicId,
+        timeExpired: timeExpired,
+        attemptNumber: attemptNumber,
+        remainingRetries: remainingRetries,
+        canRetry: canRetry,
+      ),
+    );
   }
 
   Future<void> _emitFromResponse(
@@ -320,7 +337,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) async {
     if (response.completed) {
-      await _completeAttempt(response.attemptPublicId, emit);
+      await _completeAttempt(
+        response.attemptPublicId,
+        emit,
+        attemptNumber: response.attemptNumber,
+        remainingRetries: response.remainingRetries,
+        canRetry: response.canRetry,
+      );
       return;
     }
 

@@ -12,7 +12,20 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({
+    super.key,
+    this.onSessionIdProvided,
+    this.requireSessionId = false,
+  });
+
+  /// Keeps exam entry context outside the authentication API. The app uses
+  /// this value only after a successful student sign-in.
+  final ValueChanged<String>? onSessionIdProvided;
+
+  /// Host and proctor accounts can use their workspaces without an exam
+  /// session. Student accounts are required to provide the session before
+  /// entering the exam flow.
+  final bool requireSessionId;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -22,11 +35,13 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _sessionIdController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _sessionIdController.dispose();
     super.dispose();
   }
 
@@ -48,6 +63,7 @@ class _LoginPageState extends State<LoginPage> {
                   formKey: _formKey,
                   emailField: _buildEmailField(),
                   passwordField: _buildPasswordField(),
+                  sessionIdField: _buildSessionIdField(),
                   failureMessage: _buildFailureMessage(),
                   submitButton: _buildSubmitButton(),
                 ),
@@ -92,9 +108,44 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  InputDecoration _fieldDecoration(String label) {
+  Widget _buildSessionIdField() {
+    return TextFormField(
+      controller: _sessionIdController,
+      keyboardType: TextInputType.text,
+      textInputAction: TextInputAction.done,
+      autocorrect: false,
+      enableSuggestions: false,
+      style: const TextStyle(
+        fontFamily: AppTypography.fontFamily,
+        fontSize: 12,
+        color: AppColors.loginText,
+      ),
+      decoration: _fieldDecoration(
+        widget.requireSessionId
+            ? AppStrings.loginSessionIdRequiredLabel
+            : AppStrings.loginSessionIdLabel,
+        helperText: widget.requireSessionId
+            ? AppStrings.loginSessionIdRequiredHint
+            : AppStrings.loginSessionIdHint,
+      ),
+      validator: (value) =>
+          widget.requireSessionId && (value == null || value.trim().isEmpty)
+          ? AppStrings.loginSessionIdRequired
+          : null,
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label, {String? helperText}) {
     return InputDecoration(
       labelText: label,
+      helperText: helperText,
+      helperMaxLines: 2,
+      helperStyle: const TextStyle(
+        fontFamily: AppTypography.fontFamily,
+        fontSize: 10,
+        height: 1.25,
+        color: AppColors.loginMutedText,
+      ),
       labelStyle: const TextStyle(
         fontFamily: AppTypography.fontFamily,
         fontSize: 11,
@@ -179,6 +230,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    widget.onSessionIdProvided?.call(_sessionIdController.text.trim());
     context.read<AuthBloc>().add(
       LoginRequested(
         email: _emailController.text.trim(),
@@ -193,6 +245,7 @@ class _LoginCard extends StatelessWidget {
     required this.formKey,
     required this.emailField,
     required this.passwordField,
+    required this.sessionIdField,
     required this.failureMessage,
     required this.submitButton,
   });
@@ -200,6 +253,7 @@ class _LoginCard extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final Widget emailField;
   final Widget passwordField;
+  final Widget sessionIdField;
   final Widget failureMessage;
   final Widget submitButton;
 
@@ -248,6 +302,8 @@ class _LoginCard extends StatelessWidget {
                 emailField,
                 const SizedBox(height: 17),
                 passwordField,
+                const SizedBox(height: 17),
+                sessionIdField,
                 const SizedBox(height: 8),
                 failureMessage,
                 const SizedBox(height: 10),

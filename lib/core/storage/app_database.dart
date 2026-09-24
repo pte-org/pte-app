@@ -19,16 +19,8 @@ part 'app_database.g.dart';
 /// exist — see phase-02 Design Constraints) survive process death, not just
 /// app backgrounding.
 @DriftDatabase(
-  tables: [
-    AnswerOutboxTable,
-    PendingMediaUploadTable,
-    LocalViolationsTable,
-  ],
-  daos: [
-    AnswerOutboxDao,
-    PendingMediaUploadDao,
-    LocalViolationDao,
-  ],
+  tables: [AnswerOutboxTable, PendingMediaUploadTable, LocalViolationsTable],
+  daos: [AnswerOutboxDao, PendingMediaUploadDao, LocalViolationDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
@@ -38,23 +30,77 @@ class AppDatabase extends _$AppDatabase {
   // violations. Fresh databases skip the migration entirely; existing
   // installs run the additive schema migration below.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 3) {
-            // LocalViolationsTable is purely additive — no backfill needed.
-            // The DAO will fall back to safe defaults when reading rows
-            // written before the table existed (see
-            // [LocalViolationDao._safeType]).
-            await m.createTable(localViolationsTable);
-          }
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 3) {
+        // LocalViolationsTable is purely additive — no backfill needed.
+        // The DAO will fall back to safe defaults when reading rows
+        // written before the table existed (see
+        // [LocalViolationDao._safeType]).
+        await m.createTable(localViolationsTable);
+      }
+      if (from < 4) {
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryApiKey,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryTimestamp,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryUploadSignature,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryFolder,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryResourceType,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryPublicId,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryAssetId,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinarySecureUrl,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryFormat,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryBytes,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryDurationSeconds,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinaryVersion,
+        );
+        await m.addColumn(
+          pendingMediaUploadTable,
+          pendingMediaUploadTable.cloudinarySignature,
+        );
+      }
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
