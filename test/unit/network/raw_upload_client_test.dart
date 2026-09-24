@@ -110,7 +110,8 @@ void main() {
         });
 
         await client.upload(
-          uploadUrl: 'https://api.cloudinary.com/test/video/upload',
+          uploadUrl:
+              'https://api.cloudinary.com/test/video/authenticated/upload',
           file: file,
           contentType: 'audio/wav',
           apiKey: 'test-key',
@@ -131,6 +132,12 @@ void main() {
           ),
           isFalse,
         );
+        expect(
+          adapter.lastRequest!.uri.path,
+          endsWith('/video/authenticated/upload'),
+        );
+        final uploadForm = adapter.lastRequest!.data as FormData;
+        expect(uploadForm.fields.any((field) => field.key == 'type'), isFalse);
       },
     );
   });
@@ -146,8 +153,9 @@ void main() {
           final client = RawUploadClient(dio: dio);
           final file = await _tempFile('fake audio bytes');
           addTearDown(() async {
-            if (file.parent.existsSync())
+            if (file.parent.existsSync()) {
               file.parent.deleteSync(recursive: true);
+            }
           });
 
           await expectLater(
@@ -180,8 +188,9 @@ void main() {
           final client = RawUploadClient(dio: dio);
           final file = await _tempFile('fake audio bytes');
           addTearDown(() async {
-            if (file.parent.existsSync())
+            if (file.parent.existsSync()) {
               file.parent.deleteSync(recursive: true);
+            }
           });
 
           await expectLater(
@@ -214,8 +223,9 @@ void main() {
           final client = RawUploadClient(dio: dio);
           final file = await _tempFile('fake audio bytes');
           addTearDown(() async {
-            if (file.parent.existsSync())
+            if (file.parent.existsSync()) {
               file.parent.deleteSync(recursive: true);
+            }
           });
 
           await expectLater(
@@ -248,8 +258,9 @@ void main() {
           final client = RawUploadClient(dio: dio);
           final file = await _tempFile('fake audio bytes');
           addTearDown(() async {
-            if (file.parent.existsSync())
+            if (file.parent.existsSync()) {
               file.parent.deleteSync(recursive: true);
+            }
           });
 
           await expectLater(

@@ -5,6 +5,9 @@ import 'package:dio/dio.dart';
 import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/cloudinary_upload_result.dart';
 
+const _emptyCloudinaryResponseMessage = 'Cloudinary returned an empty response';
+const _genericUploadFailureMessage = 'Upload failed';
+
 /// Unauthenticated multipart client for direct signed Cloudinary uploads.
 ///
 /// The short-lived Cloudinary signature is the credential for this request.
@@ -59,14 +62,14 @@ class RawUploadClient {
       if (body == null) {
         throw const RawUploadException(
           looksExpired: false,
-          message: 'Cloudinary returned an empty response',
+          message: _emptyCloudinaryResponseMessage,
         );
       }
       return CloudinaryUploadResult.fromJson(body);
     } on DioException catch (e) {
       throw RawUploadException(
         looksExpired: _looksLikeExpiredUrl(e),
-        message: e.message ?? 'Upload failed',
+        message: e.message ?? _genericUploadFailureMessage,
       );
     }
   }
