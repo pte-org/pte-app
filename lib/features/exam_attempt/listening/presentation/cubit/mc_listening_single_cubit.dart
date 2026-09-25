@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/mc_listening_single_state.dart';
@@ -15,9 +16,17 @@ class McListeningSingleCubit extends TaskAnswerCubit<McListeningSingleState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const McListeningSingleState()) {
+       super(
+         McListeningSingleState(
+           selectedOrderIndex: singleSelectionFromAnswerPayload(initialPayload),
+         ),
+         answerChanged:
+             (McListeningSingleState current, McListeningSingleState initial) =>
+                 current.selectedOrderIndex != initial.selectedOrderIndex,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

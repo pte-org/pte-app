@@ -6,6 +6,7 @@ import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
 import 'package:pte_app/features/exam_attempt/domain/client_capability_manifest.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 
 class _MockApiClient extends Mock implements ApiClient {}
 
@@ -111,4 +112,48 @@ void main() {
       ClientCapabilityManifest.fromRegistry().toJson(),
     );
   });
+
+  test(
+    'navigateTask posts the source item and direction to the attempt endpoint',
+    () async {
+      when(
+        () => apiClient.post<Map<String, dynamic>>(
+          '/api/v1/attempts/attempt-1/navigate',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(
+            path: '/api/v1/attempts/attempt-1/navigate',
+          ),
+          statusCode: 200,
+          data: {
+            'attemptPublicId': 'attempt-1',
+            'attemptStatus': 'IN_PROGRESS',
+            'completed': true,
+          },
+        ),
+      );
+
+      final response = await repository.navigateTask(
+        attemptPublicId: 'attempt-1',
+        fromPinnedItemPublicId: 'item-3',
+        direction: TaskNavigationDirection.previous,
+      );
+
+      expect(response.completed, isTrue);
+      final data =
+          verify(
+                () => apiClient.post<Map<String, dynamic>>(
+                  '/api/v1/attempts/attempt-1/navigate',
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(data, {
+        'fromPinnedItemPublicId': 'item-3',
+        'direction': 'PREVIOUS',
+      });
+    },
+  );
 }

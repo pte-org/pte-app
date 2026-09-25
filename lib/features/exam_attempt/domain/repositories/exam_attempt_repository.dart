@@ -1,4 +1,5 @@
 import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 /// Attempt lifecycle only (start/resume/advance/force-submit) — depends on
@@ -18,6 +19,12 @@ abstract class ExamAttemptRepository {
   });
 
   Future<AttemptTaskResponse> fetchNextTask(String attemptPublicId);
+
+  Future<AttemptTaskResponse> navigateTask({
+    required String attemptPublicId,
+    required String fromPinnedItemPublicId,
+    required TaskNavigationDirection direction,
+  });
 
   /// Stubbed for shape-completeness now so Phase 7 (force-submit, FR-10)
   /// doesn't need to touch this repository — intentionally unwired to any

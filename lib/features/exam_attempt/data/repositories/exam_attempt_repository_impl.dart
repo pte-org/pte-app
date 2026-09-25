@@ -3,6 +3,7 @@ import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
 import 'package:pte_app/features/exam_attempt/domain/client_capability_manifest.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
@@ -50,6 +51,22 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   Future<AttemptTaskResponse> fetchNextTask(String attemptPublicId) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
       '${AppConfig.examAttemptsPath}/$attemptPublicId/next-task',
+    );
+    return AttemptTaskResponse.fromJson(response.data!);
+  }
+
+  @override
+  Future<AttemptTaskResponse> navigateTask({
+    required String attemptPublicId,
+    required String fromPinnedItemPublicId,
+    required TaskNavigationDirection direction,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/navigate',
+      data: {
+        'fromPinnedItemPublicId': fromPinnedItemPublicId,
+        'direction': direction.name.toUpperCase(),
+      },
     );
     return AttemptTaskResponse.fromJson(response.data!);
   }

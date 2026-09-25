@@ -19,9 +19,20 @@ class SummarizeSpokenTextCubit
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const SummarizeSpokenTextState()) {
+       super(
+         SummarizeSpokenTextState(
+           draftText: initialPayload ?? '',
+           wordCount: countWords(initialPayload ?? ''),
+         ),
+         answerChanged:
+             (
+               SummarizeSpokenTextState current,
+               SummarizeSpokenTextState initial,
+             ) => current.draftText != initial.draftText,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

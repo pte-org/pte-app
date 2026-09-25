@@ -22,12 +22,9 @@ typedef PeriodicTimerFactory = Timer Function(Duration period, void Function(Tim
 /// Not a `Bloc` — a plain Dart service the exam-delivery `Bloc` starts and
 /// stops (Phase 3 onward); must not import `flutter_bloc` types.
 ///
-/// The single most important behavioral constraint here: a background
-/// flush (canary or periodic tick) must never flush the row for the task
-/// currently displayed to the student — see [setActiveTask] — because a
-/// successful submit advances the attempt's current-task pointer on the
-/// server. Only an explicit [flushOne] call (navigate-away / force-submit)
-/// flushes the active row (phase-02 Design Constraints).
+/// Background passes save drafts without moving the attempt pointer.
+/// The active-task exclusion prevents sync racing with the screen being edited;
+/// explicit [flushOne] calls may submit-and-advance when requested.
 class SyncEngine {
   SyncEngine({
     required AnswerOutboxDao outboxDao,
@@ -143,12 +140,12 @@ class SyncEngine {
   /// Used only by the flush-before-navigate hook (Phase 5/6) and
   /// force-submit (Phase 7) — an explicit action the student actually took,
   /// unlike a background tick.
-  Future<void> flushOne(String pinnedItemPublicId) async {
+  Future<void> flushOne(String pinnedItemPublicId, {bool advance = true}) async {
     final attemptId = _runningAttemptId;
     if (attemptId == null) return;
     final row = await _outboxDao.getAnswer(attemptId, pinnedItemPublicId);
     if (row == null || row.status != AnswerSyncStatus.pending.name) return;
-    await _flushOne(row);
+    await _flushOne(row, advance: advance);
   }
 
   Future<void> _flush(String attemptPublicId) async {
@@ -159,8 +156,10 @@ class SyncEngine {
       final activeTaskId = _activeTaskId;
       var flushedAny = false;
       for (final answer in pending) {
-        if (activeTaskId != null && answer.pinnedItemPublicId == activeTaskId) continue;
-        await _flushOne(answer);
+        if (activeTaskId != null && answer.pinnedItemPublicId == activeTaskId) {
+          continue;
+        }
+        await _flushOne(answer, advance: false);
         flushedAny = true;
         // A 429 mid-pass must stop the rest of this pass immediately, not
         // just skip retrying the row that received it — the remaining
@@ -168,7 +167,9 @@ class SyncEngine {
         // rate-limit window and needlessly compound the backoff's
         // exponential growth within a single tick (phase-07 Design
         // Constraints).
-        if (_backoff.isActive) break;
+        if (_backoff.isActive) {
+          break;
+        }
       }
       if (flushedAny) {
         await _outboxDao.checkpointWal();
@@ -178,25 +179,43 @@ class SyncEngine {
     }
   }
 
-  Future<void> _flushOne(AnswerOutbox answer) async {
+  Future<void> _flushOne(AnswerOutbox answer, {required bool advance}) async {
     try {
       final publicKey = _encryptionPublicKey;
       if (publicKey != null) {
         final encrypted = await _encryptAnswer(answer, publicKey);
         if (encrypted == null) return;
-        await _apiClient.submitEncryptedAnswer(
-          attemptPublicId: answer.attemptPublicId,
-          pinnedItemPublicId: answer.pinnedItemPublicId,
-          wrappedKey: encrypted.wrappedKey,
-          iv: encrypted.iv,
-          ciphertext: encrypted.ciphertext,
-        );
+        if (advance) {
+          await _apiClient.submitEncryptedAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            wrappedKey: encrypted.wrappedKey,
+            iv: encrypted.iv,
+            ciphertext: encrypted.ciphertext,
+          );
+        } else {
+          await _apiClient.saveEncryptedAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            wrappedKey: encrypted.wrappedKey,
+            iv: encrypted.iv,
+            ciphertext: encrypted.ciphertext,
+          );
+        }
       } else {
-        await _apiClient.submitAnswer(
-          attemptPublicId: answer.attemptPublicId,
-          pinnedItemPublicId: answer.pinnedItemPublicId,
-          payload: answer.payload,
-        );
+        if (advance) {
+          await _apiClient.submitAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            payload: answer.payload,
+          );
+        } else {
+          await _apiClient.saveAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            payload: answer.payload,
+          );
+        }
       }
       await _outboxDao.markSynced(answer.attemptPublicId, answer.pinnedItemPublicId);
       _backoff.reset();

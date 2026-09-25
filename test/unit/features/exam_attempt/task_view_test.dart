@@ -97,4 +97,23 @@ void main() {
       expect(task.imageUrl, 'https://example.com/resolved-image.png');
     });
   });
+
+  group('TaskView.fromJson — navigation permissions', () {
+    test('defaults missing permissions to disabled for compatibility', () {
+      final task = _taskFrom({});
+
+      expect(task.canNavigatePrevious, isFalse);
+      expect(task.canNavigateNext, isFalse);
+    });
+
+    test('reads server-computed Previous and Next permissions', () {
+      final task = _taskFrom({
+        'canNavigatePrevious': true,
+        'canNavigateNext': false,
+      });
+
+      expect(task.canNavigatePrevious, isTrue);
+      expect(task.canNavigateNext, isFalse);
+    });
+  });
 }

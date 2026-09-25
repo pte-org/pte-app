@@ -26,6 +26,7 @@ class McListeningSingleScreen extends StatelessWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
@@ -33,6 +34,7 @@ class McListeningSingleScreen extends StatelessWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,7 @@ class McListeningSingleScreen extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioPromptRef ?? '',
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(

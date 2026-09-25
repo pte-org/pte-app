@@ -44,6 +44,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
        super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
+    on<NavigateTaskRequested>(_onNavigateTaskRequested);
     on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
     on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
     on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
@@ -189,6 +190,25 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _lastAdvanceReason = event.reason;
     try {
       final response = await _repository.fetchNextTask(attemptPublicId);
+      await _emitFromResponse(response, emit);
+    } catch (e) {
+      emit(AttemptError(_asAttemptException(e)));
+    }
+  }
+
+  Future<void> _onNavigateTaskRequested(
+    NavigateTaskRequested event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    _lastAdvanceReason = AdvanceReason.manual;
+    try {
+      final response = await _repository.navigateTask(
+        attemptPublicId: attemptPublicId,
+        fromPinnedItemPublicId: event.fromPinnedItemPublicId,
+        direction: event.direction,
+      );
       await _emitFromResponse(response, emit);
     } catch (e) {
       emit(AttemptError(_asAttemptException(e)));

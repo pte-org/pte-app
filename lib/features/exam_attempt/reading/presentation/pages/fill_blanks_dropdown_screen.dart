@@ -25,12 +25,14 @@ class FillBlanksDropdownScreen extends StatelessWidget {
     required this.attemptPublicId,
     required this.outboxDao,
     required this.syncEngine,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
   final String attemptPublicId;
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +49,7 @@ class FillBlanksDropdownScreen extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
         blankGroupCount: blankGroups?.length ?? 0,
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(

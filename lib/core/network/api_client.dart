@@ -71,6 +71,27 @@ class ApiClient {
     }
   }
 
+  /// Saves an answer without advancing the attempt pointer. Manual
+  /// Previous/Next navigation uses this endpoint so going back from the final
+  /// item does not accidentally complete the attempt.
+  Future<Response<void>> saveAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
+  }) async {
+    try {
+      return await post<void>(
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/save',
+        data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        _ => e,
+      };
+    }
+  }
+
   /// The pinned item's on-demand play — `pte-api`'s `/audio` endpoint. A 403
   /// is remapped from the generic [ForbiddenException] to
   /// [ReplayLimitExceededException], and a 410 from [GoneException] to
@@ -118,6 +139,32 @@ class ApiClient {
     try {
       return await post<void>(
         '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/encrypted',
+        data: {
+          'pinnedItemPublicId': pinnedItemPublicId,
+          'wrappedKey': wrappedKey,
+          'iv': iv,
+          'ciphertext': ciphertext,
+        },
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        _ => e,
+      };
+    }
+  }
+
+  /// STRICT-integrity draft-save counterpart to [submitEncryptedAnswer].
+  Future<Response<void>> saveEncryptedAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String wrappedKey,
+    required String iv,
+    required String ciphertext,
+  }) async {
+    try {
+      return await post<void>(
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/encrypted/save',
         data: {
           'pinnedItemPublicId': pinnedItemPublicId,
           'wrappedKey': wrappedKey,

@@ -46,3 +46,4 @@ app.*.map.json
 
 # Claude Code local files (skills, hooks, settings)
 .claude/
+.codex/

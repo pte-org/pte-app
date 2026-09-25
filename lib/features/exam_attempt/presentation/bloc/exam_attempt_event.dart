@@ -1,4 +1,5 @@
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 sealed class ExamAttemptEvent {
@@ -49,6 +50,27 @@ final class NextTaskRequested extends ExamAttemptEvent {
 
   @override
   int get hashCode => reason.hashCode;
+}
+
+/// Explicit Previous/Next action. Unlike [NextTaskRequested], this moves the
+/// server pointer in either direction and is guarded by the pinned exam mode.
+final class NavigateTaskRequested extends ExamAttemptEvent {
+  const NavigateTaskRequested({
+    required this.fromPinnedItemPublicId,
+    required this.direction,
+  });
+
+  final String fromPinnedItemPublicId;
+  final TaskNavigationDirection direction;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NavigateTaskRequested &&
+      other.fromPinnedItemPublicId == fromPinnedItemPublicId &&
+      other.direction == direction;
+
+  @override
+  int get hashCode => Object.hash(fromPinnedItemPublicId, direction);
 }
 
 /// Dispatched internally by the `TimerService.ticks` subscription — not

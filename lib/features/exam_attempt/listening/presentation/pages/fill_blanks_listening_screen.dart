@@ -28,6 +28,7 @@ class FillBlanksListeningScreen extends StatefulWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
@@ -35,6 +36,7 @@ class FillBlanksListeningScreen extends StatefulWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
 
   @override
   State<FillBlanksListeningScreen> createState() =>
@@ -59,13 +61,15 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       gapCount: gapCount,
       audioSource: widget.task.audioPromptRef ?? '',
+      initialPayload: widget.initialAnswerPayload,
     );
     _controllers = [
       for (var gapIndex = 0; gapIndex < gapCount; gapIndex++)
-        TextEditingController()..addListener(() {
-          final index = gapIndex;
-          _cubit.gapChanged(index, _controllers[index].text);
-        }),
+        TextEditingController(text: _cubit.state.answers[gapIndex])
+          ..addListener(() {
+            final index = gapIndex;
+            _cubit.gapChanged(index, _controllers[index].text);
+          }),
     ];
   }
 

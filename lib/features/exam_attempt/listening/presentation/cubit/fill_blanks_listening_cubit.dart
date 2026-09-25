@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/fill_blanks_listening_state.dart';
@@ -21,10 +22,21 @@ class FillBlanksListeningCubit
     required this.pinnedItemPublicId,
     required int gapCount,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
        super(
-         FillBlanksListeningState(answers: List<String>.filled(gapCount, '')),
+         FillBlanksListeningState(
+           answers: positionalValuesFromAnswerPayload(
+             initialPayload,
+             length: gapCount,
+           ),
+         ),
+         answerChanged:
+             (
+               FillBlanksListeningState current,
+               FillBlanksListeningState initial,
+             ) => current.answers != initial.answers,
        ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));

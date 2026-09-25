@@ -66,7 +66,7 @@ const String _taskTypeSelectMissingWord = 'SELECT_MISSING_WORD';
 const String _taskTypeHighlightCorrectSummary = 'HIGHLIGHT_CORRECT_SUMMARY';
 
 /// Switches on `TaskView.taskType` to select the right task screen.
-class TaskTypeDispatcher extends StatelessWidget {
+class TaskTypeDispatcher extends StatefulWidget {
   const TaskTypeDispatcher({
     super.key,
     required this.task,
@@ -102,15 +102,95 @@ class TaskTypeDispatcher extends StatelessWidget {
   final AudioPromptRepository audioPromptRepository;
 
   @override
+  State<TaskTypeDispatcher> createState() => _TaskTypeDispatcherState();
+}
+
+class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
+  late Future<String?> _answerPayloadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _answerPayloadFuture = _readAnswerPayload();
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskTypeDispatcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.attemptPublicId != widget.attemptPublicId ||
+        oldWidget.task.pinnedItemPublicId != widget.task.pinnedItemPublicId) {
+      _answerPayloadFuture = _readAnswerPayload();
+    }
+  }
+
+  Future<String?> _readAnswerPayload() async {
+    final answer = await widget.outboxDao.getAnswer(
+      widget.attemptPublicId,
+      widget.task.pinnedItemPublicId,
+    );
+    return answer?.payload;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Keyed on pinnedItemPublicId so Flutter tears down and recreates the
+    return FutureBuilder<String?>(
+      future: _answerPayloadFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 40),
+                      const SizedBox(height: 12),
+                      const Text('Unable to restore this task answer.'),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () => setState(() {
+                          _answerPayloadFuture = _readAnswerPayload();
+                        }),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return _buildTask(context, snapshot.data);
+      },
+    );
+  }
+
+  Widget _buildTask(BuildContext context, String? initialAnswerPayload) {
+    final task = widget.task;
+    final attemptPublicId = widget.attemptPublicId;
+    final outboxDao = widget.outboxDao;
+    final syncEngine = widget.syncEngine;
+    final audioRecorderService = widget.audioRecorderService;
+    final mediaDao = widget.mediaDao;
+    final mediaUploadCoordinator = widget.mediaUploadCoordinator;
+    final audioPlayerService = widget.audioPlayerService;
+    final audioPromptRepository = widget.audioPromptRepository;
+
+    // Keyed on attempt + pinned item so Flutter tears down and recreates the
     // Element (and therefore the screen's cubit/controller) on every task
     // change — including consecutive tasks of the same type, which would
     // otherwise reuse the same Element and silently carry the previous
     // task's cubit/draft state (and its now-stale pinnedItemPublicId) into
     // the new task (phase-05 Design Constraints: "a stale value here would
     // silently misfile an answer against the wrong task").
-    final key = ValueKey(task.pinnedItemPublicId);
+    final key = ValueKey('$attemptPublicId:${task.pinnedItemPublicId}');
     final resolution = TaskTypeRendererRegistry.resolve(
       taskTypeCode: task.taskTypeCode,
       legacyTaskType: task.taskType,
@@ -128,6 +208,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeMcReadingMultiple => McReadingMultipleScreen(
         key: key,
@@ -135,6 +216,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeReOrderParagraphs => ReOrderParagraphsScreen(
         key: key,
@@ -142,6 +224,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeFillBlanksReading => FillBlanksDragDropScreen(
         key: key,
@@ -149,6 +232,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeFillBlanksReadingWriting => FillBlanksDropdownScreen(
         key: key,
@@ -156,6 +240,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeWriteEssay => WriteEssayV2Screen(
         key: key,
@@ -163,6 +248,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeSummarizeWrittenText => SummarizeWrittenTextScreen(
         key: key,
@@ -170,6 +256,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         outboxDao: outboxDao,
         syncEngine: syncEngine,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypePersonalIntroduction => PersonalIntroductionScreen(
         key: key,
@@ -260,6 +347,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeSummarizeSpokenText => SummarizeSpokenTextScreen(
         key: key,
@@ -268,6 +356,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeMcListeningSingle => McListeningSingleScreen(
         key: key,
@@ -276,6 +365,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeMcListeningMultiple => McListeningMultipleScreen(
         key: key,
@@ -284,6 +374,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeSelectMissingWord => SelectMissingWordScreen(
         key: key,
@@ -292,6 +383,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeHighlightIncorrectWords => HighlightIncorrectWordsScreen(
         key: key,
@@ -300,6 +392,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeHighlightCorrectSummary => HighlightCorrectSummaryScreen(
         key: key,
@@ -308,6 +401,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _taskTypeFillBlanksListening => FillBlanksListeningScreen(
         key: key,
@@ -316,6 +410,7 @@ class TaskTypeDispatcher extends StatelessWidget {
         outboxDao: outboxDao,
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
+        initialAnswerPayload: initialAnswerPayload,
       ),
       _ => _UnsupportedTaskScreen(key: key, resolution: resolution),
     };

@@ -23,12 +23,14 @@ class McReadingSingleScreen extends StatelessWidget {
     required this.attemptPublicId,
     required this.outboxDao,
     required this.syncEngine,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
   final String attemptPublicId;
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,7 @@ class McReadingSingleScreen extends StatelessWidget {
         outboxDao: outboxDao,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(

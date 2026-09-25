@@ -18,9 +18,20 @@ class WriteFromDictationCubit extends TaskAnswerCubit<WriteFromDictationState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const WriteFromDictationState()) {
+       super(
+         WriteFromDictationState(
+           draftText: initialPayload ?? '',
+           wordCount: countWords(initialPayload ?? ''),
+         ),
+         answerChanged:
+             (
+               WriteFromDictationState current,
+               WriteFromDictationState initial,
+             ) => current.draftText != initial.draftText,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

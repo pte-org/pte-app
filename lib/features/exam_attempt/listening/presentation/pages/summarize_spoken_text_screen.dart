@@ -29,6 +29,7 @@ class SummarizeSpokenTextScreen extends StatefulWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
@@ -36,6 +37,7 @@ class SummarizeSpokenTextScreen extends StatefulWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
 
   @override
   State<SummarizeSpokenTextScreen> createState() =>
@@ -55,8 +57,9 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       audioSource: widget.task.audioPromptRef ?? '',
+      initialPayload: widget.initialAnswerPayload,
     );
-    _controller = TextEditingController()
+    _controller = TextEditingController(text: _cubit.state.draftText)
       ..addListener(() => _cubit.draftChanged(_controller.text));
   }
 

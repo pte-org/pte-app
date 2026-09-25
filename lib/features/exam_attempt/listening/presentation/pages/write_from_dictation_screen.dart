@@ -30,6 +30,7 @@ class WriteFromDictationScreen extends StatefulWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
@@ -37,6 +38,7 @@ class WriteFromDictationScreen extends StatefulWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
 
   @override
   State<WriteFromDictationScreen> createState() =>
@@ -56,8 +58,9 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       audioSource: widget.task.audioPromptRef ?? '',
+      initialPayload: widget.initialAnswerPayload,
     );
-    _controller = TextEditingController()
+    _controller = TextEditingController(text: _cubit.state.draftText)
       ..addListener(() => _cubit.draftChanged(_controller.text));
   }
 

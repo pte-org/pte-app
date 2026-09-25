@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/select_missing_word_state.dart';
@@ -16,9 +17,17 @@ class SelectMissingWordCubit extends TaskAnswerCubit<SelectMissingWordState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const SelectMissingWordState()) {
+       super(
+         SelectMissingWordState(
+           selectedOrderIndex: singleSelectionFromAnswerPayload(initialPayload),
+         ),
+         answerChanged:
+             (SelectMissingWordState current, SelectMissingWordState initial) =>
+                 current.selectedOrderIndex != initial.selectedOrderIndex,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

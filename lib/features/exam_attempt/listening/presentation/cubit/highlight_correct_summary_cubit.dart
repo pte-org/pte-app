@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highlight_correct_summary_state.dart';
@@ -17,9 +18,19 @@ class HighlightCorrectSummaryCubit
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const HighlightCorrectSummaryState()) {
+       super(
+         HighlightCorrectSummaryState(
+           selectedOrderIndex: singleSelectionFromAnswerPayload(initialPayload),
+         ),
+         answerChanged:
+             (
+               HighlightCorrectSummaryState current,
+               HighlightCorrectSummaryState initial,
+             ) => current.selectedOrderIndex != initial.selectedOrderIndex,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

@@ -73,7 +73,7 @@ void main() {
     () async {
       when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
       when(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
           pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
           payload: any(named: 'payload'),
@@ -88,7 +88,7 @@ void main() {
 
       verify(() => dao.queryPendingByAttempt('attempt-1')).called(1);
       verify(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+        () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
       ).called(1);
       verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
     },
@@ -97,7 +97,7 @@ void main() {
   test('a 409 response results in markTerminalRejected, never a retry loop', () async {
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
-      () => apiClient.submitAnswer(
+      () => apiClient.saveAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
@@ -117,7 +117,7 @@ void main() {
   test('a ValidationException also results in markTerminalRejected — retrying the same malformed payload forever cannot succeed', () async {
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
-      () => apiClient.submitAnswer(
+      () => apiClient.saveAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
@@ -139,7 +139,7 @@ void main() {
     () async {
       when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
       when(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
           pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
           payload: any(named: 'payload'),
@@ -159,7 +159,7 @@ void main() {
   test('a NetworkException leaves the row untouched for the next tick (no mark* call)', () async {
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
-      () => apiClient.submitAnswer(
+      () => apiClient.saveAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
@@ -193,7 +193,7 @@ void main() {
   test('flushNow triggers an immediate flush pass for the running attempt, independent of any canary/periodic trigger', () async {
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
-      () => apiClient.submitAnswer(
+      () => apiClient.saveAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
@@ -206,7 +206,7 @@ void main() {
     await engine.flushNow('attempt-1');
 
     verify(
-      () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+      () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
     ).called(1);
   });
 
@@ -250,7 +250,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       verifyNever(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
           pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
           payload: any(named: 'payload'),
@@ -271,7 +271,7 @@ void main() {
       () async {
         when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -305,7 +305,7 @@ void main() {
       () async {
         when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -348,7 +348,7 @@ void main() {
         // exponential backoff starting at baseInterval (1s).
         when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -361,7 +361,7 @@ void main() {
         await engine.flushNow('attempt-1');
         verify(() => dao.queryPendingByAttempt('attempt-1')).called(1);
         verify(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -379,7 +379,7 @@ void main() {
         await engine.flushNow('attempt-1');
         verifyNever(() => dao.queryPendingByAttempt('attempt-1'));
         verifyNever(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -392,7 +392,7 @@ void main() {
 
         // Pass 3: cooldown elapsed — now succeeds and must reset the backoff.
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -408,7 +408,7 @@ void main() {
         // exponential growth), proving the "later pass is no longer
         // suppressed" half of the contract holds even after a prior 429.
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -425,7 +425,7 @@ void main() {
 
       when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
       when(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
           pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
           payload: any(named: 'payload'),
@@ -451,7 +451,7 @@ void main() {
         when(() => dao.queryPendingByAttempt('attempt-1'))
             .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitEncryptedAnswer(
+          () => apiClient.saveEncryptedAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             wrappedKey: any(named: 'wrappedKey'),
@@ -471,7 +471,7 @@ void main() {
 
         // submitEncryptedAnswer should be called instead of submitAnswer
         verify(
-          () => apiClient.submitEncryptedAnswer(
+          () => apiClient.saveEncryptedAnswer(
             attemptPublicId: 'attempt-1',
             pinnedItemPublicId: 'p1',
             wrappedKey: any(named: 'wrappedKey'),
@@ -491,7 +491,7 @@ void main() {
         when(() => dao.queryPendingByAttempt('attempt-1'))
             .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -507,7 +507,7 @@ void main() {
 
         // submitAnswer should still be called for STANDARD attempts
         verify(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: 'attempt-1',
             pinnedItemPublicId: 'p1',
             payload: 'payload',
@@ -524,7 +524,7 @@ void main() {
         when(() => dao.queryPendingByAttempt('attempt-1'))
             .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitAnswer(
+          () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             payload: any(named: 'payload'),
@@ -538,7 +538,7 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         verify(
-          () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+          () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
         ).called(1);
       },
     );
@@ -549,7 +549,7 @@ void main() {
         when(() => dao.queryPendingByAttempt('attempt-1'))
             .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
-          () => apiClient.submitEncryptedAnswer(
+          () => apiClient.saveEncryptedAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
             pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
             wrappedKey: any(named: 'wrappedKey'),
@@ -587,7 +587,7 @@ void main() {
 
     when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
     when(
-      () => apiClient.submitAnswer(
+      () => apiClient.saveAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
@@ -607,7 +607,7 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     verify(
-      () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+      () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
     ).called(1);
   });
 }

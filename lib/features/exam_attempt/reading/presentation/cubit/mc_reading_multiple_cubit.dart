@@ -1,4 +1,5 @@
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_multiple_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 
@@ -11,8 +12,13 @@ class McReadingMultipleCubit extends TaskAnswerCubit<McReadingMultipleState> {
     required AnswerOutboxDao outboxDao,
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
-       super(const McReadingMultipleState());
+       super(
+         McReadingMultipleState(
+           selectedOrderIndexes: optionIndexesFromAnswerPayload(initialPayload),
+         ),
+       );
 
   final AnswerOutboxDao _outboxDao;
   final String attemptPublicId;
@@ -35,7 +41,8 @@ class McReadingMultipleCubit extends TaskAnswerCubit<McReadingMultipleState> {
   /// list — sorted regardless of toggle order, since `Set` iteration order
   /// is unspecified in Dart (phase-03 Design Constraints/Risks).
   String _sortedPayload(Set<String> orderIndexes) {
-    final sorted = orderIndexes.toList()..sort((a, b) => int.parse(a).compareTo(int.parse(b)));
+    final sorted = orderIndexes.toList()
+      ..sort((a, b) => int.parse(a).compareTo(int.parse(b)));
     return sorted.join(',');
   }
 

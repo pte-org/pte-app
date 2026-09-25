@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highlight_incorrect_words_state.dart';
@@ -19,9 +20,19 @@ class HighlightIncorrectWordsCubit
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       super(const HighlightIncorrectWordsState()) {
+       super(
+         HighlightIncorrectWordsState(
+           selectedWordIndices: indicesFromAnswerPayload(initialPayload),
+         ),
+         answerChanged:
+             (
+               HighlightIncorrectWordsState current,
+               HighlightIncorrectWordsState initial,
+             ) => current.selectedWordIndices != initial.selectedWordIndices,
+       ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });

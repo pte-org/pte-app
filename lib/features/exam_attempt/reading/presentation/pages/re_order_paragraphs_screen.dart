@@ -23,12 +23,14 @@ class ReOrderParagraphsScreen extends StatelessWidget {
     required this.attemptPublicId,
     required this.outboxDao,
     required this.syncEngine,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
   final String attemptPublicId;
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,7 @@ class ReOrderParagraphsScreen extends StatelessWidget {
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
         initialOrder: task.options ?? const [],
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(

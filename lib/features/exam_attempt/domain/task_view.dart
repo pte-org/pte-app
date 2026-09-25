@@ -79,6 +79,8 @@ class TaskView {
     this.taskTypeCode,
     this.runtime,
     this.taskTypeDisplayName,
+    this.canNavigatePrevious = false,
+    this.canNavigateNext = false,
   });
 
   final String pinnedItemPublicId;
@@ -96,6 +98,8 @@ class TaskView {
   /// an older response and the app must use the alias-aware legacy registry.
   final TaskRuntimeProfile? runtime;
   final String? taskTypeDisplayName;
+  final bool canNavigatePrevious;
+  final bool canNavigateNext;
 
   String get canonicalTaskType =>
       TaskTypeCodes.canonicalize(taskTypeCode ?? taskType) ?? taskType;
@@ -162,6 +166,8 @@ class TaskView {
       taskTypeCode: json['taskTypeCode'] as String?,
       runtime: _readRuntime(json['runtime']),
       taskTypeDisplayName: json['taskTypeDisplayName'] as String?,
+      canNavigatePrevious: json['canNavigatePrevious'] as bool? ?? false,
+      canNavigateNext: json['canNavigateNext'] as bool? ?? false,
       title: json['title'] as String,
       promptText: json['promptText'] as String?,
       audioPromptRef: json['audioPromptRef'] as String?,
