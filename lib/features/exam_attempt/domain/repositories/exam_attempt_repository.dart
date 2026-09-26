@@ -20,6 +20,10 @@ abstract class ExamAttemptRepository {
 
   Future<AttemptTaskResponse> fetchNextTask(String attemptPublicId);
 
+  /// Bulk-prefetch all tasks for the attempt in order. Used on exam
+  /// start/resume so the client can navigate locally without round-trips.
+  Future<List<AttemptTaskResponse>> fetchAllTasks(String attemptPublicId);
+
   Future<AttemptTaskResponse> navigateTask({
     required String attemptPublicId,
     required String fromPinnedItemPublicId,

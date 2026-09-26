@@ -56,6 +56,16 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   }
 
   @override
+  Future<List<AttemptTaskResponse>> fetchAllTasks(String attemptPublicId) async {
+    final response = await _apiClient.get<List<dynamic>>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/tasks',
+    );
+    return (response.data! as List<dynamic>)
+        .map((item) => AttemptTaskResponse.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
   Future<AttemptTaskResponse> navigateTask({
     required String attemptPublicId,
     required String fromPinnedItemPublicId,

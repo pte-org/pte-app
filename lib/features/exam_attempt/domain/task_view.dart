@@ -156,6 +156,60 @@ class TaskView {
   /// (plans/phat-describe-image-e2e).
   final String? imageUrl;
 
+  TaskView copyWith({
+    String? pinnedItemPublicId,
+    int? orderIndex,
+    int? totalTasks,
+    String? section,
+    String? taskType,
+    String? taskTypeCode,
+    TaskRuntimeProfile? runtime,
+    String? taskTypeDisplayName,
+    bool? canNavigatePrevious,
+    bool? canNavigateNext,
+    String? title,
+    String? promptText,
+    String? audioPromptRef,
+    String? imagePromptRef,
+    int? minWordCount,
+    int? maxWordCount,
+    List<TaskOption>? options,
+    List<BlankGroup>? blankGroups,
+    int? prepSeconds,
+    int? responseSeconds,
+    DateTime? examEndTime,
+    int? preListenSeconds,
+    int? preRecordSeconds,
+    String? imageUrl,
+  }) {
+    return TaskView(
+      pinnedItemPublicId: pinnedItemPublicId ?? this.pinnedItemPublicId,
+      orderIndex: orderIndex ?? this.orderIndex,
+      totalTasks: totalTasks ?? this.totalTasks,
+      section: section ?? this.section,
+      taskType: taskType ?? this.taskType,
+      taskTypeCode: taskTypeCode ?? this.taskTypeCode,
+      runtime: runtime ?? this.runtime,
+      taskTypeDisplayName: taskTypeDisplayName ?? this.taskTypeDisplayName,
+      canNavigatePrevious: canNavigatePrevious ?? this.canNavigatePrevious,
+      canNavigateNext: canNavigateNext ?? this.canNavigateNext,
+      title: title ?? this.title,
+      promptText: promptText ?? this.promptText,
+      audioPromptRef: audioPromptRef ?? this.audioPromptRef,
+      imagePromptRef: imagePromptRef ?? this.imagePromptRef,
+      minWordCount: minWordCount ?? this.minWordCount,
+      maxWordCount: maxWordCount ?? this.maxWordCount,
+      options: options ?? this.options,
+      blankGroups: blankGroups ?? this.blankGroups,
+      prepSeconds: prepSeconds ?? this.prepSeconds,
+      responseSeconds: responseSeconds ?? this.responseSeconds,
+      examEndTime: examEndTime ?? this.examEndTime,
+      preListenSeconds: preListenSeconds ?? this.preListenSeconds,
+      preRecordSeconds: preRecordSeconds ?? this.preRecordSeconds,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
+  }
+
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
       pinnedItemPublicId: json['pinnedItemPublicId'] as String,
