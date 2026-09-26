@@ -65,14 +65,12 @@ class McListeningMultipleScreen extends StatelessWidget {
                   playing: !state.hasFinishedPlaying,
                   progress: state.hasFinishedPlaying ? 1 : 0,
                 ),
-                response: SingleChildScrollView(
-                  child: ListeningMultipleOptionList(
-                    options: task.options ?? const [],
-                    selectedOrderIndexes: state.selectedOrderIndexes,
-                    onToggle: (orderIndex) => context
-                        .read<McListeningMultipleCubit>()
-                        .toggleOption(orderIndex),
-                  ),
+                response: ListeningMultipleOptionList(
+                  options: task.options ?? const [],
+                  selectedOrderIndexes: state.selectedOrderIndexes,
+                  onToggle: (orderIndex) => context
+                      .read<McListeningMultipleCubit>()
+                      .toggleOption(orderIndex),
                 ),
               );
             },

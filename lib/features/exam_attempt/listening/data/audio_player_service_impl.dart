@@ -26,7 +26,11 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
 
   @override
   Future<void> play(String source) async {
-    await _player.setAsset(source);
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      await _player.setUrl(source);
+    } else {
+      await _player.setAsset(source);
+    }
     await _player.play();
   }
 

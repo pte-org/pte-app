@@ -20,7 +20,8 @@ class ListeningMultipleOptionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         for (final option in options)
           CheckboxListTile(
