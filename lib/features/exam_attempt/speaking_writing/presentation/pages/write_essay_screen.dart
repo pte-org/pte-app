@@ -85,6 +85,7 @@ class _WriteEssayScreenState extends State<WriteEssayScreen> {
           cubit: _cubit,
           pinnedItemPublicId: widget.task.pinnedItemPublicId,
           syncEngine: widget.syncEngine,
+          autoAdvanceOnExpiration: false,
         ),
       ),
     );

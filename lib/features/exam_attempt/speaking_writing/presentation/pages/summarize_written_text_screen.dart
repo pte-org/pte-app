@@ -46,6 +46,7 @@ class SummarizeWrittenTextScreen extends StatelessWidget {
             cubit: innerContext.read<WriteEssayCubit>(),
             pinnedItemPublicId: task.pinnedItemPublicId,
             syncEngine: syncEngine,
+            autoAdvanceOnExpiration: false,
           ),
         ),
       ),
