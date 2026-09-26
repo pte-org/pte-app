@@ -91,6 +91,15 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
           direction: direction,
         ),
       );
+      // Navigation is synchronous in the BLoC; reset immediately so the
+      // button never gets permanently stuck if the state did not change
+      // (e.g. allTasks fallback with a single entry).
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _pendingTaskId = null;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
