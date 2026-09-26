@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/constants/app_strings.dart';
 import 'package:pte_app/core/constants/exam_chrome_config.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
@@ -152,34 +150,6 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
                   ),
                 ),
                 child: const Text(ExamChromeConfig.previousLabel),
-              ),
-              const SizedBox(width: AppDimensions.spacingSm),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.warning_amber_rounded,
-                      color: AppColors.warningIcon,
-                      size: AppDimensions.taskAdvanceWarningIconSize,
-                    ),
-                    const SizedBox(width: AppDimensions.spacingMedium / 4),
-                    Flexible(
-                      child: Text(
-                        AppStrings.taskAdvanceUnansweredNote,
-                        textAlign: TextAlign.start,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.onPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(width: AppDimensions.spacingMedium),
               PrimaryButton(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -33,7 +35,7 @@ class ExamAppBar extends StatelessWidget {
           candidateId: ExamChromeConfig.unavailableCandidateId,
           itemLabel: item,
           timeLabel: ExamChromeConfig.formatDuration(snapshot?.remaining),
-          timeContent: const _ExamTimerLabel(),
+          timeContent: const _ExamGlobalTimerLabel(),
           onForceSubmit: () => _confirmAndForceSubmit(context),
         );
       },
@@ -54,20 +56,61 @@ class ExamAppBar extends StatelessWidget {
   }
 }
 
-class _ExamTimerLabel extends StatelessWidget {
-  const _ExamTimerLabel();
+/// Counts down the whole-attempt deadline (`TaskView.examEndTime`) rather than
+/// the current task's remaining slice, so the displayed time reflects total
+/// exam time left regardless of which task is active or which mode is used.
+/// Falls back to the per-task `timerSnapshot.remaining` for attempts created
+/// before the backend started populating `examEndTime`.
+class _ExamGlobalTimerLabel extends StatefulWidget {
+  const _ExamGlobalTimerLabel();
+
+  @override
+  State<_ExamGlobalTimerLabel> createState() => _ExamGlobalTimerLabelState();
+}
+
+class _ExamGlobalTimerLabelState extends State<_ExamGlobalTimerLabel> {
+  Timer? _ticker;
+  Duration? _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    // Compute synchronously so the first build frame shows the real value,
+    // not "--:--". context.read is safe here — BlocProvider is already above
+    // in the tree when initState runs (same pattern as AutoRecordTimerBridgeMixin).
+    _remaining = _compute();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) _update();
+    });
+  }
+
+  Duration? _compute() {
+    final state = context.read<ExamAttemptBloc>().state;
+    if (state is! AttemptInProgress) return null;
+    final examEndTime = state.task.examEndTime;
+    if (examEndTime == null) return state.timerSnapshot.remaining;
+    final diff = examEndTime.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
+  }
+
+  void _update() {
+    final next = _compute();
+    if (next != null) setState(() => _remaining = next);
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<ExamAttemptBloc, ExamAttemptState, Duration?>(
-      selector: (state) =>
-          state is AttemptInProgress ? state.timerSnapshot.remaining : null,
-      builder: (context, remaining) => Text(
-        ExamChromeConfig.formatDuration(remaining),
-        key: const ValueKey('examAppBarCountdown'),
-        style: AppTypography.timerTabular.copyWith(
-          color: AppColors.textPrimary,
-        ),
+    return Text(
+      ExamChromeConfig.formatDuration(_remaining),
+      key: const ValueKey('examAppBarCountdown'),
+      style: AppTypography.timerTabular.copyWith(
+        color: AppColors.textPrimary,
       ),
     );
   }

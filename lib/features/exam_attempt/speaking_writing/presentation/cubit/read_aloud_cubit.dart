@@ -150,8 +150,19 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     unawaited(_rowSubscription.cancel());
+    // If navigation interrupts an active recording (practice-mode prev/next),
+    // stop and persist the audio before tearing down so the partial answer is
+    // uploaded in the background and the recorder is freed for the next task.
+    if (state.recordingPhase == RecordingPhase.recording && !_stopInFlight) {
+      _stopInFlight = true;
+      try {
+        await stopRecording();
+      } catch (_) {
+        // Best-effort: don't block cubit teardown on recorder errors.
+      }
+    }
     return super.close();
   }
 }
