@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
@@ -137,8 +138,11 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
       future: _answerPayloadFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          // Keep header/footer stable while the local SQLite answer payload
+          // loads — bare Scaffold here causes a full-screen white flash.
+          return ExamScaffold(
+            totalTasks: widget.task.totalTasks,
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
         if (snapshot.hasError) {
