@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/constants/task_type_meta.dart';
-import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/templates/fill_blanks_template.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
@@ -60,7 +60,7 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       gapCount: gapCount,
-      audioSource: widget.task.audioPromptRef ?? '',
+      audioSource: widget.task.audioUrl ?? '',
       initialPayload: widget.initialAnswerPayload,
     );
     _controllers = [
@@ -98,12 +98,9 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
               instruction:
                   TaskTypeMeta.forTaskType(widget.task.taskType)?.instruction ??
                   'Type the missing words as you listen.',
-              stimulus: AudioStimulusPlayer(
-                label: state.hasFinishedPlaying
-                    ? 'Audio finished'
-                    : 'Playing audio',
-                playing: !state.hasFinishedPlaying,
-                progress: state.hasFinishedPlaying ? 1 : 0,
+              stimulus: AudioListeningStatusCard(
+                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: SingleChildScrollView(
                 child: FillBlanksListeningText(

@@ -76,6 +76,7 @@ class TaskView {
     this.preListenSeconds,
     this.preRecordSeconds,
     this.imageUrl,
+    this.audioUrl,
     this.taskTypeCode,
     this.runtime,
     this.taskTypeDisplayName,
@@ -150,11 +151,13 @@ class TaskView {
 
   /// Resolved, directly-fetchable presigned URL for [imagePromptRef] — null
   /// unless the server resolved one (mandatory for DESCRIBE_IMAGE, absent
-  /// for every other task type today). Unlike Speaking's audio prompts
-  /// (played on demand via a separate replay-limited endpoint), a static
-  /// image has no such concern, so it's embedded directly here
-  /// (plans/phat-describe-image-e2e).
+  /// for every other task type today).
   final String? imageUrl;
+
+  /// Resolved presigned audio URL for LISTENING tasks — null for Speaking
+  /// tasks (which use the /audio on-demand endpoint for replay-limit
+  /// enforcement) and any task type without an audio prompt.
+  final String? audioUrl;
 
   TaskView copyWith({
     String? pinnedItemPublicId,
@@ -181,6 +184,7 @@ class TaskView {
     int? preListenSeconds,
     int? preRecordSeconds,
     String? imageUrl,
+    String? audioUrl,
   }) {
     return TaskView(
       pinnedItemPublicId: pinnedItemPublicId ?? this.pinnedItemPublicId,
@@ -207,6 +211,7 @@ class TaskView {
       preListenSeconds: preListenSeconds ?? this.preListenSeconds,
       preRecordSeconds: preRecordSeconds ?? this.preRecordSeconds,
       imageUrl: imageUrl ?? this.imageUrl,
+      audioUrl: audioUrl ?? this.audioUrl,
     );
   }
 
@@ -242,6 +247,7 @@ class TaskView {
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,
       imageUrl: json['imageUrl'] as String?,
+      audioUrl: json['audioUrl'] as String?,
     );
   }
 
