@@ -102,8 +102,14 @@ final class SyncTaskRejectedExternally extends ExamAttemptEvent {
 /// User-initiated, irreversible: ends the attempt immediately regardless of
 /// remaining tasks via `POST .../submit`. UI dispatches this only after an
 /// explicit confirmation step (phase-07 Design Constraints).
+///
+/// When dispatched internally by [NextTaskRequested] after the student has
+/// gone past the last task, [reason] carries the original advance reason so
+/// `AttemptCompleted.timeExpired` reflects whether the clock ran out.
 final class ForceSubmitRequested extends ExamAttemptEvent {
-  const ForceSubmitRequested();
+  const ForceSubmitRequested({this.reason = AdvanceReason.manual});
+
+  final AdvanceReason reason;
 }
 
 /// `kDebugMode`-only: seeds [task] straight into `AttemptInProgress` without

@@ -62,6 +62,24 @@ TaskView _task({String pinnedItemPublicId = 'item-1'}) {
   );
 }
 
+AttemptTaskResponse _inProgressResponse({
+  String attemptPublicId = 'attempt-1',
+  String pinnedItemPublicId = 'item-1',
+}) {
+  return AttemptTaskResponse(
+    attemptPublicId: attemptPublicId,
+    attemptStatus: 'IN_PROGRESS',
+    completed: false,
+    task: _task(pinnedItemPublicId: pinnedItemPublicId),
+  );
+}
+
+const _completedResponse = AttemptTaskResponse(
+  attemptPublicId: 'attempt-1',
+  attemptStatus: 'COMPLETED',
+  completed: true,
+);
+
 void main() {
   late _MockExamAttemptRepository repository;
   late _MockSessionEntryRepository sessionEntryRepository;
@@ -115,6 +133,14 @@ void main() {
         currentOrderIndex: 1,
       ),
     );
+    // Default stubs for the prefetch-all-tasks flow introduced in Phase 3.
+    // Tests that need specific task lists override these in their own setUp.
+    when(() => repository.fetchAllTasks(any())).thenAnswer(
+      (_) async => [_inProgressResponse()],
+    );
+    when(() => repository.forceSubmit(any())).thenAnswer(
+      (_) async => _completedResponse,
+    );
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
@@ -134,11 +160,7 @@ void main() {
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
       when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => const AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'COMPLETED',
-          completed: true,
-        ),
+        (_) async => _completedResponse,
       );
     },
     build: buildBloc,
@@ -160,12 +182,7 @@ void main() {
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
       when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'IN_PROGRESS',
-          completed: false,
-          task: _task(),
-        ),
+        (_) async => _inProgressResponse(),
       );
     },
     build: buildBloc,
@@ -181,17 +198,73 @@ void main() {
   );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'start populates allTasks from fetchAllTasks so local navigation has the full list',
+    setUp: () {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
+      );
+      when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+        (_) async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-1'),
+          _inProgressResponse(pinnedItemPublicId: 'item-2'),
+        ],
+      );
+    },
+    build: buildBloc,
+    act: (bloc) =>
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+    expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+    verify: (bloc) {
+      final state = bloc.state as AttemptInProgress;
+      expect(state.allTasks, hasLength(2));
+      expect(state.currentIndex, 0);
+      expect(state.task.pinnedItemPublicId, 'item-1');
+      verify(() => repository.fetchAllTasks('attempt-1')).called(1);
+    },
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'NextTaskRequested advances currentIndex locally — no fetchNextTask call',
+    setUp: () {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
+      );
+      when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+        (_) async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-1'),
+          _inProgressResponse(pinnedItemPublicId: 'item-2'),
+        ],
+      );
+    },
+    build: buildBloc,
+    act: (bloc) async {
+      bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const NextTaskRequested());
+    },
+    expect: () => [
+      isA<AttemptStarting>(),
+      isA<AttemptInProgress>(),
+      isA<AttemptInProgress>(),
+    ],
+    verify: (_) {
+      verifyNever(() => repository.fetchNextTask(any()));
+    },
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
     'swapping SessionEntryRepository for a different implementation requires no change to ExamAttemptBloc',
     setUp: () {
       when(
         () => repository.startOrResumeAttempt('deep-link-session'),
       ).thenAnswer(
-        (_) async => AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'IN_PROGRESS',
-          completed: false,
-          task: _task(),
-        ),
+        (_) async => _inProgressResponse(),
       );
     },
     build: () => ExamAttemptBloc(
@@ -217,11 +290,7 @@ void main() {
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
       when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => const AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'COMPLETED',
-          completed: true,
-        ),
+        (_) async => _completedResponse,
       );
     },
     build: buildBloc,
@@ -286,14 +355,7 @@ void main() {
           'session-1',
           deviceCheckConfirmed: true,
         ),
-      ).thenAnswer(
-        (_) async => AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'IN_PROGRESS',
-          completed: false,
-          task: _task(),
-        ),
-      );
+      ).thenAnswer((_) async => _inProgressResponse());
     },
     build: buildBloc,
     act: (bloc) async {
@@ -370,31 +432,18 @@ void main() {
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
       when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'IN_PROGRESS',
-          completed: false,
-          task: _task(pinnedItemPublicId: 'item-1'),
-        ),
+        (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
       );
-
-      var fetchCallCount = 0;
-      when(() => repository.fetchNextTask('attempt-1')).thenAnswer((_) async {
-        fetchCallCount++;
-        if (fetchCallCount == 1) {
-          return AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-2'),
-          );
-        }
-        return const AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'COMPLETED',
-          completed: true,
-        );
-      });
+      when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+        (_) async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-1'),
+          _inProgressResponse(pinnedItemPublicId: 'item-2'),
+        ],
+      );
+      // forceSubmit fires when NextTaskRequested goes past the last item.
+      when(() => repository.forceSubmit('attempt-1')).thenAnswer(
+        (_) async => _completedResponse,
+      );
     },
     build: buildBloc,
     act: (bloc) async {
@@ -416,6 +465,7 @@ void main() {
         () => syncEngine.setActiveTask('item-2'),
         () => syncEngine.setActiveTask(null),
       ]);
+      verifyNever(() => repository.fetchNextTask(any()));
     },
   );
 
@@ -427,20 +477,9 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
-        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-          (_) async => const AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'COMPLETED',
-            completed: true,
-          ),
-        );
+        // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
       act: (bloc) async {
@@ -456,6 +495,7 @@ void main() {
       verify: (bloc) {
         final completed = bloc.state as AttemptCompleted;
         expect(completed.timeExpired, isFalse);
+        verifyNever(() => repository.fetchNextTask(any()));
       },
     );
 
@@ -466,20 +506,9 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
-        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-          (_) async => const AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'COMPLETED',
-            completed: true,
-          ),
-        );
+        // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
       act: (bloc) async {
@@ -506,24 +535,14 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-1'),
-          ),
+          (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
         );
-        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-2'),
-          ),
+        when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+          (_) async => [
+            _inProgressResponse(pinnedItemPublicId: 'item-1'),
+            _inProgressResponse(pinnedItemPublicId: 'item-2'),
+          ],
         );
-        when(
-          () => repository.forceSubmit('attempt-1'),
-        ).thenAnswer((_) async {});
       },
       build: buildBloc,
       act: (bloc) async {
@@ -558,16 +577,8 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
-        when(
-          () => repository.forceSubmit('attempt-1'),
-        ).thenAnswer((_) async {});
       },
       build: buildBloc,
       act: (bloc) async {
@@ -595,12 +606,7 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
         when(
           () => repository.forceSubmit('attempt-1'),
@@ -646,20 +652,14 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
-        final forceSubmitStarted = Completer<void>();
         when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {
-          forceSubmitStarted.complete();
           // Never resolves within this test — the first call stays "in
           // flight" for the whole test, which is exactly the window the
           // second, racing event must be rejected in.
-          return Completer<void>().future;
+          await Completer<void>().future;
+          return _completedResponse;
         });
       },
       build: buildBloc,
@@ -682,19 +682,15 @@ void main() {
 
   group('AppResumed (background/foreground resync)', () {
     blocTest<ExamAttemptBloc, ExamAttemptState>(
-      'with an attempt running, re-arms TimerService.startPolling for the current attempt without emitting a new state',
+      'with an attempt running, re-fetches all tasks, re-seeds the timer and emits a refreshed AttemptInProgress',
       setUp: () {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
+        // fetchAllTasks is called twice: once on start, once on resume.
       },
       build: buildBloc,
       act: (bloc) async {
@@ -702,10 +698,17 @@ void main() {
         await Future<void>.delayed(Duration.zero);
         bloc.add(const AppResumed());
       },
-      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+      ],
       verify: (_) {
         verify(
           () => timerService.startPolling('attempt-1'),
+        ).called(2); // once on start, once on resume
+        verify(
+          () => repository.fetchAllTasks('attempt-1'),
         ).called(2); // once on start, once on resume
       },
     );
@@ -717,19 +720,48 @@ void main() {
       expect: () => [],
       verify: (_) {
         verifyNever(() => timerService.startPolling(any()));
+        verifyNever(() => repository.fetchAllTasks(any()));
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'AppResumed fetchAllTasks failure falls back to timer re-arm without emitting a new state',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => _inProgressResponse(),
+        );
+        var callCount = 0;
+        when(() => repository.fetchAllTasks('attempt-1')).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) return [_inProgressResponse()];
+          throw const NetworkException('offline');
+        });
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const AppResumed());
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        // Second startPolling call is the fallback timer re-arm.
+        verify(() => timerService.startPolling('attempt-1')).called(2);
       },
     );
   });
 
   group('SyncTaskRejectedExternally regression (Step 8/9 wiring)', () {
     blocTest<ExamAttemptBloc, ExamAttemptState>(
-      'when SyncEngine.taskRejectedExternally emits, the bloc re-fetches next-task the same way '
-      'TimerTaskAdvancedExternally does — advancing past the server-rejected stale task',
+      'when SyncEngine.taskRejectedExternally emits, the bloc advances locally — '
+      'moving to the next item in allTasks without a fetchNextTask server call',
       setUp: () {
         final rejectedController = StreamController<void>.broadcast();
         addTearDown(rejectedController.close);
-        // Overrides the blanket Stream.empty() stub from the outer setUp so
-        // this test can emit on it directly.
         when(
           () => syncEngine.taskRejectedExternally,
         ).thenAnswer((_) => rejectedController.stream);
@@ -738,20 +770,13 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-1'),
-          ),
+          (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
         );
-        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-2'),
-          ),
+        when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+          (_) async => [
+            _inProgressResponse(pinnedItemPublicId: 'item-1'),
+            _inProgressResponse(pinnedItemPublicId: 'item-2'),
+          ],
         );
 
         _rejectedControllerForTest = rejectedController;
@@ -769,7 +794,7 @@ void main() {
         isA<AttemptInProgress>(),
       ],
       verify: (_) {
-        verify(() => repository.fetchNextTask('attempt-1')).called(1);
+        verifyNever(() => repository.fetchNextTask(any()));
         verify(() => syncEngine.setActiveTask('item-2')).called(1);
       },
     );
@@ -783,12 +808,7 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
       },
       build: buildBloc,
@@ -808,20 +828,13 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-1'),
-          ),
+          (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
         );
-        when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(pinnedItemPublicId: 'item-2'),
-          ),
+        when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+          (_) async => [
+            _inProgressResponse(pinnedItemPublicId: 'item-1'),
+            _inProgressResponse(pinnedItemPublicId: 'item-2'),
+          ],
         );
       },
       build: buildBloc,
@@ -847,11 +860,7 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => const AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'COMPLETED',
-            completed: true,
-          ),
+          (_) async => _completedResponse,
         );
       },
       build: buildBloc,
@@ -871,12 +880,7 @@ void main() {
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
         when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => AttemptTaskResponse(
-            attemptPublicId: 'attempt-1',
-            attemptStatus: 'IN_PROGRESS',
-            completed: false,
-            task: _task(),
-          ),
+          (_) async => _inProgressResponse(),
         );
       },
       build: buildBloc,
@@ -885,7 +889,11 @@ void main() {
         await Future<void>.delayed(Duration.zero);
         bloc.add(const AppResumed());
       },
-      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+      ],
       verify: (_) {
         verify(
           () => heartbeatService.start('attempt-1'),
@@ -905,12 +913,7 @@ void main() {
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
           when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => AttemptTaskResponse(
-              attemptPublicId: 'attempt-1',
-              attemptStatus: 'IN_PROGRESS',
-              completed: false,
-              task: _task(),
-            ),
+            (_) async => _inProgressResponse(),
           );
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
@@ -920,9 +923,6 @@ void main() {
               examRemaining: Duration(minutes: 5),
             ),
           );
-          when(
-            () => repository.forceSubmit('attempt-1'),
-          ).thenAnswer((_) async {});
         },
         build: buildBloc,
         act: (bloc) async {
@@ -959,12 +959,7 @@ void main() {
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
           when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => AttemptTaskResponse(
-              attemptPublicId: 'attempt-1',
-              attemptStatus: 'IN_PROGRESS',
-              completed: false,
-              task: _task(),
-            ),
+            (_) async => _inProgressResponse(),
           );
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
@@ -1001,3 +996,4 @@ void main() {
 /// constructs it — `blocTest`'s `setUp`/`act` don't share a closure scope
 /// otherwise.
 StreamController<void>? _rejectedControllerForTest;
+

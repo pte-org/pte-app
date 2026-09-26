@@ -113,6 +113,16 @@ void main() {
           attemptPublicId: any(named: 'attemptPublicId'),
         )).thenAnswer((_) async {});
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
+    when(() => repository.fetchAllTasks(any())).thenAnswer(
+      (_) async => [_StubAttemptTaskResponse.make()],
+    );
+    when(() => repository.forceSubmit(any())).thenAnswer(
+      (_) async => const AttemptTaskResponse(
+        attemptPublicId: 'attempt-1',
+        attemptStatus: 'COMPLETED',
+        completed: true,
+      ),
+    );
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
@@ -214,13 +224,9 @@ void main() {
       when(() => repository.startOrResumeAttempt(any())).thenAnswer(
         (_) async => _StubAttemptTaskResponse.make(lockdownMode: 'STRICT'),
       );
-      when(() => repository.fetchNextTask('attempt-1')).thenAnswer(
-        (_) async => AttemptTaskResponse(
-          attemptPublicId: 'attempt-1',
-          attemptStatus: 'COMPLETED',
-          completed: true,
-        ),
-      );
+      // In Phase 3, NextTaskRequested on the last (only) item triggers
+      // ForceSubmitRequested, not fetchNextTask — forceSubmit default stub
+      // from setUp returns completed.
     },
     build: buildBloc,
     act: (bloc) async {

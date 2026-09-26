@@ -26,11 +26,43 @@ final class DeviceCheckRequired extends ExamAttemptState {
 }
 
 final class AttemptInProgress extends ExamAttemptState {
-  const AttemptInProgress(this.attemptPublicId, this.task, this.timerSnapshot);
+  AttemptInProgress(
+    this.attemptPublicId,
+    TaskView singleTask,
+    this.timerSnapshot, {
+    List<TaskView>? allTasks,
+    this.currentIndex = 0,
+  }) : allTasks = allTasks ?? [singleTask];
 
   final String attemptPublicId;
-  final TaskView task;
+
+  /// Full prefetched task list for the attempt, in order. Single-item when
+  /// `fetchAllTasks` was unavailable or the attempt was created in dev-preview
+  /// mode — local navigation is still correct, just limited to one task.
+  final List<TaskView> allTasks;
+
+  /// Index into [allTasks] for the currently displayed task.
+  final int currentIndex;
+
   final TimerSnapshot timerSnapshot;
+
+  TaskView get task => allTasks[currentIndex];
+
+  AttemptInProgress copyWith({
+    List<TaskView>? allTasks,
+    int? currentIndex,
+    TimerSnapshot? timerSnapshot,
+  }) {
+    final newAllTasks = allTasks ?? this.allTasks;
+    final newIndex = currentIndex ?? this.currentIndex;
+    return AttemptInProgress(
+      attemptPublicId,
+      newAllTasks[newIndex],
+      timerSnapshot ?? this.timerSnapshot,
+      allTasks: newAllTasks,
+      currentIndex: newIndex,
+    );
+  }
 }
 
 final class AttemptCompleted extends ExamAttemptState {
