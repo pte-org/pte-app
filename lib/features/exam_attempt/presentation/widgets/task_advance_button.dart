@@ -46,6 +46,20 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
         state.timerSnapshot.remaining == Duration.zero;
   }
 
+  /// Returns true only when the per-task timer expiring should auto-submit
+  /// and advance. Rules:
+  /// - Practice mode: never auto-advance (student controls their own pace).
+  /// - Official READING/WRITING: never auto-advance (section timer is
+  ///   informational; only force-submit or manual next chốt answers).
+  /// - Official LISTENING/SPEAKING: respect the caller's [widget.autoAdvanceOnExpiration].
+  bool _shouldAutoAdvanceOnExpiration(AttemptInProgress state) {
+    if (!widget.autoAdvanceOnExpiration) return false;
+    if (state.isPractice) return false;
+    final section = state.task.section.toUpperCase();
+    if (section == 'READING' || section == 'WRITING') return false;
+    return true;
+  }
+
   Future<void> _advanceOnExpiration() async {
     if (_isNavigating) return;
     final state = context.read<ExamAttemptBloc>().state;
@@ -112,7 +126,7 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   }
 
   void _handleStateChange(ExamAttemptState state) {
-    if (_isExpired(state) && widget.autoAdvanceOnExpiration) {
+    if (_isExpired(state) && state is AttemptInProgress && _shouldAutoAdvanceOnExpiration(state)) {
       _advanceOnExpiration();
       return;
     }
@@ -132,9 +146,10 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   Widget build(BuildContext context) {
     return BlocListener<ExamAttemptBloc, ExamAttemptState>(
       listenWhen: (previous, current) =>
-          (widget.autoAdvanceOnExpiration &&
-              !_isExpired(previous) &&
-              _isExpired(current)) ||
+          (!_isExpired(previous) &&
+              _isExpired(current) &&
+              current is AttemptInProgress &&
+              _shouldAutoAdvanceOnExpiration(current)) ||
           current is AttemptError ||
           current is AttemptCompleted ||
           (current is AttemptInProgress &&
