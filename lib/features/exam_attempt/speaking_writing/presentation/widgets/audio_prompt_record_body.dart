@@ -204,7 +204,7 @@ class RecordedAnswerPrepCard extends StatelessWidget {
       selector: (state) => state is AttemptInProgress && state.isPractice,
       builder: (context, isPractice) {
         if (isPractice) {
-          return _PracticeRecordCard(
+          return PracticeRecordCard(
             recordingState: recordingState,
             responseSeconds: task.responseSeconds,
           );
@@ -349,8 +349,9 @@ class _PracticeListenCard extends StatelessWidget {
 /// buttons driven by manual taps; auto-stops after [responseSeconds] with
 /// a live progress bar. No manual "Stop" button — the time limit enforces
 /// the upper bound instead.
-class _PracticeRecordCard extends StatefulWidget {
-  const _PracticeRecordCard({
+class PracticeRecordCard extends StatefulWidget {
+  const PracticeRecordCard({
+    super.key,
     required this.recordingState,
     required this.responseSeconds,
   });
@@ -359,15 +360,15 @@ class _PracticeRecordCard extends StatefulWidget {
   final int responseSeconds;
 
   @override
-  State<_PracticeRecordCard> createState() => _PracticeRecordCardState();
+  State<PracticeRecordCard> createState() => _PracticeRecordCardState();
 }
 
-class _PracticeRecordCardState extends State<_PracticeRecordCard> {
+class _PracticeRecordCardState extends State<PracticeRecordCard> {
   Timer? _timer;
   double _progress = 0.0;
 
   @override
-  void didUpdateWidget(_PracticeRecordCard old) {
+  void didUpdateWidget(PracticeRecordCard old) {
     super.didUpdateWidget(old);
     final wasRecording =
         old.recordingState.recordingPhase == RecordingPhase.recording;
@@ -421,21 +422,19 @@ class _PracticeRecordCardState extends State<_PracticeRecordCard> {
   Widget build(BuildContext context) {
     final phase = widget.recordingState.recordingPhase;
 
-    final String statusLabel;
-    switch (phase) {
-      case RecordingPhase.idle:
-        statusLabel = SpeakingWritingStrings.practiceRecordIdleLabel;
-      case RecordingPhase.recording:
-        statusLabel = SpeakingWritingStrings.readAloudRecordingIndicator;
-      case RecordingPhase.recorded:
-        statusLabel = SpeakingWritingStrings.practiceRecordedLabel;
-      case RecordingPhase.unavailable:
-        return const RecordedAnswerStatusCard(
-          statusLabel:
-              SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
-          progress: 0.0,
-        );
+    if (phase == RecordingPhase.unavailable) {
+      return const RecordedAnswerStatusCard(
+        statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
+        progress: 0.0,
+      );
     }
+
+    final statusLabel = switch (phase) {
+      RecordingPhase.idle => SpeakingWritingStrings.practiceRecordIdleLabel,
+      RecordingPhase.recording => SpeakingWritingStrings.readAloudRecordingIndicator,
+      RecordingPhase.recorded => SpeakingWritingStrings.practiceRecordedLabel,
+      RecordingPhase.unavailable => '',
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
