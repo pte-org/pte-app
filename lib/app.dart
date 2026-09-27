@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import 'core/audio/volume_service.dart';
 import 'core/constants/app_strings.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_dimensions.dart';
@@ -148,7 +149,7 @@ class PteApp extends StatelessWidget {
       recorder: GetIt.instance<AudioRecorderService>(),
       // Not GetIt-registered — single-screen, dev-only feature with no
       // second call site (see TestMicAndSoundScreen's own doc comment).
-      player: DeviceCheckAudioPlayerImpl(),
+      player: DeviceCheckAudioPlayerImpl(volumeService: GetIt.instance<VolumeService>()),
     );
   }
 }
@@ -301,7 +302,7 @@ class StudentExamGateState extends State<StudentExamGate> {
           if (state is DeviceCheckRequired) {
             return TestMicAndSoundScreen(
               recorder: getIt<AudioRecorderService>(),
-              player: DeviceCheckAudioPlayerImpl(),
+              player: DeviceCheckAudioPlayerImpl(volumeService: getIt<VolumeService>()),
               onComplete: () => context.read<ExamAttemptBloc>().add(
                 SessionResolutionRequested(
                   rawInput: state.sessionPublicId,
