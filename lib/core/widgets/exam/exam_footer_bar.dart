@@ -9,7 +9,6 @@ import 'package:pte_app/core/constants/exam_chrome_config.dart';
 class ExamFooterBar extends StatelessWidget {
   const ExamFooterBar({
     super.key,
-    this.onSaveAndExit,
     this.onNext,
     this.navigationActions,
     this.nextAction,
@@ -17,7 +16,6 @@ class ExamFooterBar extends StatelessWidget {
     this.nextLoading = false,
   });
 
-  final VoidCallback? onSaveAndExit;
   final VoidCallback? onNext;
   final Widget? navigationActions;
   final Widget? nextAction;
@@ -35,11 +33,6 @@ class ExamFooterBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          OutlinedButton(
-            onPressed: onSaveAndExit,
-            style: _outlineStyle(),
-            child: const Text(ExamChromeConfig.saveAndExitLabel),
-          ),
           const Spacer(),
           if (navigationActions != null)
             navigationActions!

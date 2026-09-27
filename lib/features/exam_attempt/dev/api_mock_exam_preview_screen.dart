@@ -202,7 +202,6 @@ class _ApiMockExamPreviewScreenState extends State<ApiMockExamPreviewScreen> {
         audioProgress: _audioProgress,
       ),
       footer: ExamFooterBar(
-        onSaveAndExit: () => Navigator.of(context).pop(),
         onNext: _nextTask,
         nextLoading: _loading,
         nextLabel: ExamChromeConfig.nextLabel,
