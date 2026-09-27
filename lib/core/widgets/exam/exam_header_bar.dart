@@ -88,7 +88,7 @@ class ExamHeaderBar extends StatelessWidget {
     return IconButton(
       onPressed: onForceSubmit,
       tooltip: ExamChromeConfig.submitExamTooltip,
-      icon: const Icon(Icons.person_outline, size: 20),
+      icon: const Icon(Icons.send_outlined, size: 20),
       color: AppColors.primary,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 32, height: 36),

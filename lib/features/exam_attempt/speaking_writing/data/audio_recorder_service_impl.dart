@@ -20,7 +20,7 @@ class AudioRecorderServiceImpl implements AudioRecorderService {
       throw const AudioInputUnavailableException();
     }
     await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.wav),
+      const RecordConfig(encoder: AudioEncoder.wav, autoGain: true),
       path: filePath,
     );
   }

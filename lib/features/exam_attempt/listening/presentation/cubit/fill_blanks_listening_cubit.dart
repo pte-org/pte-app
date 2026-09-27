@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/listening_payload.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/fill_blanks_listening_state.dart';
@@ -21,14 +22,27 @@ class FillBlanksListeningCubit
     required this.pinnedItemPublicId,
     required int gapCount,
     required String audioSource,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
        super(
-         FillBlanksListeningState(answers: List<String>.filled(gapCount, '')),
+         FillBlanksListeningState(
+           answers: positionalValuesFromAnswerPayload(
+             initialPayload,
+             length: gapCount,
+           ),
+         ),
+         answerChanged:
+             (
+               FillBlanksListeningState current,
+               FillBlanksListeningState initial,
+             ) => current.answers != initial.answers,
        ) {
     _finishedSubscription = _audioPlayerService.hasFinishedPlaying.listen((_) {
       emit(state.copyWith(hasFinishedPlaying: true));
     });
+    _positionSubscription = _audioPlayerService.position.listen(_onPosition);
+    _durationSubscription = _audioPlayerService.duration.listen(_onDuration);
     unawaited(_audioPlayerService.play(audioSource));
   }
 
@@ -37,6 +51,10 @@ class FillBlanksListeningCubit
   final String attemptPublicId;
   final String pinnedItemPublicId;
   late final StreamSubscription<bool> _finishedSubscription;
+  late final StreamSubscription<Duration> _positionSubscription;
+  late final StreamSubscription<Duration?> _durationSubscription;
+  Duration _lastPosition = Duration.zero;
+  Duration? _lastDuration;
 
   Future<void> gapChanged(int gapIndex, String text) async {
     final updated = List<String>.of(state.answers);
@@ -60,9 +78,30 @@ class FillBlanksListeningCubit
     );
   }
 
+  void _onPosition(Duration position) {
+    _lastPosition = position;
+    _emitProgress();
+  }
+
+  void _onDuration(Duration? duration) {
+    _lastDuration = duration;
+    _emitProgress();
+  }
+
+  void _emitProgress() {
+    if (state.hasFinishedPlaying) return;
+    final duration = _lastDuration;
+    final progress = (duration == null || duration <= Duration.zero)
+        ? 0.0
+        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+    emit(state.copyWith(progress: progress));
+  }
+
   @override
   Future<void> close() async {
     await _finishedSubscription.cancel();
+    await _positionSubscription.cancel();
+    await _durationSubscription.cancel();
     await _audioPlayerService.close();
     return super.close();
   }

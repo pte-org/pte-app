@@ -10,6 +10,7 @@ import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
@@ -44,6 +45,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
        super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
+    on<NavigateTaskRequested>(_onNavigateTaskRequested);
     on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
     on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
     on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
@@ -180,19 +182,57 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
   }
 
-  Future<void> _onNextTaskRequested(
+  void _onNextTaskRequested(
     NextTaskRequested event,
     Emitter<ExamAttemptState> emit,
-  ) async {
-    final attemptPublicId = _attemptPublicId;
-    if (attemptPublicId == null) return;
+  ) {
+    final currentState = state;
+    if (currentState is! AttemptInProgress) return;
     _lastAdvanceReason = event.reason;
-    try {
-      final response = await _repository.fetchNextTask(attemptPublicId);
-      await _emitFromResponse(response, emit);
-    } catch (e) {
-      emit(AttemptError(_asAttemptException(e)));
+
+    final nextIndex = currentState.currentIndex + 1;
+    if (nextIndex >= currentState.allTasks.length) {
+      add(ForceSubmitRequested(reason: event.reason));
+      return;
     }
+
+    final nextTask = currentState.allTasks[nextIndex];
+    _syncEngine.setActiveTask(nextTask.pinnedItemPublicId);
+    _timerService.seedFromTask(nextTask);
+    _timerService.startPolling(currentState.attemptPublicId);
+    _heartbeatService.start(currentState.attemptPublicId);
+    emit(currentState.copyWith(
+      currentIndex: nextIndex,
+      timerSnapshot: _timerService.currentSnapshot,
+    ));
+  }
+
+  void _onNavigateTaskRequested(
+    NavigateTaskRequested event,
+    Emitter<ExamAttemptState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is! AttemptInProgress) return;
+    _lastAdvanceReason = AdvanceReason.manual;
+
+    final fromIndex = currentState.allTasks.indexWhere(
+      (t) => t.pinnedItemPublicId == event.fromPinnedItemPublicId,
+    );
+    if (fromIndex < 0) return;
+
+    final targetIndex = fromIndex +
+        (event.direction == TaskNavigationDirection.next ? 1 : -1);
+    if (targetIndex < 0 || targetIndex >= currentState.allTasks.length) return;
+
+    final targetTask = currentState.allTasks[targetIndex];
+    _syncEngine.setActiveTask(targetTask.pinnedItemPublicId);
+    _timerService.seedFromTask(targetTask);
+    _timerService.startPolling(currentState.attemptPublicId);
+    _heartbeatService.start(currentState.attemptPublicId);
+    emit(currentState.copyWith(
+      currentIndex: targetIndex,
+      timerSnapshot: _timerService.currentSnapshot,
+    ));
   }
 
   Exception _asAttemptException(Object error) =>
@@ -216,38 +256,24 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     final examJustExpired =
         event.snapshot.examRemaining == Duration.zero &&
         currentState.timerSnapshot.examRemaining > Duration.zero;
-    emit(
-      AttemptInProgress(
-        currentState.attemptPublicId,
-        currentState.task,
-        event.snapshot,
-      ),
-    );
+    emit(currentState.copyWith(timerSnapshot: event.snapshot));
     if (examJustExpired) {
       add(const ForceSubmitRequested());
     }
   }
 
-  Future<void> _onTimerTaskAdvancedExternally(
+  void _onTimerTaskAdvancedExternally(
     TimerTaskAdvancedExternally event,
     Emitter<ExamAttemptState> emit,
   ) {
-    // A proctor-initiated (or otherwise external) task advance must not be
-    // trusted as "still the currently displayed task" — re-fetch through
-    // the same path a normal NextTaskRequested would (phase-04 Design
-    // Constraints).
-    return _onNextTaskRequested(const NextTaskRequested(), emit);
+    _onNextTaskRequested(const NextTaskRequested(), emit);
   }
 
-  Future<void> _onSyncTaskRejectedExternally(
+  void _onSyncTaskRejectedExternally(
     SyncTaskRejectedExternally event,
     Emitter<ExamAttemptState> emit,
   ) {
-    // The server already closed the current task out from under the
-    // client (stale/expired submission) — same re-fetch path, the local
-    // "current task" view is equally stale here (phase-07 Design
-    // Constraints).
-    return _onNextTaskRequested(const NextTaskRequested(), emit);
+    _onNextTaskRequested(const NextTaskRequested(), emit);
   }
 
   Future<void> _onForceSubmitRequested(
@@ -257,7 +283,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null || _forceSubmitInFlight) return;
     _forceSubmitInFlight = true;
-    _lastAdvanceReason = AdvanceReason.manual;
+    _lastAdvanceReason = event.reason;
     try {
       final response = await _repository.forceSubmit(attemptPublicId);
       // Same terminal outcome as the natural end-of-tasks path in
@@ -278,16 +304,53 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     }
   }
 
-  /// Re-arms `TimerService`'s poll+tick chain immediately instead of
-  /// waiting up to the normal poll interval — `startPolling` already calls
-  /// `stop()` first internally, so this safely supersedes whatever chain
-  /// was running, exactly as a task transition would. A no-op if no
-  /// attempt is currently running (e.g. resumed while on the session-entry
-  /// or report screen).
-  void _onAppResumed(AppResumed event, Emitter<ExamAttemptState> emit) {
+  /// Re-fetches all tasks from the server to get fresh timer values, then
+  /// re-emits `AttemptInProgress` with the refreshed list. Preserves the
+  /// student's current position by matching `pinnedItemPublicId`. Falls back
+  /// to simply re-arming the timer if `fetchAllTasks` fails.
+  Future<void> _onAppResumed(
+    AppResumed event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
     final attemptPublicId = _attemptPublicId;
     if (attemptPublicId == null) return;
-    _timerService.startPolling(attemptPublicId);
+
+    final currentState = state;
+    if (currentState is! AttemptInProgress) {
+      _timerService.startPolling(attemptPublicId);
+      return;
+    }
+
+    try {
+      final responses = await _repository.fetchAllTasks(attemptPublicId);
+      final freshTasks = responses
+          .where((r) => !r.completed && r.task != null)
+          .map((r) => r.task!)
+          .toList();
+
+      if (freshTasks.isEmpty) {
+        _timerService.startPolling(attemptPublicId);
+        return;
+      }
+
+      final currentPinnedId = currentState.task.pinnedItemPublicId;
+      final resumeIndex = freshTasks.indexWhere(
+        (t) => t.pinnedItemPublicId == currentPinnedId,
+      );
+      final safeIndex = resumeIndex < 0 ? 0 : resumeIndex;
+      final resumeTask = freshTasks[safeIndex];
+
+      _syncEngine.setActiveTask(resumeTask.pinnedItemPublicId);
+      _timerService.seedFromTask(resumeTask);
+      _timerService.startPolling(attemptPublicId);
+      emit(currentState.copyWith(
+        allTasks: freshTasks,
+        currentIndex: safeIndex,
+        timerSnapshot: _timerService.currentSnapshot,
+      ));
+    } catch (_) {
+      _timerService.startPolling(attemptPublicId);
+    }
   }
 
   /// Shared terminal teardown for both the natural end-of-tasks path
@@ -362,6 +425,26 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     }
 
     _attemptPublicId = response.attemptPublicId;
+
+    // Prefetch all tasks so local navigation needs no server round-trips.
+    // Falls back to single-task mode on error — exam still runs correctly.
+    List<TaskView> allTasks;
+    try {
+      final responses = await _repository.fetchAllTasks(response.attemptPublicId);
+      allTasks = responses
+          .where((r) => !r.completed && r.task != null)
+          .map((r) => r.task!)
+          .toList();
+      if (allTasks.isEmpty) allTasks = [task];
+    } catch (_) {
+      allTasks = [task];
+    }
+
+    final currentIndex = allTasks.indexWhere(
+      (t) => t.pinnedItemPublicId == task.pinnedItemPublicId,
+    );
+    final safeIndex = currentIndex < 0 ? 0 : currentIndex;
+
     _syncEngine.setActiveTask(task.pinnedItemPublicId);
     // Started on every in-progress transition, not just the first — a
     // no-op while already running (MediaUploadCoordinator.start()'s own
@@ -383,6 +466,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         response.attemptPublicId,
         task,
         _timerService.currentSnapshot,
+        allTasks: allTasks,
+        currentIndex: safeIndex,
       ),
     );
   }

@@ -69,7 +69,7 @@ Future<File> _tempFile(String contents) async {
 }
 
 void main() {
-  group('RawUploadClient — no-auth-header requirement (Step 9)', () {
+  group('RawUploadClient — signed public upload (Step 9)', () {
     test(
       'interceptors never includes an auth-related interceptor by default — a plain Dio() may carry Dio\'s own '
       'internal ImplyContentTypeInterceptor, but never AuthHeaderInterceptor/TokenRefreshInterceptor',
@@ -111,7 +111,7 @@ void main() {
 
         await client.upload(
           uploadUrl:
-              'https://api.cloudinary.com/test/video/authenticated/upload',
+              'https://api.cloudinary.com/test/video/upload',
           file: file,
           contentType: 'audio/wav',
           apiKey: 'test-key',
@@ -134,7 +134,7 @@ void main() {
         );
         expect(
           adapter.lastRequest!.uri.path,
-          endsWith('/video/authenticated/upload'),
+          endsWith('/video/upload'),
         );
         final uploadForm = adapter.lastRequest!.data as FormData;
         expect(uploadForm.fields.any((field) => field.key == 'type'), isFalse);

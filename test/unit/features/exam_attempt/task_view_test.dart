@@ -97,4 +97,54 @@ void main() {
       expect(task.imageUrl, 'https://example.com/resolved-image.png');
     });
   });
+
+  group('TaskView.copyWith', () {
+    test('returns an identical copy when no overrides are given', () {
+      final original = _taskFrom({
+        'canNavigatePrevious': true,
+        'canNavigateNext': true,
+        'responseSeconds': 90,
+      });
+      final copy = original.copyWith();
+
+      expect(copy.pinnedItemPublicId, original.pinnedItemPublicId);
+      expect(copy.orderIndex, original.orderIndex);
+      expect(copy.totalTasks, original.totalTasks);
+      expect(copy.section, original.section);
+      expect(copy.taskType, original.taskType);
+      expect(copy.prepSeconds, original.prepSeconds);
+      expect(copy.responseSeconds, original.responseSeconds);
+      expect(copy.canNavigatePrevious, original.canNavigatePrevious);
+      expect(copy.canNavigateNext, original.canNavigateNext);
+    });
+
+    test('overrides only the specified fields', () {
+      final original = _taskFrom({'responseSeconds': 60});
+      final patched = original.copyWith(responseSeconds: 120, canNavigateNext: true);
+
+      expect(patched.responseSeconds, 120);
+      expect(patched.canNavigateNext, isTrue);
+      expect(patched.section, original.section);
+      expect(patched.orderIndex, original.orderIndex);
+    });
+  });
+
+  group('TaskView.fromJson — navigation permissions', () {
+    test('defaults missing permissions to disabled for compatibility', () {
+      final task = _taskFrom({});
+
+      expect(task.canNavigatePrevious, isFalse);
+      expect(task.canNavigateNext, isFalse);
+    });
+
+    test('reads server-computed Previous and Next permissions', () {
+      final task = _taskFrom({
+        'canNavigatePrevious': true,
+        'canNavigateNext': false,
+      });
+
+      expect(task.canNavigatePrevious, isTrue);
+      expect(task.canNavigateNext, isFalse);
+    });
+  });
 }

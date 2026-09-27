@@ -1,4 +1,5 @@
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/positional_payload.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_drag_drop_state.dart';
@@ -14,8 +15,18 @@ class FillBlanksDragDropCubit extends TaskAnswerCubit<FillBlanksDragDropState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required this.gapCount,
+    String? initialPayload,
+    List<TaskOption> options = const [],
   }) : _outboxDao = outboxDao,
-       super(const FillBlanksDragDropState());
+       super(
+         FillBlanksDragDropState(
+           gapAssignments: gapAssignmentsFromAnswerPayload(
+             payload: initialPayload,
+             gapCount: gapCount,
+             options: options,
+           ),
+         ),
+       );
 
   final AnswerOutboxDao _outboxDao;
   final String attemptPublicId;
@@ -40,7 +51,8 @@ class FillBlanksDragDropCubit extends TaskAnswerCubit<FillBlanksDragDropState> {
   /// already empty), returning it to the shared word bank.
   Future<void> clearGap(int gapIndex) async {
     if (!state.gapAssignments.containsKey(gapIndex)) return;
-    final updated = Map<int, TaskOption>.of(state.gapAssignments)..remove(gapIndex);
+    final updated = Map<int, TaskOption>.of(state.gapAssignments)
+      ..remove(gapIndex);
     await _emitAndPersist(updated);
   }
 
@@ -49,7 +61,9 @@ class FillBlanksDragDropCubit extends TaskAnswerCubit<FillBlanksDragDropState> {
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: positionalPayload(List.generate(gapCount, (gapIndex) => updated[gapIndex]?.orderIndex)),
+      payload: positionalPayload(
+        List.generate(gapCount, (gapIndex) => updated[gapIndex]?.orderIndex),
+      ),
     );
   }
 
@@ -64,7 +78,12 @@ class FillBlanksDragDropCubit extends TaskAnswerCubit<FillBlanksDragDropState> {
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,
-      payload: positionalPayload(List.generate(gapCount, (gapIndex) => state.gapAssignments[gapIndex]?.orderIndex)),
+      payload: positionalPayload(
+        List.generate(
+          gapCount,
+          (gapIndex) => state.gapAssignments[gapIndex]?.orderIndex,
+        ),
+      ),
     );
   }
 }

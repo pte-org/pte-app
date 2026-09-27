@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
+import 'package:pte_app/core/audio/volume_service.dart';
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
@@ -325,6 +327,8 @@ class _SoundSection extends StatelessWidget {
           label: DeviceCheckStrings.playTestSoundButtonLabel,
           onPressed: canPlayTestSound ? cubit.playTestSound : null,
         ),
+        const SizedBox(height: AppDimensions.spacingMedium),
+        const _VolumeControl(),
         if (soundPhase == SoundCheckPhase.played &&
             state.soundConfirmedHeardClearly == null) ...[
           const SizedBox(height: AppDimensions.spacingMedium),
@@ -347,6 +351,35 @@ class _SoundSection extends StatelessWidget {
             ],
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _VolumeControl extends StatelessWidget {
+  const _VolumeControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final volumeService = GetIt.instance<VolumeService>();
+    return Row(
+      children: [
+        const Icon(Icons.volume_up, color: AppColors.textSecondary),
+        const SizedBox(width: AppDimensions.spacingSm),
+        Expanded(
+          child: ValueListenableBuilder<double>(
+            valueListenable: volumeService,
+            builder: (context, volume, _) {
+              return Slider(
+                value: volume,
+                min: 0.0,
+                max: 1.0,
+                activeColor: AppColors.primary,
+                onChanged: (v) => volumeService.value = v,
+              );
+            },
+          ),
+        ),
       ],
     );
   }

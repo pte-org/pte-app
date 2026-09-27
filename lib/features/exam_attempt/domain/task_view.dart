@@ -76,9 +76,12 @@ class TaskView {
     this.preListenSeconds,
     this.preRecordSeconds,
     this.imageUrl,
+    this.audioUrl,
     this.taskTypeCode,
     this.runtime,
     this.taskTypeDisplayName,
+    this.canNavigatePrevious = false,
+    this.canNavigateNext = false,
   });
 
   final String pinnedItemPublicId;
@@ -96,6 +99,8 @@ class TaskView {
   /// an older response and the app must use the alias-aware legacy registry.
   final TaskRuntimeProfile? runtime;
   final String? taskTypeDisplayName;
+  final bool canNavigatePrevious;
+  final bool canNavigateNext;
 
   String get canonicalTaskType =>
       TaskTypeCodes.canonicalize(taskTypeCode ?? taskType) ?? taskType;
@@ -146,11 +151,69 @@ class TaskView {
 
   /// Resolved, directly-fetchable presigned URL for [imagePromptRef] — null
   /// unless the server resolved one (mandatory for DESCRIBE_IMAGE, absent
-  /// for every other task type today). Unlike Speaking's audio prompts
-  /// (played on demand via a separate replay-limited endpoint), a static
-  /// image has no such concern, so it's embedded directly here
-  /// (plans/phat-describe-image-e2e).
+  /// for every other task type today).
   final String? imageUrl;
+
+  /// Resolved presigned audio URL for LISTENING tasks — null for Speaking
+  /// tasks (which use the /audio on-demand endpoint for replay-limit
+  /// enforcement) and any task type without an audio prompt.
+  final String? audioUrl;
+
+  TaskView copyWith({
+    String? pinnedItemPublicId,
+    int? orderIndex,
+    int? totalTasks,
+    String? section,
+    String? taskType,
+    String? taskTypeCode,
+    TaskRuntimeProfile? runtime,
+    String? taskTypeDisplayName,
+    bool? canNavigatePrevious,
+    bool? canNavigateNext,
+    String? title,
+    String? promptText,
+    String? audioPromptRef,
+    String? imagePromptRef,
+    int? minWordCount,
+    int? maxWordCount,
+    List<TaskOption>? options,
+    List<BlankGroup>? blankGroups,
+    int? prepSeconds,
+    int? responseSeconds,
+    DateTime? examEndTime,
+    int? preListenSeconds,
+    int? preRecordSeconds,
+    String? imageUrl,
+    String? audioUrl,
+  }) {
+    return TaskView(
+      pinnedItemPublicId: pinnedItemPublicId ?? this.pinnedItemPublicId,
+      orderIndex: orderIndex ?? this.orderIndex,
+      totalTasks: totalTasks ?? this.totalTasks,
+      section: section ?? this.section,
+      taskType: taskType ?? this.taskType,
+      taskTypeCode: taskTypeCode ?? this.taskTypeCode,
+      runtime: runtime ?? this.runtime,
+      taskTypeDisplayName: taskTypeDisplayName ?? this.taskTypeDisplayName,
+      canNavigatePrevious: canNavigatePrevious ?? this.canNavigatePrevious,
+      canNavigateNext: canNavigateNext ?? this.canNavigateNext,
+      title: title ?? this.title,
+      promptText: promptText ?? this.promptText,
+      audioPromptRef: audioPromptRef ?? this.audioPromptRef,
+      imagePromptRef: imagePromptRef ?? this.imagePromptRef,
+      minWordCount: minWordCount ?? this.minWordCount,
+      maxWordCount: maxWordCount ?? this.maxWordCount,
+      options: options ?? this.options,
+      blankGroups: blankGroups ?? this.blankGroups,
+      prepSeconds: prepSeconds ?? this.prepSeconds,
+      responseSeconds: responseSeconds ?? this.responseSeconds,
+      examEndTime: examEndTime ?? this.examEndTime,
+      preListenSeconds: preListenSeconds ?? this.preListenSeconds,
+      preRecordSeconds: preRecordSeconds ?? this.preRecordSeconds,
+      imageUrl: imageUrl ?? this.imageUrl,
+      audioUrl: audioUrl ?? this.audioUrl,
+    );
+  }
 
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
@@ -162,6 +225,8 @@ class TaskView {
       taskTypeCode: json['taskTypeCode'] as String?,
       runtime: _readRuntime(json['runtime']),
       taskTypeDisplayName: json['taskTypeDisplayName'] as String?,
+      canNavigatePrevious: json['canNavigatePrevious'] as bool? ?? false,
+      canNavigateNext: json['canNavigateNext'] as bool? ?? false,
       title: json['title'] as String,
       promptText: json['promptText'] as String?,
       audioPromptRef: json['audioPromptRef'] as String?,
@@ -182,6 +247,7 @@ class TaskView {
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,
       imageUrl: json['imageUrl'] as String?,
+      audioUrl: json['audioUrl'] as String?,
     );
   }
 

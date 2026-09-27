@@ -6,6 +6,8 @@ import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
 import 'package:pte_app/features/exam_attempt/domain/client_capability_manifest.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 class _MockApiClient extends Mock implements ApiClient {}
 
@@ -111,4 +113,99 @@ void main() {
       ClientCapabilityManifest.fromRegistry().toJson(),
     );
   });
+
+  test('fetchAllTasks parses a list of two tasks from the bulk endpoint', () async {
+    final taskJson = {
+      'pinnedItemPublicId': 'item-a',
+      'orderIndex': 0,
+      'totalTasks': 2,
+      'section': 'SPEAKING',
+      'taskType': 'READ_ALOUD',
+      'title': 'Task A',
+      'prepSeconds': 30,
+      'responseSeconds': 60,
+      'canNavigatePrevious': false,
+      'canNavigateNext': true,
+    };
+    final task2Json = {
+      'pinnedItemPublicId': 'item-b',
+      'orderIndex': 1,
+      'totalTasks': 2,
+      'section': 'SPEAKING',
+      'taskType': 'READ_ALOUD',
+      'title': 'Task B',
+      'prepSeconds': 30,
+      'responseSeconds': 60,
+      'canNavigatePrevious': true,
+      'canNavigateNext': true,
+    };
+    when(
+      () => apiClient.get<List<dynamic>>(
+        '/api/v1/attempts/attempt-1/tasks',
+      ),
+    ).thenAnswer(
+      (_) async => Response(
+        requestOptions: RequestOptions(path: '/api/v1/attempts/attempt-1/tasks'),
+        statusCode: 200,
+        data: [
+          {'attemptPublicId': 'attempt-1', 'attemptStatus': 'IN_PROGRESS', 'completed': false, 'task': taskJson},
+          {'attemptPublicId': 'attempt-1', 'attemptStatus': 'IN_PROGRESS', 'completed': false, 'task': task2Json},
+        ],
+      ),
+    );
+
+    final result = await repository.fetchAllTasks('attempt-1');
+
+    expect(result, hasLength(2));
+    expect(result[0].task, isA<TaskView>());
+    expect(result[0].task!.pinnedItemPublicId, 'item-a');
+    expect(result[0].task!.orderIndex, 0);
+    expect(result[1].task!.pinnedItemPublicId, 'item-b');
+    expect(result[1].task!.orderIndex, 1);
+    expect(result[0].completed, isFalse);
+  });
+
+  test(
+    'navigateTask posts the source item and direction to the attempt endpoint',
+    () async {
+      when(
+        () => apiClient.post<Map<String, dynamic>>(
+          '/api/v1/attempts/attempt-1/navigate',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(
+            path: '/api/v1/attempts/attempt-1/navigate',
+          ),
+          statusCode: 200,
+          data: {
+            'attemptPublicId': 'attempt-1',
+            'attemptStatus': 'IN_PROGRESS',
+            'completed': true,
+          },
+        ),
+      );
+
+      final response = await repository.navigateTask(
+        attemptPublicId: 'attempt-1',
+        fromPinnedItemPublicId: 'item-3',
+        direction: TaskNavigationDirection.previous,
+      );
+
+      expect(response.completed, isTrue);
+      final data =
+          verify(
+                () => apiClient.post<Map<String, dynamic>>(
+                  '/api/v1/attempts/attempt-1/navigate',
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(data, {
+        'fromPinnedItemPublicId': 'item-3',
+        'direction': 'PREVIOUS',
+      });
+    },
+  );
 }

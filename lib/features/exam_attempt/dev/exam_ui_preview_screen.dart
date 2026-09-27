@@ -62,7 +62,6 @@ class _ExamUiPreviewScreenState extends State<ExamUiPreviewScreen> {
       ),
       body: ExamUiPreviewTaskBody(model: selected),
       footer: ExamFooterBar(
-        onSaveAndExit: () => setState(() => _selected = null),
         onNext: () {
           final next = (index + 1) % ExamUiPreviewCatalog.models.length;
           setState(() => _selected = ExamUiPreviewCatalog.models[next]);

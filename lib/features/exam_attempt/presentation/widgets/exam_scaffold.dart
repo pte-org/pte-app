@@ -4,11 +4,13 @@ import 'package:get_it/get_it.dart';
 
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/security/models/violation_event.dart';
+import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/widgets/exam/exam_shell.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_app_bar.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_bottom_bar.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/violation_warning_banner.dart';
 
 /// Feature composition root for the props-only [ExamShell]. It is also the
@@ -55,11 +57,22 @@ class _ExamScaffoldState extends State<ExamScaffold>
     final lockdownStream = GetIt.instance.isRegistered<LockdownService>()
         ? GetIt.instance<LockdownService>().violations
         : const Stream<ViolationType>.empty();
+    final syncEngine = GetIt.instance.isRegistered<SyncEngine>()
+        ? GetIt.instance<SyncEngine>()
+        : null;
+    final navigationAction =
+        widget.bottomAction ??
+        (syncEngine == null
+            ? null
+            : TaskAdvanceButton(
+                syncEngine: syncEngine,
+                autoAdvanceOnExpiration: false,
+              ));
     return ExamShell(
       topNotice: ViolationWarningBanner(violations: lockdownStream),
       header: ExamAppBar(totalTasks: widget.totalTasks),
       body: widget.body,
-      footer: ExamBottomBar(action: widget.bottomAction),
+      footer: ExamBottomBar(action: navigationAction),
     );
   }
 }

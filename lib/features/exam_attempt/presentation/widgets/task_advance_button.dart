@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/constants/exam_chrome_config.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
@@ -13,47 +14,31 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
-/// The one explicit trigger allowed to submit the active task's answer
-/// over the network (phase-05 Design Constraints): flushes whichever
-/// [FlushableAnswerCubit] is currently on screen, then calls
-/// `SyncEngine.flushOne` for [pinnedItemPublicId], then requests the next
-/// task — in that order, so the very latest edit is never lost to an
-/// in-flight debounce window and background flush never races this call.
-/// Shared across every task-type screen (Phase 5/6) rather than
-/// reimplemented per type.
-///
-/// Also self-triggers the identical sequence when the current task's
-/// countdown reaches zero — the same "server is timing authority, client
-/// timer is UX only" deadline this button already flushes against, so no
-/// separate expiry check is needed. `_isAdvancing` guards both the tap
-/// handler and the auto-trigger from firing twice for the same task.
+/// Shared candidate navigation. Manual movement first saves the local draft
+/// without advancing the server pointer, then asks the backend to move in the
+/// requested direction. Timer expiry retains the existing submit-and-advance
+/// behavior.
 class TaskAdvanceButton extends StatefulWidget {
   const TaskAdvanceButton({
     super.key,
-    required this.cubit,
-    required this.pinnedItemPublicId,
+    this.cubit,
+    this.pinnedItemPublicId,
     required this.syncEngine,
+    this.autoAdvanceOnExpiration = true,
   });
 
-  final FlushableAnswerCubit cubit;
-  final String pinnedItemPublicId;
+  final FlushableAnswerCubit? cubit;
+  final String? pinnedItemPublicId;
   final SyncEngine syncEngine;
+  final bool autoAdvanceOnExpiration;
 
   @override
   State<TaskAdvanceButton> createState() => _TaskAdvanceButtonState();
 }
 
 class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
-  bool _isAdvancing = false;
-
-  Future<void> _advance({AdvanceReason reason = AdvanceReason.manual}) async {
-    if (_isAdvancing) return;
-    setState(() => _isAdvancing = true);
-    await widget.cubit.flushPendingEdit();
-    await widget.syncEngine.flushOne(widget.pinnedItemPublicId);
-    if (!mounted) return;
-    context.read<ExamAttemptBloc>().add(NextTaskRequested(reason: reason));
-  }
+  bool _isNavigating = false;
+  String? _pendingTaskId;
 
   bool _isExpired(ExamAttemptState state) {
     return state is AttemptInProgress &&
@@ -61,50 +46,131 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
         state.timerSnapshot.remaining == Duration.zero;
   }
 
+  Future<void> _advanceOnExpiration() async {
+    if (_isNavigating) return;
+    final state = context.read<ExamAttemptBloc>().state;
+    if (state is! AttemptInProgress) return;
+    setState(() {
+      _isNavigating = true;
+      _pendingTaskId = state.task.pinnedItemPublicId;
+    });
+    await widget.cubit?.flushPendingEdit();
+    await widget.syncEngine.flushOne(state.task.pinnedItemPublicId);
+    if (!mounted) return;
+    context.read<ExamAttemptBloc>().add(
+      const NextTaskRequested(reason: AdvanceReason.timeExpired),
+    );
+  }
+
+  Future<void> _navigate(
+    TaskView task,
+    TaskNavigationDirection direction,
+  ) async {
+    if (_isNavigating) return;
+    final canNavigate = direction == TaskNavigationDirection.previous
+        ? task.canNavigatePrevious
+        : task.canNavigateNext;
+    if (!canNavigate) return;
+
+    setState(() {
+      _isNavigating = true;
+      _pendingTaskId = task.pinnedItemPublicId;
+    });
+    try {
+      // Cubits start from an empty default when a task screen is recreated.
+      // Do not flush that default when the student revisits an existing task
+      // and leaves it untouched, or it would overwrite the previous answer.
+      if (widget.cubit?.hasPendingEdits ?? false) {
+        await widget.cubit!.flushPendingEdit();
+      }
+      await widget.syncEngine.flushOne(task.pinnedItemPublicId, advance: false);
+      if (!mounted) return;
+      context.read<ExamAttemptBloc>().add(
+        NavigateTaskRequested(
+          fromPinnedItemPublicId: task.pinnedItemPublicId,
+          direction: direction,
+        ),
+      );
+      // Navigation is synchronous in the BLoC; reset immediately so the
+      // button never gets permanently stuck if the state did not change
+      // (e.g. allTasks fallback with a single entry).
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _pendingTaskId = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _pendingTaskId = null;
+        });
+      }
+      rethrow;
+    }
+  }
+
+  void _handleStateChange(ExamAttemptState state) {
+    if (_isExpired(state) && widget.autoAdvanceOnExpiration) {
+      _advanceOnExpiration();
+      return;
+    }
+    if (state is AttemptError ||
+        state is AttemptCompleted ||
+        (state is AttemptInProgress &&
+            _pendingTaskId != null &&
+            state.task.pinnedItemPublicId != _pendingTaskId)) {
+      setState(() {
+        _isNavigating = false;
+        _pendingTaskId = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<ExamAttemptBloc, ExamAttemptState>(
       listenWhen: (previous, current) =>
-          !_isExpired(previous) && _isExpired(current),
-      listener: (context, state) => _advance(reason: AdvanceReason.timeExpired),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: AppColors.warningIcon,
-                  size: AppDimensions.taskAdvanceWarningIconSize,
-                ),
-                const SizedBox(width: AppDimensions.spacingMedium / 4),
-                Flexible(
-                  child: Text(
-                    AppStrings.taskAdvanceUnansweredNote,
-                    textAlign: TextAlign.start,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.onPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+          (widget.autoAdvanceOnExpiration &&
+              !_isExpired(previous) &&
+              _isExpired(current)) ||
+          current is AttemptError ||
+          current is AttemptCompleted ||
+          (current is AttemptInProgress &&
+              _pendingTaskId != null &&
+              current.task.pinnedItemPublicId != _pendingTaskId),
+      listener: (context, state) => _handleStateChange(state),
+      child: BlocBuilder<ExamAttemptBloc, ExamAttemptState>(
+        builder: (context, state) {
+          if (state is! AttemptInProgress) return const SizedBox.shrink();
+          final task = state.task;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton(
+                onPressed: !_isNavigating && task.canNavigatePrevious
+                    ? () => _navigate(task, TaskNavigationDirection.previous)
+                    : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, AppDimensions.buttonHeight),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.spacingMd,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppDimensions.spacingMedium),
-          PrimaryButton(
-            label: ExamAttemptStrings.taskAdvanceButtonLabel,
-            onPressed: _advance,
-            isLoading: _isAdvancing,
-          ),
-        ],
+                child: const Text(ExamChromeConfig.previousLabel),
+              ),
+              const SizedBox(width: AppDimensions.spacingMedium),
+              PrimaryButton(
+                label: ExamAttemptStrings.taskAdvanceButtonLabel,
+                onPressed: task.canNavigateNext
+                    ? () => _navigate(task, TaskNavigationDirection.next)
+                    : null,
+                isLoading: _isNavigating,
+              ),
+            ],
+          );
+        },
       ),
     );
   }

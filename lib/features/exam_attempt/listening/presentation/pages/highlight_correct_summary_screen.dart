@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/choice_list.dart';
 import 'package:pte_app/core/widgets/components/choice_row.dart';
 import 'package:pte_app/core/widgets/templates/single_select_template.dart';
@@ -25,6 +25,7 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
@@ -32,6 +33,7 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,8 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
         audioPlayerService: audioPlayerService,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
-        audioSource: task.audioPromptRef ?? '',
+        audioSource: task.audioUrl ?? '',
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -63,12 +66,9 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
                     subtitle: task.section,
                     instruction:
                         'Select the summary that best represents the recording.',
-                    stimulus: AudioStimulusPlayer(
-                      label: state.hasFinishedPlaying
-                          ? 'Audio finished'
-                          : 'Playing audio',
-                      playing: !state.hasFinishedPlaying,
-                      progress: state.hasFinishedPlaying ? 1 : 0,
+                    stimulus: AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(
                       child: ChoiceList(

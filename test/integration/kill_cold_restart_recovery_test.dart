@@ -118,7 +118,7 @@ void main() {
       // of this phase's Success Criteria, not just "the row exists".
       final apiClient = _MockApiClient();
       when(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
           pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
           payload: any(named: 'payload'),
@@ -135,7 +135,7 @@ void main() {
       syncEngine.stopSync();
 
       verify(
-        () => apiClient.submitAnswer(
+        () => apiClient.saveAnswer(
           attemptPublicId: attemptPublicId,
           pinnedItemPublicId: pinnedItemPublicId,
           payload: '2',

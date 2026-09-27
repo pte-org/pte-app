@@ -1,4 +1,5 @@
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 sealed class ExamAttemptEvent {
@@ -51,6 +52,27 @@ final class NextTaskRequested extends ExamAttemptEvent {
   int get hashCode => reason.hashCode;
 }
 
+/// Explicit Previous/Next action. Unlike [NextTaskRequested], this moves the
+/// server pointer in either direction and is guarded by the pinned exam mode.
+final class NavigateTaskRequested extends ExamAttemptEvent {
+  const NavigateTaskRequested({
+    required this.fromPinnedItemPublicId,
+    required this.direction,
+  });
+
+  final String fromPinnedItemPublicId;
+  final TaskNavigationDirection direction;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NavigateTaskRequested &&
+      other.fromPinnedItemPublicId == fromPinnedItemPublicId &&
+      other.direction == direction;
+
+  @override
+  int get hashCode => Object.hash(fromPinnedItemPublicId, direction);
+}
+
 /// Dispatched internally by the `TimerService.ticks` subscription — not
 /// intended to be dispatched by UI code directly.
 final class TimerSnapshotUpdated extends ExamAttemptEvent {
@@ -80,8 +102,14 @@ final class SyncTaskRejectedExternally extends ExamAttemptEvent {
 /// User-initiated, irreversible: ends the attempt immediately regardless of
 /// remaining tasks via `POST .../submit`. UI dispatches this only after an
 /// explicit confirmation step (phase-07 Design Constraints).
+///
+/// When dispatched internally by [NextTaskRequested] after the student has
+/// gone past the last task, [reason] carries the original advance reason so
+/// `AttemptCompleted.timeExpired` reflects whether the clock ran out.
 final class ForceSubmitRequested extends ExamAttemptEvent {
-  const ForceSubmitRequested();
+  const ForceSubmitRequested({this.reason = AdvanceReason.manual});
+
+  final AdvanceReason reason;
 }
 
 /// `kDebugMode`-only: seeds [task] straight into `AttemptInProgress` without

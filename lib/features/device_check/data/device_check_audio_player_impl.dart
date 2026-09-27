@@ -1,38 +1,59 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
+import 'package:pte_app/core/audio/volume_service.dart';
 import 'package:pte_app/features/device_check/domain/device_check_audio_player.dart';
 
-/// `just_audio`-backed impl. `setFilePath`/`setAsset` are both documented
-/// convenience wrappers around `setAudioSource` — safe to call repeatedly
-/// on the same long-lived [AudioPlayer] instance to switch sources (the
-/// standard `just_audio` track-switching pattern), so one instance covers
-/// both [playFile] and [playAsset] with no leak or stale-state risk.
+/// `just_audio`-backed impl.
+///
+/// [playAsset] extracts the Flutter asset to a temp file before playback
+/// because `just_audio_media_kit` (the Windows backend) does not support
+/// `setAsset()` — only `setFilePath` and `setUrl` work reliably via libmpv.
 class DeviceCheckAudioPlayerImpl implements DeviceCheckAudioPlayer {
-  DeviceCheckAudioPlayerImpl({AudioPlayer? player})
-    : _player = player ?? AudioPlayer() {
+  DeviceCheckAudioPlayerImpl({AudioPlayer? player, VolumeService? volumeService})
+    : _player = player ?? AudioPlayer(),
+      _volumeService = volumeService {
     _stateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _hasFinishedPlayingController.add(true);
       }
     });
+    final vs = _volumeService;
+    if (vs != null) {
+      _player.setVolume(vs.value);
+      vs.addListener(_syncVolume);
+    }
   }
 
   final AudioPlayer _player;
+  final VolumeService? _volumeService;
   late final StreamSubscription<PlayerState> _stateSubscription;
   final StreamController<bool> _hasFinishedPlayingController =
       StreamController<bool>.broadcast();
 
+  void _syncVolume() {
+    final vs = _volumeService;
+    if (vs != null) _player.setVolume(vs.value);
+  }
+
   @override
   Future<void> playFile(String filePath) async {
-    await _player.setFilePath(filePath);
+    await _player.setUrl(Uri.file(filePath).toString());
     await _player.play();
   }
 
   @override
   Future<void> playAsset(String assetPath) async {
-    await _player.setAsset(assetPath);
+    final byteData = await rootBundle.load(assetPath);
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File(p.join(tempDir.path, p.basename(assetPath)));
+    await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+    await _player.setUrl(Uri.file(tempFile.path).toString());
     await _player.play();
   }
 
@@ -41,6 +62,7 @@ class DeviceCheckAudioPlayerImpl implements DeviceCheckAudioPlayer {
 
   @override
   Future<void> close() async {
+    _volumeService?.removeListener(_syncVolume);
     await _stateSubscription.cancel();
     await _hasFinishedPlayingController.close();
     await _player.dispose();

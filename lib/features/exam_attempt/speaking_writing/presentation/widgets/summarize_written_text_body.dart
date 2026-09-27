@@ -20,10 +20,12 @@ class SummarizeWrittenTextBody extends StatefulWidget {
   const SummarizeWrittenTextBody({
     super.key,
     required this.task,
+    this.initialAnswer,
     this.persistDraft,
   });
 
   final TaskView task;
+  final String? initialAnswer;
   final ValueChanged<String>? persistDraft;
 
   @override
@@ -39,7 +41,9 @@ class _SummarizeWrittenTextBodyState extends State<SummarizeWrittenTextBody> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController()..addListener(_onDraftChanged);
+    _controller = TextEditingController(text: widget.initialAnswer ?? '')
+      ..addListener(_onDraftChanged);
+    _wordCount = _countWords(_controller.text);
   }
 
   void _onDraftChanged() {

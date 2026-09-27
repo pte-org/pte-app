@@ -1,4 +1,5 @@
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/positional_payload.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
@@ -13,8 +14,16 @@ class FillBlanksDropdownCubit extends TaskAnswerCubit<FillBlanksDropdownState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required int blankGroupCount,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
-       super(FillBlanksDropdownState(selectedOrderIndexes: List<String?>.filled(blankGroupCount, null)));
+       super(
+         FillBlanksDropdownState(
+           selectedOrderIndexes: positionalSelectionsFromAnswerPayload(
+             initialPayload,
+             length: blankGroupCount,
+           ),
+         ),
+       );
 
   final AnswerOutboxDao _outboxDao;
   final String attemptPublicId;
