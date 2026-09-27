@@ -31,6 +31,7 @@ class WriteFromDictationScreen extends StatefulWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
+    this.isPractice = false,
   });
 
   final TaskView task;
@@ -39,6 +40,7 @@ class WriteFromDictationScreen extends StatefulWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
+  final bool isPractice;
 
   @override
   State<WriteFromDictationScreen> createState() =>
@@ -59,6 +61,7 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
       audioSource: widget.task.audioUrl ?? '',
       initialPayload: widget.initialAnswerPayload,
+      isPractice: widget.isPractice,
     );
     _controller = TextEditingController(text: _cubit.state.draftText)
       ..addListener(() => _cubit.draftChanged(_controller.text));
@@ -85,9 +88,37 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
                   widget.task.title,
               subtitle: widget.task.section,
               instruction: ListeningStrings.writeFromDictationPrompt,
-              stimulus: AudioListeningStatusCard(
-                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
-                progress: state.hasFinishedPlaying ? 1.0 : state.progress,
+              stimulus: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AudioListeningStatusCard(
+                    statusLabel: !state.hasStartedPlaying
+                        ? 'Tap to listen'
+                        : state.hasFinishedPlaying
+                            ? 'Audio finished'
+                            : 'Playing audio...',
+                    progress: !state.hasStartedPlaying
+                        ? 0.0
+                        : state.hasFinishedPlaying
+                            ? 1.0
+                            : state.progress,
+                  ),
+                  if (widget.isPractice) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        if (!state.hasStartedPlaying) {
+                          context.read<WriteFromDictationCubit>().startPlayback();
+                        } else {
+                          context.read<WriteFromDictationCubit>().replayAudio();
+                        }
+                      },
+                      icon: const Icon(Icons.play_circle_outline),
+                      label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
+                    ),
+                  ],
+                ],
               ),
               response: Column(
                 children: [
