@@ -65,6 +65,9 @@ mixin AutoRecordTimerBridgeMixin<T extends StatefulWidget> on State<T> {
   }) {
     if (state is! AttemptInProgress) return;
     if (state.task.pinnedItemPublicId != task.pinnedItemPublicId) return;
+    // Practice mode: manual buttons drive audio playback and recording;
+    // suppress timer automation so the student controls their own pacing.
+    if (state.isPractice) return;
     cubit.onTimerSnapshot(state.timerSnapshot);
     audioPromptCubit?.onTimerSnapshot(state.timerSnapshot);
   }

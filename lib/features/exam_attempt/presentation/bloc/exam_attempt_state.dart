@@ -32,6 +32,7 @@ final class AttemptInProgress extends ExamAttemptState {
     this.timerSnapshot, {
     List<TaskView>? allTasks,
     this.currentIndex = 0,
+    this.examMode,
   }) : allTasks = allTasks ?? [singleTask];
 
   final String attemptPublicId;
@@ -45,6 +46,12 @@ final class AttemptInProgress extends ExamAttemptState {
   final int currentIndex;
 
   final TimerSnapshot timerSnapshot;
+
+  /// Wire value from server — `"PRACTICE"` or `"OFFICIAL_EXAM"`. Null only
+  /// for legacy attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
+  final String? examMode;
+
+  bool get isPractice => examMode == 'PRACTICE';
 
   TaskView get task => allTasks[currentIndex];
 
@@ -61,6 +68,7 @@ final class AttemptInProgress extends ExamAttemptState {
       timerSnapshot ?? this.timerSnapshot,
       allTasks: newAllTasks,
       currentIndex: newIndex,
+      examMode: examMode,
     );
   }
 }

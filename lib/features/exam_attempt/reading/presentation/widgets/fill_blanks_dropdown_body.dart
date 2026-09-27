@@ -18,7 +18,9 @@ class FillBlanksDropdownBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blankGroups = task.blankGroups!;
+    final groupMap = <int, BlankGroup>{
+      for (final g in task.blankGroups!) g.blankIndex: g,
+    };
     final segments = parseBlankPrompt(task.promptText ?? '');
 
     return BlocBuilder<FillBlanksDropdownCubit, FillBlanksDropdownState>(
@@ -29,7 +31,7 @@ class FillBlanksDropdownBody extends StatelessWidget {
             TextSpan(
               children: [
                 for (final segment in segments)
-                  _spanFor(context, segment, blankGroups, state),
+                  _spanFor(context, segment, groupMap, state),
               ],
             ),
           ),
@@ -41,22 +43,25 @@ class FillBlanksDropdownBody extends StatelessWidget {
   InlineSpan _spanFor(
     BuildContext context,
     PromptSegment segment,
-    List<BlankGroup> blankGroups,
+    Map<int, BlankGroup> groupMap,
     FillBlanksDropdownState state,
   ) {
     if (segment is PromptTextSegment) {
       return TextSpan(text: segment.text);
     }
     final gapIndex = (segment as PromptGapSegment).gapIndex;
-    final group = blankGroups.firstWhere((g) => g.blankIndex == gapIndex);
-    final selected = state.selectedOrderIndexes[gapIndex];
+    final group = groupMap[gapIndex];
+    if (group == null) return const TextSpan(text: '');
+    final selected = gapIndex < state.selectedOrderIndexes.length
+        ? state.selectedOrderIndexes[gapIndex]
+        : null;
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: Semantics(
         label: selected == null
             ? 'Gap ${gapIndex + 1}, empty'
             : 'Gap ${gapIndex + 1}, filled with '
-                  '\'${group.options.firstWhere((o) => o.orderIndex == selected).text}\'',
+                  '\'${group.options.firstWhere((o) => o.orderIndex == selected, orElse: () => group.options.first).text}\'',
         child: DropdownButton<String>(
           value: selected,
           items: [

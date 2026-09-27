@@ -21,11 +21,14 @@ class HighlightIncorrectWordsCubit
     required this.pinnedItemPublicId,
     required String audioSource,
     String? initialPayload,
+    bool isPractice = false,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
+       _audioSource = audioSource,
        super(
          HighlightIncorrectWordsState(
            selectedWordIndices: indicesFromAnswerPayload(initialPayload),
+           hasStartedPlaying: !isPractice,
          ),
          answerChanged:
              (
@@ -38,11 +41,12 @@ class HighlightIncorrectWordsCubit
     });
     _positionSubscription = _audioPlayerService.position.listen(_onPosition);
     _durationSubscription = _audioPlayerService.duration.listen(_onDuration);
-    unawaited(_audioPlayerService.play(audioSource));
+    if (!isPractice) unawaited(_audioPlayerService.play(_audioSource));
   }
 
   final AnswerOutboxDao _outboxDao;
   final AudioPlayerService _audioPlayerService;
+  final String _audioSource;
   final String attemptPublicId;
   final String pinnedItemPublicId;
   late final StreamSubscription<bool> _finishedSubscription;
@@ -50,6 +54,16 @@ class HighlightIncorrectWordsCubit
   late final StreamSubscription<Duration?> _durationSubscription;
   Duration _lastPosition = Duration.zero;
   Duration? _lastDuration;
+
+  Future<void> startPlayback() async {
+    emit(state.copyWith(hasStartedPlaying: true));
+    unawaited(_audioPlayerService.play(_audioSource));
+  }
+
+  Future<void> replayAudio() async {
+    emit(state.copyWith(hasFinishedPlaying: false, progress: 0.0));
+    await _audioPlayerService.replay();
+  }
 
   Future<void> toggleWord(int wordIndex) async {
     final updated = Set<int>.of(state.selectedWordIndices);

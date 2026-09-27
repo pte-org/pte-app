@@ -42,8 +42,6 @@ import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
 import 'features/live_proctor/domain/live_proctor_access_policy.dart';
 import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
-import 'features/report/domain/repositories/report_repository.dart';
-import 'features/report/presentation/pages/report_screen.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -238,12 +236,6 @@ class StudentExamGateState extends State<StudentExamGate> {
   bool _attemptStarted = false;
   bool _deviceCheckConfirmed = false;
 
-  /// Gates `ReportScreen` behind `SectionCompletedScreen` (Screen 7) once
-  /// per `AttemptCompleted` — reset alongside `_bloc` on
-  /// `_resetToLogin` so the next attempt's completion shows the
-  /// interstitial again instead of skipping straight to its report.
-  bool _reportRevealed = false;
-
   @override
   void initState() {
     super.initState();
@@ -262,7 +254,6 @@ class StudentExamGateState extends State<StudentExamGate> {
     _bloc = getIt<ExamAttemptBloc>();
     _attemptStarted = false;
     _deviceCheckConfirmed = false;
-    _reportRevealed = false;
     context.read<AuthBloc>().add(const LogoutRequested());
   }
 
@@ -287,7 +278,6 @@ class StudentExamGateState extends State<StudentExamGate> {
           }
           if (state is AttemptInProgress) {
             _deviceCheckConfirmed = true;
-            _reportRevealed = false;
           }
           final error = state is AttemptError ? state.error : null;
           if (error is LockdownActivationException) {
@@ -325,23 +315,13 @@ class StudentExamGateState extends State<StudentExamGate> {
             );
           }
           if (state is AttemptCompleted) {
-            if (!_reportRevealed) {
-              return SectionCompletedScreen(
-                timeExpired: state.timeExpired,
-                attemptNumber: state.attemptNumber,
-                remainingRetries: state.remainingRetries,
-                canRetry: state.canRetry,
-                onContinue: () => setState(() => _reportRevealed = true),
-                onRetry: () {
-                  _reportRevealed = false;
-                  _retrySession();
-                },
-              );
-            }
-            return ReportScreen(
-              attemptPublicId: state.attemptPublicId,
-              repository: getIt<ReportRepository>(),
-              onBack: _resetToLogin,
+            return SectionCompletedScreen(
+              timeExpired: state.timeExpired,
+              attemptNumber: state.attemptNumber,
+              remainingRetries: state.remainingRetries,
+              canRetry: state.canRetry,
+              onContinue: _resetToLogin,
+              onRetry: _retrySession,
             );
           }
           if (state is AttemptError) {

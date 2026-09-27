@@ -35,5 +35,8 @@ abstract class AudioPlayerService {
   /// played" state.
   Stream<bool> get hasFinishedPlaying;
 
+  /// Seeks to the beginning and replays — practice mode only.
+  Future<void> replay();
+
   Future<void> close();
 }
