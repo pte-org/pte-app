@@ -34,6 +34,7 @@ class FillBlanksDropdownCubit extends TaskAnswerCubit<FillBlanksDropdownState> {
   /// `options` field (this is the defining property of this task type vs.
   /// `FILL_IN_THE_BLANKS_DRAG_AND_DROP`'s shared word bank).
   Future<void> selectOption(int gapIndex, String orderIndex) async {
+    if (gapIndex < 0 || gapIndex >= state.selectedOrderIndexes.length) return;
     final updated = List<String?>.of(state.selectedOrderIndexes);
     updated[gapIndex] = orderIndex;
     emit(state.copyWith(selectedOrderIndexes: updated));
