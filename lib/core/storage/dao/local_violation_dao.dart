@@ -25,12 +25,14 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   Future<int> insert(ViolationEvent event) {
     return into(localViolationsTable).insert(
       LocalViolationsTableCompanion(
+        clientEventId: Value(event.clientEventId),
         attemptPublicId: Value(event.attemptPublicId),
         violationType: Value(event.type.serverValue),
         severity: Value(event.severity.toServerValue()),
         timestamp: Value(event.timestamp),
         metadata: Value(event.metadata),
         sent: const Value(false),
+        terminal: const Value(false),
       ),
     );
   }
@@ -43,7 +45,7 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   /// `AnswerOutboxDao`, where order doesn't matter.
   Future<List<LocalViolation>> getUnsent() {
     return (select(localViolationsTable)
-          ..where((t) => t.sent.equals(false))
+          ..where((t) => t.sent.equals(false) & t.terminal.equals(false))
           ..orderBy([(t) => OrderingTerm.asc(t.id)]))
         .get();
   }
@@ -64,6 +66,18 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
     if (ids.isEmpty) return Future.value();
     return (update(localViolationsTable)..where((t) => t.id.isIn(ids))).write(
       const LocalViolationsTableCompanion(sent: Value(true)),
+    );
+  }
+
+  /// Keeps a rejected row for diagnostics while removing it from the retry
+  /// candidate set. Terminalization is deliberately separate from `sent` so
+  /// local tooling can distinguish acknowledgement from rejection.
+  Future<void> markTerminal(int id, String reason) {
+    return (update(localViolationsTable)..where((t) => t.id.equals(id))).write(
+      LocalViolationsTableCompanion(
+        terminal: const Value(true),
+        terminalReason: Value(reason),
+      ),
     );
   }
 
@@ -98,8 +112,9 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
   static ViolationEvent fromRow(LocalViolation row) {
     return ViolationEvent(
       id: row.id,
+      clientEventId: row.clientEventId,
       attemptPublicId: row.attemptPublicId,
-      type: _safeType(row.violationType),
+      type: _strictType(row.violationType),
       severity: _safeSeverity(row.severity),
       timestamp: row.timestamp,
       metadata: row.metadata,
@@ -107,14 +122,13 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  static ViolationType _safeType(String value) {
+  static ViolationType _strictType(String value) {
     try {
       return ViolationType.fromServerValue(value);
     } on ArgumentError {
-      // Server may have added new violation types in a future release —
-      // fall back to the closest existing bucket instead of throwing,
-      // so a single unknown type can't brick the retry queue.
-      return ViolationType.shortcutBlocked;
+      // Preserve the row and let the reporter terminalize it; sending an
+      // unknown wire value under a different type would corrupt the audit.
+      throw UnknownViolationTypeException(value);
     }
   }
 
@@ -125,5 +139,4 @@ class LocalViolationDao extends DatabaseAccessor<AppDatabase>
     }
     return ViolationSeverity.warning;
   }
-
 }

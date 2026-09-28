@@ -1,5 +1,6 @@
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/network/friendly_error_message.dart';
+import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -10,6 +11,9 @@ import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_
 String examAttemptFriendlyErrorMessage(Object error) {
   if (error is LockdownActivationException) {
     return ExamAttemptStrings.lockdownStartFailureMessage;
+  }
+  if (error is LockdownPolicyException) {
+    return ExamAttemptStrings.examConfigurationNotCompatibleMessage;
   }
   if (error is SessionResolutionException) {
     return ExamAttemptStrings.sessionResolutionFailureMessage;

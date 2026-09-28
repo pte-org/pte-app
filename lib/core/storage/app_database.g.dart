@@ -1855,6 +1855,18 @@ class $LocalViolationsTableTable extends LocalViolationsTable
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _clientEventIdMeta = const VerificationMeta(
+    'clientEventId',
+  );
+  @override
+  late final GeneratedColumn<String> clientEventId = GeneratedColumn<String>(
+    'client_event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _attemptPublicIdMeta = const VerificationMeta(
     'attemptPublicId',
   );
@@ -1923,15 +1935,44 @@ class $LocalViolationsTableTable extends LocalViolationsTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _terminalMeta = const VerificationMeta(
+    'terminal',
+  );
+  @override
+  late final GeneratedColumn<bool> terminal = GeneratedColumn<bool>(
+    'terminal',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("terminal" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _terminalReasonMeta = const VerificationMeta(
+    'terminalReason',
+  );
+  @override
+  late final GeneratedColumn<String> terminalReason = GeneratedColumn<String>(
+    'terminal_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    clientEventId,
     attemptPublicId,
     violationType,
     severity,
     timestamp,
     metadata,
     sent,
+    terminal,
+    terminalReason,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1947,6 +1988,15 @@ class $LocalViolationsTableTable extends LocalViolationsTable
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('client_event_id')) {
+      context.handle(
+        _clientEventIdMeta,
+        clientEventId.isAcceptableOrUnknown(
+          data['client_event_id']!,
+          _clientEventIdMeta,
+        ),
+      );
     }
     if (data.containsKey('attempt_public_id')) {
       context.handle(
@@ -1998,6 +2048,21 @@ class $LocalViolationsTableTable extends LocalViolationsTable
         sent.isAcceptableOrUnknown(data['sent']!, _sentMeta),
       );
     }
+    if (data.containsKey('terminal')) {
+      context.handle(
+        _terminalMeta,
+        terminal.isAcceptableOrUnknown(data['terminal']!, _terminalMeta),
+      );
+    }
+    if (data.containsKey('terminal_reason')) {
+      context.handle(
+        _terminalReasonMeta,
+        terminalReason.isAcceptableOrUnknown(
+          data['terminal_reason']!,
+          _terminalReasonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2010,6 +2075,10 @@ class $LocalViolationsTableTable extends LocalViolationsTable
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      clientEventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_event_id'],
       )!,
       attemptPublicId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2035,6 +2104,14 @@ class $LocalViolationsTableTable extends LocalViolationsTable
         DriftSqlType.bool,
         data['${effectivePrefix}sent'],
       )!,
+      terminal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}terminal'],
+      )!,
+      terminalReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}terminal_reason'],
+      ),
     );
   }
 
@@ -2046,6 +2123,13 @@ class $LocalViolationsTableTable extends LocalViolationsTable
 
 class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   final int id;
+
+  /// Stable client-generated idempotency key. The empty SQL default exists so
+  /// SQLite can add this non-null column to an existing table; the migration
+  /// immediately backfills every old row and the DAO supplies the real value
+  /// for new rows. A unique index is created by AppDatabase after creation or
+  /// backfill because SQLite cannot add a UNIQUE column constraint with ALTER.
+  final String clientEventId;
 
   /// `attempt_public_id` — same opaque id as everywhere else (e.g.
   /// `AnswerOutboxTable.attemptPublicId`); the proctor endpoint already
@@ -2070,19 +2154,28 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   /// Sync flag. `false` until the violation has been acknowledged by
   /// the backend.
   final bool sent;
+
+  /// A policy or type rejection is terminal for this row. Keep the row and
+  /// reason for diagnostics, but do not retry it forever.
+  final bool terminal;
+  final String? terminalReason;
   const LocalViolation({
     required this.id,
+    required this.clientEventId,
     required this.attemptPublicId,
     required this.violationType,
     required this.severity,
     required this.timestamp,
     this.metadata,
     required this.sent,
+    required this.terminal,
+    this.terminalReason,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['client_event_id'] = Variable<String>(clientEventId);
     map['attempt_public_id'] = Variable<String>(attemptPublicId);
     map['violation_type'] = Variable<String>(violationType);
     map['severity'] = Variable<String>(severity);
@@ -2091,12 +2184,17 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
       map['metadata'] = Variable<String>(metadata);
     }
     map['sent'] = Variable<bool>(sent);
+    map['terminal'] = Variable<bool>(terminal);
+    if (!nullToAbsent || terminalReason != null) {
+      map['terminal_reason'] = Variable<String>(terminalReason);
+    }
     return map;
   }
 
   LocalViolationsTableCompanion toCompanion(bool nullToAbsent) {
     return LocalViolationsTableCompanion(
       id: Value(id),
+      clientEventId: Value(clientEventId),
       attemptPublicId: Value(attemptPublicId),
       violationType: Value(violationType),
       severity: Value(severity),
@@ -2105,6 +2203,10 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
           ? const Value.absent()
           : Value(metadata),
       sent: Value(sent),
+      terminal: Value(terminal),
+      terminalReason: terminalReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(terminalReason),
     );
   }
 
@@ -2115,12 +2217,15 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LocalViolation(
       id: serializer.fromJson<int>(json['id']),
+      clientEventId: serializer.fromJson<String>(json['clientEventId']),
       attemptPublicId: serializer.fromJson<String>(json['attemptPublicId']),
       violationType: serializer.fromJson<String>(json['violationType']),
       severity: serializer.fromJson<String>(json['severity']),
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       metadata: serializer.fromJson<String?>(json['metadata']),
       sent: serializer.fromJson<bool>(json['sent']),
+      terminal: serializer.fromJson<bool>(json['terminal']),
+      terminalReason: serializer.fromJson<String?>(json['terminalReason']),
     );
   }
   @override
@@ -2128,35 +2233,49 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'clientEventId': serializer.toJson<String>(clientEventId),
       'attemptPublicId': serializer.toJson<String>(attemptPublicId),
       'violationType': serializer.toJson<String>(violationType),
       'severity': serializer.toJson<String>(severity),
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'metadata': serializer.toJson<String?>(metadata),
       'sent': serializer.toJson<bool>(sent),
+      'terminal': serializer.toJson<bool>(terminal),
+      'terminalReason': serializer.toJson<String?>(terminalReason),
     };
   }
 
   LocalViolation copyWith({
     int? id,
+    String? clientEventId,
     String? attemptPublicId,
     String? violationType,
     String? severity,
     DateTime? timestamp,
     Value<String?> metadata = const Value.absent(),
     bool? sent,
+    bool? terminal,
+    Value<String?> terminalReason = const Value.absent(),
   }) => LocalViolation(
     id: id ?? this.id,
+    clientEventId: clientEventId ?? this.clientEventId,
     attemptPublicId: attemptPublicId ?? this.attemptPublicId,
     violationType: violationType ?? this.violationType,
     severity: severity ?? this.severity,
     timestamp: timestamp ?? this.timestamp,
     metadata: metadata.present ? metadata.value : this.metadata,
     sent: sent ?? this.sent,
+    terminal: terminal ?? this.terminal,
+    terminalReason: terminalReason.present
+        ? terminalReason.value
+        : this.terminalReason,
   );
   LocalViolation copyWithCompanion(LocalViolationsTableCompanion data) {
     return LocalViolation(
       id: data.id.present ? data.id.value : this.id,
+      clientEventId: data.clientEventId.present
+          ? data.clientEventId.value
+          : this.clientEventId,
       attemptPublicId: data.attemptPublicId.present
           ? data.attemptPublicId.value
           : this.attemptPublicId,
@@ -2167,6 +2286,10 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
       sent: data.sent.present ? data.sent.value : this.sent,
+      terminal: data.terminal.present ? data.terminal.value : this.terminal,
+      terminalReason: data.terminalReason.present
+          ? data.terminalReason.value
+          : this.terminalReason,
     );
   }
 
@@ -2174,12 +2297,15 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   String toString() {
     return (StringBuffer('LocalViolation(')
           ..write('id: $id, ')
+          ..write('clientEventId: $clientEventId, ')
           ..write('attemptPublicId: $attemptPublicId, ')
           ..write('violationType: $violationType, ')
           ..write('severity: $severity, ')
           ..write('timestamp: $timestamp, ')
           ..write('metadata: $metadata, ')
-          ..write('sent: $sent')
+          ..write('sent: $sent, ')
+          ..write('terminal: $terminal, ')
+          ..write('terminalReason: $terminalReason')
           ..write(')'))
         .toString();
   }
@@ -2187,92 +2313,119 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   @override
   int get hashCode => Object.hash(
     id,
+    clientEventId,
     attemptPublicId,
     violationType,
     severity,
     timestamp,
     metadata,
     sent,
+    terminal,
+    terminalReason,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalViolation &&
           other.id == this.id &&
+          other.clientEventId == this.clientEventId &&
           other.attemptPublicId == this.attemptPublicId &&
           other.violationType == this.violationType &&
           other.severity == this.severity &&
           other.timestamp == this.timestamp &&
           other.metadata == this.metadata &&
-          other.sent == this.sent);
+          other.sent == this.sent &&
+          other.terminal == this.terminal &&
+          other.terminalReason == this.terminalReason);
 }
 
 class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
   final Value<int> id;
+  final Value<String> clientEventId;
   final Value<String> attemptPublicId;
   final Value<String> violationType;
   final Value<String> severity;
   final Value<DateTime> timestamp;
   final Value<String?> metadata;
   final Value<bool> sent;
+  final Value<bool> terminal;
+  final Value<String?> terminalReason;
   const LocalViolationsTableCompanion({
     this.id = const Value.absent(),
+    this.clientEventId = const Value.absent(),
     this.attemptPublicId = const Value.absent(),
     this.violationType = const Value.absent(),
     this.severity = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.metadata = const Value.absent(),
     this.sent = const Value.absent(),
+    this.terminal = const Value.absent(),
+    this.terminalReason = const Value.absent(),
   });
   LocalViolationsTableCompanion.insert({
     this.id = const Value.absent(),
+    this.clientEventId = const Value.absent(),
     required String attemptPublicId,
     required String violationType,
     required String severity,
     required DateTime timestamp,
     this.metadata = const Value.absent(),
     this.sent = const Value.absent(),
+    this.terminal = const Value.absent(),
+    this.terminalReason = const Value.absent(),
   }) : attemptPublicId = Value(attemptPublicId),
        violationType = Value(violationType),
        severity = Value(severity),
        timestamp = Value(timestamp);
   static Insertable<LocalViolation> custom({
     Expression<int>? id,
+    Expression<String>? clientEventId,
     Expression<String>? attemptPublicId,
     Expression<String>? violationType,
     Expression<String>? severity,
     Expression<DateTime>? timestamp,
     Expression<String>? metadata,
     Expression<bool>? sent,
+    Expression<bool>? terminal,
+    Expression<String>? terminalReason,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (clientEventId != null) 'client_event_id': clientEventId,
       if (attemptPublicId != null) 'attempt_public_id': attemptPublicId,
       if (violationType != null) 'violation_type': violationType,
       if (severity != null) 'severity': severity,
       if (timestamp != null) 'timestamp': timestamp,
       if (metadata != null) 'metadata': metadata,
       if (sent != null) 'sent': sent,
+      if (terminal != null) 'terminal': terminal,
+      if (terminalReason != null) 'terminal_reason': terminalReason,
     });
   }
 
   LocalViolationsTableCompanion copyWith({
     Value<int>? id,
+    Value<String>? clientEventId,
     Value<String>? attemptPublicId,
     Value<String>? violationType,
     Value<String>? severity,
     Value<DateTime>? timestamp,
     Value<String?>? metadata,
     Value<bool>? sent,
+    Value<bool>? terminal,
+    Value<String?>? terminalReason,
   }) {
     return LocalViolationsTableCompanion(
       id: id ?? this.id,
+      clientEventId: clientEventId ?? this.clientEventId,
       attemptPublicId: attemptPublicId ?? this.attemptPublicId,
       violationType: violationType ?? this.violationType,
       severity: severity ?? this.severity,
       timestamp: timestamp ?? this.timestamp,
       metadata: metadata ?? this.metadata,
       sent: sent ?? this.sent,
+      terminal: terminal ?? this.terminal,
+      terminalReason: terminalReason ?? this.terminalReason,
     );
   }
 
@@ -2281,6 +2434,9 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (clientEventId.present) {
+      map['client_event_id'] = Variable<String>(clientEventId.value);
     }
     if (attemptPublicId.present) {
       map['attempt_public_id'] = Variable<String>(attemptPublicId.value);
@@ -2300,6 +2456,12 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
     if (sent.present) {
       map['sent'] = Variable<bool>(sent.value);
     }
+    if (terminal.present) {
+      map['terminal'] = Variable<bool>(terminal.value);
+    }
+    if (terminalReason.present) {
+      map['terminal_reason'] = Variable<String>(terminalReason.value);
+    }
     return map;
   }
 
@@ -2307,12 +2469,15 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
   String toString() {
     return (StringBuffer('LocalViolationsTableCompanion(')
           ..write('id: $id, ')
+          ..write('clientEventId: $clientEventId, ')
           ..write('attemptPublicId: $attemptPublicId, ')
           ..write('violationType: $violationType, ')
           ..write('severity: $severity, ')
           ..write('timestamp: $timestamp, ')
           ..write('metadata: $metadata, ')
-          ..write('sent: $sent')
+          ..write('sent: $sent, ')
+          ..write('terminal: $terminal, ')
+          ..write('terminalReason: $terminalReason')
           ..write(')'))
         .toString();
   }
@@ -3161,22 +3326,28 @@ typedef $$PendingMediaUploadTableTableProcessedTableManager =
 typedef $$LocalViolationsTableTableCreateCompanionBuilder =
     LocalViolationsTableCompanion Function({
       Value<int> id,
+      Value<String> clientEventId,
       required String attemptPublicId,
       required String violationType,
       required String severity,
       required DateTime timestamp,
       Value<String?> metadata,
       Value<bool> sent,
+      Value<bool> terminal,
+      Value<String?> terminalReason,
     });
 typedef $$LocalViolationsTableTableUpdateCompanionBuilder =
     LocalViolationsTableCompanion Function({
       Value<int> id,
+      Value<String> clientEventId,
       Value<String> attemptPublicId,
       Value<String> violationType,
       Value<String> severity,
       Value<DateTime> timestamp,
       Value<String?> metadata,
       Value<bool> sent,
+      Value<bool> terminal,
+      Value<String?> terminalReason,
     });
 
 class $$LocalViolationsTableTableFilterComposer
@@ -3190,6 +3361,11 @@ class $$LocalViolationsTableTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3222,6 +3398,16 @@ class $$LocalViolationsTableTableFilterComposer
     column: $table.sent,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get terminal => $composableBuilder(
+    column: $table.terminal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$LocalViolationsTableTableOrderingComposer
@@ -3235,6 +3421,11 @@ class $$LocalViolationsTableTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3267,6 +3458,16 @@ class $$LocalViolationsTableTableOrderingComposer
     column: $table.sent,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get terminal => $composableBuilder(
+    column: $table.terminal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalViolationsTableTableAnnotationComposer
@@ -3280,6 +3481,11 @@ class $$LocalViolationsTableTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get attemptPublicId => $composableBuilder(
     column: $table.attemptPublicId,
@@ -3302,6 +3508,14 @@ class $$LocalViolationsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get sent =>
       $composableBuilder(column: $table.sent, builder: (column) => column);
+
+  GeneratedColumn<bool> get terminal =>
+      $composableBuilder(column: $table.terminal, builder: (column) => column);
+
+  GeneratedColumn<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalViolationsTableTableTableManager
@@ -3348,38 +3562,50 @@ class $$LocalViolationsTableTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> clientEventId = const Value.absent(),
                 Value<String> attemptPublicId = const Value.absent(),
                 Value<String> violationType = const Value.absent(),
                 Value<String> severity = const Value.absent(),
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
+                Value<bool> terminal = const Value.absent(),
+                Value<String?> terminalReason = const Value.absent(),
               }) => LocalViolationsTableCompanion(
                 id: id,
+                clientEventId: clientEventId,
                 attemptPublicId: attemptPublicId,
                 violationType: violationType,
                 severity: severity,
                 timestamp: timestamp,
                 metadata: metadata,
                 sent: sent,
+                terminal: terminal,
+                terminalReason: terminalReason,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> clientEventId = const Value.absent(),
                 required String attemptPublicId,
                 required String violationType,
                 required String severity,
                 required DateTime timestamp,
                 Value<String?> metadata = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
+                Value<bool> terminal = const Value.absent(),
+                Value<String?> terminalReason = const Value.absent(),
               }) => LocalViolationsTableCompanion.insert(
                 id: id,
+                clientEventId: clientEventId,
                 attemptPublicId: attemptPublicId,
                 violationType: violationType,
                 severity: severity,
                 timestamp: timestamp,
                 metadata: metadata,
                 sent: sent,
+                terminal: terminal,
+                terminalReason: terminalReason,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

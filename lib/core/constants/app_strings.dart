@@ -137,6 +137,10 @@ class AppStrings {
   static const String sentAtLabel = 'Sent at';
   static const String notSent = 'Not sent';
   static const String violationTypeLabel = 'Violation type';
+  static const String auditSourceLabel = 'Source';
+  static const String severityLabel = 'Severity';
+  static const String clientEventIdLabel = 'Client event ID';
+  static const String studentLabel = 'Student';
   static const String violationDetailLabel = 'Detail';
   static const String sequenceLabel = 'Sequence';
   static const String integrityHashLabel = 'Integrity hash';

@@ -297,10 +297,9 @@ class AttemptTaskResponse {
   /// attempt snapshot (`PinnedExamSnapshot.lockdownMode`) and the
   /// `exam-delivery` mapper projects it back out here. Wire values
   /// match `pte-api`'s `LockdownMode` enum uppercase
-  /// (`NONE`/`STANDARD`/`STRICT`), and `null` is tolerated for older
-  /// deployments that predate Phase 1 — [ExamAttemptBloc] treats
-  /// `null` as `none` to avoid regressing legacy backends
-  /// (phase-04 Design Constraints).
+  /// (`NONE`/`STANDARD`/`STRICT`). New in-progress attempt responses must
+  /// contain this value; [ExamAttemptBloc] fails closed when it is missing or
+  /// unknown. Completed responses may omit it because no task will be opened.
   final String? lockdownMode;
 
   /// Server-assigned sequence and quota metadata; retry authorization never

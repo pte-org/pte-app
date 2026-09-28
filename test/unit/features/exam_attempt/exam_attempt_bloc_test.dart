@@ -71,6 +71,7 @@ AttemptTaskResponse _inProgressResponse({
     attemptStatus: 'IN_PROGRESS',
     completed: false,
     task: _task(pinnedItemPublicId: pinnedItemPublicId),
+    lockdownMode: 'NONE',
   );
 }
 
@@ -135,12 +136,12 @@ void main() {
     );
     // Default stubs for the prefetch-all-tasks flow introduced in Phase 3.
     // Tests that need specific task lists override these in their own setUp.
-    when(() => repository.fetchAllTasks(any())).thenAnswer(
-      (_) async => [_inProgressResponse()],
-    );
-    when(() => repository.forceSubmit(any())).thenAnswer(
-      (_) async => _completedResponse,
-    );
+    when(
+      () => repository.fetchAllTasks(any()),
+    ).thenAnswer((_) async => [_inProgressResponse()]);
+    when(
+      () => repository.forceSubmit(any()),
+    ).thenAnswer((_) async => _completedResponse);
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
@@ -159,9 +160,9 @@ void main() {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) =>
@@ -181,9 +182,9 @@ void main() {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _inProgressResponse(),
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _inProgressResponse());
     },
     build: buildBloc,
     act: (bloc) =>
@@ -263,9 +264,7 @@ void main() {
     setUp: () {
       when(
         () => repository.startOrResumeAttempt('deep-link-session'),
-      ).thenAnswer(
-        (_) async => _inProgressResponse(),
-      );
+      ).thenAnswer((_) async => _inProgressResponse());
     },
     build: () => ExamAttemptBloc(
       repository: repository,
@@ -289,9 +288,9 @@ void main() {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) async {
@@ -441,9 +440,9 @@ void main() {
         ],
       );
       // forceSubmit fires when NextTaskRequested goes past the last item.
-      when(() => repository.forceSubmit('attempt-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.forceSubmit('attempt-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) async {
@@ -476,9 +475,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
@@ -505,9 +504,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
@@ -576,9 +575,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) async {
@@ -605,9 +604,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         when(
           () => repository.forceSubmit('attempt-1'),
         ).thenThrow(const NetworkException('connection refused'));
@@ -651,9 +650,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {
           // Never resolves within this test — the first call stays "in
           // flight" for the whole test, which is exactly the window the
@@ -687,9 +686,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // fetchAllTasks is called twice: once on start, once on resume.
       },
       build: buildBloc,
@@ -730,9 +729,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         var callCount = 0;
         when(() => repository.fetchAllTasks('attempt-1')).thenAnswer((_) async {
           callCount++;
@@ -807,9 +806,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) =>
@@ -859,9 +858,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _completedResponse,
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _completedResponse);
       },
       build: buildBloc,
       act: (bloc) =>
@@ -879,9 +878,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) async {
@@ -912,9 +911,9 @@ void main() {
           when(
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
-          when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => _inProgressResponse(),
-          );
+          when(
+            () => repository.startOrResumeAttempt('session-1'),
+          ).thenAnswer((_) async => _inProgressResponse());
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
               phase: TimerPhase.prep,
@@ -958,9 +957,9 @@ void main() {
           when(
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
-          when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => _inProgressResponse(),
-          );
+          when(
+            () => repository.startOrResumeAttempt('session-1'),
+          ).thenAnswer((_) async => _inProgressResponse());
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
               phase: TimerPhase.prep,
@@ -996,4 +995,3 @@ void main() {
 /// constructs it — `blocTest`'s `setUp`/`act` don't share a closure scope
 /// otherwise.
 StreamController<void>? _rejectedControllerForTest;
-

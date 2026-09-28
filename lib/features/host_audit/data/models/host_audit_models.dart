@@ -44,9 +44,13 @@ class ViolationAuditModel {
     required this.attemptPublicId,
     required this.violationType,
     required this.detail,
-    required this.sequenceNo,
-    required this.hash,
     required this.detectedAt,
+    required this.source,
+    required this.severity,
+    this.clientEventId,
+    this.studentPublicId,
+    this.sequenceNo,
+    this.hash,
   });
 
   factory ViolationAuditModel.fromJson(Map<String, dynamic> json) {
@@ -54,30 +58,69 @@ class ViolationAuditModel {
       publicId: json['publicId'] as String,
       attemptPublicId: json['attemptPublicId'] as String,
       violationType: json['violationType'] as String,
-      detail: json['detail'] as String,
-      sequenceNo: json['sequenceNo'] as int,
-      hash: json['hash'] as String,
+      detail: json['detail'] as String?,
       detectedAt: _requiredTimestamp(json['detectedAt']),
+      source: json['source'] as String? ?? 'PROCTOR',
+      severity: json['severity'] as String? ?? 'WARNING',
+      clientEventId: json['clientEventId'] as String?,
+      studentPublicId: json['studentPublicId'] as String?,
+      sequenceNo: json['sequenceNo'] as int?,
+      hash: json['hash'] as String?,
     );
   }
 
   final String publicId;
   final String attemptPublicId;
   final String violationType;
-  final String detail;
-  final int sequenceNo;
-  final String hash;
+  final String? detail;
   final DateTime detectedAt;
+  final String source;
+  final String severity;
+  final String? clientEventId;
+  final String? studentPublicId;
+  final int? sequenceNo;
+  final String? hash;
 
   ViolationAuditEvent toEntity() => ViolationAuditEvent(
     publicId: publicId,
     attemptPublicId: attemptPublicId,
     violationType: violationType,
     detail: detail,
+    detectedAt: detectedAt,
+    source: source,
+    severity: severity,
+    clientEventId: clientEventId,
+    studentPublicId: studentPublicId,
     sequenceNo: sequenceNo,
     hash: hash,
-    detectedAt: detectedAt,
   );
+}
+
+class ViolationAuditPageModel {
+  const ViolationAuditPageModel({required this.items, this.nextCursor});
+
+  factory ViolationAuditPageModel.fromJson(Map<String, dynamic> json) {
+    final rawEntries = json['entries'];
+    final entries = rawEntries is List<dynamic>
+        ? rawEntries
+        : const <dynamic>[];
+    return ViolationAuditPageModel(
+      items: entries
+          .map(
+            (value) => ViolationAuditModel.fromJson(
+              value as Map<String, dynamic>,
+            ).toEntity(),
+          )
+          .toList(growable: false),
+      nextCursor: json['nextCursor'] as String?,
+    );
+  }
+
+  final List<ViolationAuditEvent> items;
+  final String? nextCursor;
+
+  ViolationAuditPageData toEntity() =>
+      ViolationAuditPageData(items: items, nextCursor: nextCursor);
 }
 
 DateTime? _nullableTimestamp(Object? value) {

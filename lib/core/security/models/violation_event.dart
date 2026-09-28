@@ -1,9 +1,11 @@
+import 'dart:math';
+
 import 'package:equatable/equatable.dart';
 
 /// Tags a violation by its causal origin so the backend can bucket and
 /// deduplicate them. `serverValue` is the exact string that `pte-api`'s
-/// `ViolationType` enum expects (Phase 1 added these), so `ViolationEvent`
-/// can be serialized directly into `POST /api/proctor/violations`
+/// `ViolationType` enum expects, so `ViolationEvent` can be serialized
+/// directly into the authenticated student security-violation contract
 /// without remapping on the client side.
 enum ViolationType {
   fullscreenExit('LOCKDOWN_FULLSCREEN_EXIT'),
@@ -18,11 +20,10 @@ enum ViolationType {
     for (final type in ViolationType.values) {
       if (type.serverValue == value) return type;
     }
-    // Unknown server values must not crash — fall back to the most
-    // general category so the violation still makes it to storage and
-    // the proctor console. The DAO mirrors this with a try/catch on
-    // ArgumentError as a belt-and-suspenders guard.
-    return ViolationType.shortcutBlocked;
+    // Unknown server values must remain visible to the retry layer as a
+    // terminal compatibility error; remapping them would misrepresent the
+    // signal and could send an invalid event forever.
+    throw ArgumentError.value(value, 'value', 'Unknown violation type');
   }
 }
 
@@ -38,7 +39,7 @@ enum ViolationSeverity {
 }
 
 class ViolationEvent extends Equatable {
-  const ViolationEvent({
+  ViolationEvent({
     this.id,
     required this.attemptPublicId,
     required this.type,
@@ -46,11 +47,15 @@ class ViolationEvent extends Equatable {
     required this.timestamp,
     this.metadata,
     this.sent = false,
-  });
+    String? clientEventId,
+  }) : clientEventId = clientEventId ?? newClientEventId();
 
   /// Local Drift row id. `null` until the event is persisted; reporting
   /// logic uses it to flip the `sent` flag without a second lookup.
   final int? id;
+
+  /// Stable idempotency key reused across process restarts and retries.
+  final String clientEventId;
 
   /// Public id of the exam attempt this violation is attributed to.
   final String attemptPublicId;
@@ -63,20 +68,27 @@ class ViolationEvent extends Equatable {
 
   /// Free-form JSON envelope for additional context (process name,
   /// window title, etc.). Storing as a JSON string keeps the Drift table
-  /// schema stable even as new optional fields are added in later
-  /// phases — Phase 1's existing proctor endpoint already accepts
-  /// arbitrary metadata.
+  /// schema stable even as new optional fields are added in later phases.
   final String? metadata;
 
   /// Sync flag — true after the backend has acknowledged the row.
   final bool sent;
 
   @override
-  List<Object?> get props =>
-      [id, attemptPublicId, type, severity, timestamp, metadata, sent];
+  List<Object?> get props => [
+    id,
+    clientEventId,
+    attemptPublicId,
+    type,
+    severity,
+    timestamp,
+    metadata,
+    sent,
+  ];
 
   ViolationEvent copyWith({
     int? id,
+    String? clientEventId,
     String? attemptPublicId,
     ViolationType? type,
     ViolationSeverity? severity,
@@ -86,6 +98,7 @@ class ViolationEvent extends Equatable {
   }) {
     return ViolationEvent(
       id: id ?? this.id,
+      clientEventId: clientEventId ?? this.clientEventId,
       attemptPublicId: attemptPublicId ?? this.attemptPublicId,
       type: type ?? this.type,
       severity: severity ?? this.severity,
@@ -95,11 +108,46 @@ class ViolationEvent extends Equatable {
     );
   }
 
+  /// Exact Phase 3 transport contract. The attempt id is carried by the URL,
+  /// and client severity is never sent as an authority field.
   Map<String, dynamic> toJson() => {
-        'violationType': type.serverValue,
-        'severity': severity.toServerValue(),
-        'timestamp': timestamp.toIso8601String(),
-        'attemptPublicId': attemptPublicId,
-        if (metadata != null) 'metadata': metadata,
-      };
+    'clientEventId': clientEventId,
+    'violationType': type.serverValue,
+    'clientOccurredAt': timestamp.toUtc().toIso8601String(),
+    if (metadata != null) 'detail': boundedDetail(metadata!),
+  };
+
+  static const int maxDetailLength = 2048;
+
+  static String boundedDetail(String detail) {
+    if (detail.length <= maxDetailLength) return detail;
+    return detail.substring(0, maxDetailLength);
+  }
+}
+
+/// Produces a RFC-4122 version-4 UUID without adding another package for a
+/// single client-side idempotency key.
+String newClientEventId() {
+  final random = Random.secure();
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  final hex = bytes
+      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
+      '${hex.substring(20)}';
+}
+
+/// A persisted row contains a wire type that this app version does not know.
+/// It must be retained for diagnostics and terminalized, never remapped to a
+/// different signal type before sending.
+class UnknownViolationTypeException implements Exception {
+  const UnknownViolationTypeException(this.value);
+
+  final String value;
+
+  @override
+  String toString() => 'UnknownViolationTypeException($value)';
 }

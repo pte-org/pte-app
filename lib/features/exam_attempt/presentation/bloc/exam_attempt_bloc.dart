@@ -165,16 +165,19 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   }
 
   /// Maps the response's `lockdownMode` (Phase 1 wire value) to the
-  /// service's [LockdownMode] enum and activates accordingly. `none` /
-  /// null are silent no-ops. Anything else surfaces as a
-  /// [LockdownActivationException] the caller catches.
+  /// service's [LockdownMode] enum and activates accordingly. `NONE` is the
+  /// only silent no-op. A missing or unknown policy is a contract failure and
+  /// must reach the retryable attempt error instead of opening the task.
   Future<void> _activateLockdownForResponse(
     AttemptTaskResponse response,
   ) async {
     final wire = response.lockdownMode;
-    final mode = wire == null
-        ? LockdownMode.none
-        : LockdownMode.fromString(wire);
+    if (wire == null || wire.trim().isEmpty) {
+      throw const LockdownPolicyException(
+        'Attempt response is missing the pinned lockdown mode',
+      );
+    }
+    final mode = LockdownMode.fromString(wire);
     if (mode == LockdownMode.none) return;
     await _lockdownService.activateLockdown(
       mode: mode,
@@ -201,10 +204,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _timerService.seedFromTask(nextTask);
     _timerService.startPolling(currentState.attemptPublicId);
     _heartbeatService.start(currentState.attemptPublicId);
-    emit(currentState.copyWith(
-      currentIndex: nextIndex,
-      timerSnapshot: _timerService.currentSnapshot,
-    ));
+    emit(
+      currentState.copyWith(
+        currentIndex: nextIndex,
+        timerSnapshot: _timerService.currentSnapshot,
+      ),
+    );
   }
 
   void _onNavigateTaskRequested(
@@ -220,8 +225,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
     if (fromIndex < 0) return;
 
-    final targetIndex = fromIndex +
-        (event.direction == TaskNavigationDirection.next ? 1 : -1);
+    final targetIndex =
+        fromIndex + (event.direction == TaskNavigationDirection.next ? 1 : -1);
     if (targetIndex < 0 || targetIndex >= currentState.allTasks.length) return;
 
     final targetTask = currentState.allTasks[targetIndex];
@@ -229,10 +234,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _timerService.seedFromTask(targetTask);
     _timerService.startPolling(currentState.attemptPublicId);
     _heartbeatService.start(currentState.attemptPublicId);
-    emit(currentState.copyWith(
-      currentIndex: targetIndex,
-      timerSnapshot: _timerService.currentSnapshot,
-    ));
+    emit(
+      currentState.copyWith(
+        currentIndex: targetIndex,
+        timerSnapshot: _timerService.currentSnapshot,
+      ),
+    );
   }
 
   Exception _asAttemptException(Object error) =>
@@ -343,11 +350,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       _syncEngine.setActiveTask(resumeTask.pinnedItemPublicId);
       _timerService.seedFromTask(resumeTask);
       _timerService.startPolling(attemptPublicId);
-      emit(currentState.copyWith(
-        allTasks: freshTasks,
-        currentIndex: safeIndex,
-        timerSnapshot: _timerService.currentSnapshot,
-      ));
+      emit(
+        currentState.copyWith(
+          allTasks: freshTasks,
+          currentIndex: safeIndex,
+          timerSnapshot: _timerService.currentSnapshot,
+        ),
+      );
     } catch (_) {
       _timerService.startPolling(attemptPublicId);
     }
@@ -430,7 +439,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // Falls back to single-task mode on error — exam still runs correctly.
     List<TaskView> allTasks;
     try {
-      final responses = await _repository.fetchAllTasks(response.attemptPublicId);
+      final responses = await _repository.fetchAllTasks(
+        response.attemptPublicId,
+      );
       allTasks = responses
           .where((r) => !r.completed && r.task != null)
           .map((r) => r.task!)

@@ -17,88 +17,106 @@ void main() {
   });
 
   group('insert / getUnsent / markSent', () {
-    test('insert assigns an auto id, leaves sent=false, and lists under getUnsent', () async {
-      final id = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'attempt-1',
-          type: ViolationType.fullscreenExit,
-          severity: ViolationSeverity.warning,
-          timestamp: _t,
-          metadata: '{}',
-        ),
-      );
-      expect(id, isPositive);
-
-      final unsent = await db.localViolationDao.getUnsent();
-      expect(unsent, hasLength(1));
-      expect(unsent.single.id, id);
-      expect(unsent.single.sent, isFalse);
-      expect(unsent.single.violationType, 'LOCKDOWN_FULLSCREEN_EXIT');
-      expect(unsent.single.severity, 'WARNING');
-    });
-
-    test('markSent flips the row\'s sent flag and removes it from getUnsent', () async {
-      final id = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'attempt-1',
-          type: ViolationType.shortcutBlocked,
-          severity: ViolationSeverity.critical,
-          timestamp: _t,
-        ),
-      );
-      await db.localViolationDao.markSent(id);
-      expect((await db.localViolationDao.getUnsent()), isEmpty);
-    });
-
-    test('markManySent flips a contiguous range of ids in a single call', () async {
-      final ids = <int>[];
-      for (var i = 0; i < 3; i++) {
-        ids.add(
-          await db.localViolationDao.insert(
-            ViolationEvent(
-              attemptPublicId: 'attempt-$i',
-              type: ViolationType.shortcutBlocked,
-              severity: ViolationSeverity.warning,
-              timestamp: _t,
-            ),
+    test(
+      'insert assigns an auto id, leaves sent=false, and lists under getUnsent',
+      () async {
+        final id = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'attempt-1',
+            type: ViolationType.fullscreenExit,
+            severity: ViolationSeverity.warning,
+            timestamp: _t,
+            metadata: '{}',
           ),
         );
-      }
-      await db.localViolationDao.markManySent(ids.take(2));
-      final unsent = await db.localViolationDao.getUnsent();
-      expect(unsent.map((r) => r.id), [ids.last]);
-    });
+        expect(id, isPositive);
+
+        final unsent = await db.localViolationDao.getUnsent();
+        expect(unsent, hasLength(1));
+        expect(unsent.single.id, id);
+        expect(unsent.single.sent, isFalse);
+        expect(unsent.single.violationType, 'LOCKDOWN_FULLSCREEN_EXIT');
+        expect(unsent.single.severity, 'WARNING');
+        expect(
+          unsent.single.clientEventId,
+          matches(RegExp(r'^[0-9a-f-]{36}$')),
+        );
+      },
+    );
+
+    test(
+      'markSent flips the row\'s sent flag and removes it from getUnsent',
+      () async {
+        final id = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'attempt-1',
+            type: ViolationType.shortcutBlocked,
+            severity: ViolationSeverity.critical,
+            timestamp: _t,
+          ),
+        );
+        await db.localViolationDao.markSent(id);
+        expect((await db.localViolationDao.getUnsent()), isEmpty);
+      },
+    );
+
+    test(
+      'markManySent flips a contiguous range of ids in a single call',
+      () async {
+        final ids = <int>[];
+        for (var i = 0; i < 3; i++) {
+          ids.add(
+            await db.localViolationDao.insert(
+              ViolationEvent(
+                attemptPublicId: 'attempt-$i',
+                type: ViolationType.shortcutBlocked,
+                severity: ViolationSeverity.warning,
+                timestamp: _t,
+              ),
+            ),
+          );
+        }
+        await db.localViolationDao.markManySent(ids.take(2));
+        final unsent = await db.localViolationDao.getUnsent();
+        expect(unsent.map((r) => r.id), [ids.last]);
+      },
+    );
   });
 
   group('deleteOldSent', () {
-    test('drops only rows with sent=true and timestamp older than the cutoff', () async {
-      final oldId = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'old',
-          type: ViolationType.shortcutBlocked,
-          severity: ViolationSeverity.warning,
-          timestamp: DateTime.now().subtract(const Duration(days: 30)),
-        ),
-      );
-      final freshId = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'fresh',
-          type: ViolationType.shortcutBlocked,
-          severity: ViolationSeverity.warning,
-          timestamp: DateTime.now(),
-        ),
-      );
-      await db.localViolationDao.markSent(oldId);
-      // freshId stays unsent
+    test(
+      'drops only rows with sent=true and timestamp older than the cutoff',
+      () async {
+        final oldId = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'old',
+            type: ViolationType.shortcutBlocked,
+            severity: ViolationSeverity.warning,
+            timestamp: DateTime.now().subtract(const Duration(days: 30)),
+          ),
+        );
+        final freshId = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'fresh',
+            type: ViolationType.shortcutBlocked,
+            severity: ViolationSeverity.warning,
+            timestamp: DateTime.now(),
+          ),
+        );
+        await db.localViolationDao.markSent(oldId);
+        // freshId stays unsent
 
-      final removed = await db.localViolationDao
-          .deleteOldSent(olderThan: const Duration(days: 7));
+        final removed = await db.localViolationDao.deleteOldSent(
+          olderThan: const Duration(days: 7),
+        );
 
-      expect(removed, 1);
-      final remainingIds = (await db.localViolationDao.getAllForAttempt('old')) +
-          (await db.localViolationDao.getAllForAttempt('fresh'));
-      expect(remainingIds.map((r) => r.id), [freshId]);
-    });
+        expect(removed, 1);
+        final remainingIds =
+            (await db.localViolationDao.getAllForAttempt('old')) +
+            (await db.localViolationDao.getAllForAttempt('fresh'));
+        expect(remainingIds.map((r) => r.id), [freshId]);
+      },
+    );
 
     test('no-op when there are no rows past the cutoff', () async {
       final id = await db.localViolationDao.insert(
@@ -111,8 +129,9 @@ void main() {
       );
       await db.localViolationDao.markSent(id);
 
-      final removed = await db.localViolationDao
-          .deleteOldSent(olderThan: const Duration(days: 30));
+      final removed = await db.localViolationDao.deleteOldSent(
+        olderThan: const Duration(days: 30),
+      );
       expect(removed, 0);
     });
   });
@@ -136,50 +155,66 @@ void main() {
   });
 
   group('fromRow', () {
-    test('round-trips an in-memory ViolationEvent through a Drift row', () async {
-      final id = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'attempt-1',
-          type: ViolationType.clipboardPaste,
-          severity: ViolationSeverity.critical,
-          timestamp: _t,
-          metadata: '{"src":"clipboard"}',
-        ),
-      );
-      final rows = await db.localViolationDao.getAllForAttempt('attempt-1');
-      final restored = LocalViolationDao.fromRow(rows.single);
+    test(
+      'round-trips an in-memory ViolationEvent through a Drift row',
+      () async {
+        final id = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'attempt-1',
+            type: ViolationType.clipboardPaste,
+            severity: ViolationSeverity.critical,
+            timestamp: _t,
+            metadata: '{"src":"clipboard"}',
+          ),
+        );
+        final rows = await db.localViolationDao.getAllForAttempt('attempt-1');
+        final restored = LocalViolationDao.fromRow(rows.single);
 
-      expect(restored.id, id);
-      expect(restored.attemptPublicId, 'attempt-1');
-      expect(restored.type, ViolationType.clipboardPaste);
-      expect(restored.severity, ViolationSeverity.critical);
-      expect(restored.metadata, '{"src":"clipboard"}');
-      expect(restored.sent, isFalse);
-    });
+        expect(restored.id, id);
+        expect(restored.clientEventId, isNotEmpty);
+        expect(restored.attemptPublicId, 'attempt-1');
+        expect(restored.type, ViolationType.clipboardPaste);
+        expect(restored.severity, ViolationSeverity.critical);
+        expect(restored.metadata, '{"src":"clipboard"}');
+        expect(restored.sent, isFalse);
+      },
+    );
 
-    test('falls back to a safe type when the row carries an unknown serverValue', () async {
-      // Simulates a future server-side enum addition the client hasn't
-      // been updated for yet. The DAO must not throw on retry.
-      final id = await db.localViolationDao.insert(
-        ViolationEvent(
-          attemptPublicId: 'attempt-unknown',
-          type: ViolationType.shortcutBlocked,
-          severity: ViolationSeverity.warning,
-          timestamp: _t,
-        ),
-      );
-      await db.customStatement(
-        'UPDATE local_violations_table SET violation_type = ? WHERE id = ?',
-        ['FUTURE_TYPE', id],
-      );
+    test(
+      'rejects an unknown serverValue so the reporter can terminalize it',
+      () async {
+        // Simulates a future server-side enum addition the client has not been
+        // updated for. It must never be remapped to another signal type.
+        final id = await db.localViolationDao.insert(
+          ViolationEvent(
+            attemptPublicId: 'attempt-unknown',
+            type: ViolationType.shortcutBlocked,
+            severity: ViolationSeverity.warning,
+            timestamp: _t,
+          ),
+        );
+        await db.customStatement(
+          'UPDATE local_violations_table SET violation_type = ? WHERE id = ?',
+          ['FUTURE_TYPE', id],
+        );
 
-      final restored = LocalViolationDao.fromRow(
-        (await db.localViolationDao.getAllForAttempt('attempt-unknown')).single,
-      );
-      expect(restored.type, ViolationType.shortcutBlocked);
-    });
+        final row = (await db.localViolationDao.getAllForAttempt(
+          'attempt-unknown',
+        )).single;
+        expect(
+          () => LocalViolationDao.fromRow(row),
+          throwsA(isA<UnknownViolationTypeException>()),
+        );
+        await db.localViolationDao.markTerminal(id, 'unsupported type');
+        expect(await db.localViolationDao.getUnsent(), isEmpty);
+        final terminalRow = (await db.localViolationDao.getAllForAttempt(
+          'attempt-unknown',
+        )).single;
+        expect(terminalRow.terminal, isTrue);
+        expect(terminalRow.terminalReason, 'unsupported type');
+      },
+    );
   });
-
 }
 
 final DateTime _t = DateTime.utc(2026, 9, 9, 0, 0, 0);
