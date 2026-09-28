@@ -2,8 +2,37 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <algorithm>
+
 #include "flutter_window.h"
 #include "utils.h"
+
+namespace {
+constexpr unsigned int kLoginWindowMaxWidth = 1280;
+constexpr unsigned int kLoginWindowMaxHeight = 720;
+
+Win32Window::Point CenterWindowOnPrimaryWorkArea(
+    const Win32Window::Size& size) {
+  MONITORINFO monitor_info{sizeof(monitor_info)};
+  const POINT origin{0, 0};
+  const HMONITOR monitor =
+      MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
+  if (!GetMonitorInfo(monitor, &monitor_info)) {
+    return Win32Window::Point(0, 0);
+  }
+
+  const RECT& work_area = monitor_info.rcWork;
+  const LONG work_width = work_area.right - work_area.left;
+  const LONG work_height = work_area.bottom - work_area.top;
+  const LONG window_width = static_cast<LONG>(size.width);
+  const LONG window_height = static_cast<LONG>(size.height);
+  const LONG x = work_area.left +
+                 std::max<LONG>(0, (work_width - window_width) / 2);
+  const LONG y = work_area.top +
+                 std::max<LONG>(0, (work_height - window_height) / 2);
+  return Win32Window::Point(static_cast<int>(x), static_cast<int>(y));
+}
+}  // namespace
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -25,8 +54,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
+  Win32Window::Size size(kLoginWindowMaxWidth, kLoginWindowMaxHeight);
+  Win32Window::Point origin = CenterWindowOnPrimaryWorkArea(size);
   if (!window.Create(L"pte_app", origin, size)) {
     return EXIT_FAILURE;
   }
