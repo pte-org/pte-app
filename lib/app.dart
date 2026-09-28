@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +22,7 @@ import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
+import 'features/device_check/constants/device_check_strings.dart';
 import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
@@ -145,11 +148,18 @@ class PteApp extends StatelessWidget {
   }
 
   static Widget _buildTestMicAndSoundScreen() {
-    return TestMicAndSoundScreen(
-      recorder: GetIt.instance<AudioRecorderService>(),
-      // Not GetIt-registered — single-screen, dev-only feature with no
-      // second call site (see TestMicAndSoundScreen's own doc comment).
-      player: DeviceCheckAudioPlayerImpl(volumeService: GetIt.instance<VolumeService>()),
+    return _DeviceCheckFullscreenGate(
+      service: GetIt.instance<LockdownService>(),
+      releaseOnDispose: true,
+      child: TestMicAndSoundScreen(
+        recorder: GetIt.instance<AudioRecorderService>(),
+        // Not GetIt-registered — single-screen, dev-only feature with no
+        // second call site (see TestMicAndSoundScreen's own doc comment).
+        player: DeviceCheckAudioPlayerImpl(
+          volumeService: GetIt.instance<VolumeService>(),
+        ),
+        volumeService: GetIt.instance<VolumeService>(),
+      ),
     );
   }
 }
@@ -255,6 +265,7 @@ class StudentExamGateState extends State<StudentExamGate> {
   }
 
   void _resetToLogin() {
+    unawaited(_releaseDeviceCheckFullscreen());
     final getIt = GetIt.instance;
     getIt.resetLazySingleton<ExamAttemptBloc>(
       disposingFunction: (bloc) => bloc.close(),
@@ -266,6 +277,11 @@ class StudentExamGateState extends State<StudentExamGate> {
     context.read<AuthBloc>().add(const LogoutRequested());
   }
 
+  Future<void> _releaseDeviceCheckFullscreen() async {
+    if (!GetIt.instance.isRegistered<LockdownService>()) return;
+    await GetIt.instance<LockdownService>().exitDeviceCheckFullscreen();
+  }
+
   void _retrySession() {
     _bloc.add(
       SessionResolutionRequested(
@@ -273,6 +289,12 @@ class StudentExamGateState extends State<StudentExamGate> {
         deviceCheckConfirmed: _deviceCheckConfirmed,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_releaseDeviceCheckFullscreen());
+    super.dispose();
   }
 
   @override
@@ -300,13 +322,19 @@ class StudentExamGateState extends State<StudentExamGate> {
         },
         builder: (context, state) {
           if (state is DeviceCheckRequired) {
-            return TestMicAndSoundScreen(
-              recorder: getIt<AudioRecorderService>(),
-              player: DeviceCheckAudioPlayerImpl(volumeService: getIt<VolumeService>()),
-              onComplete: () => context.read<ExamAttemptBloc>().add(
-                SessionResolutionRequested(
-                  rawInput: state.sessionPublicId,
-                  deviceCheckConfirmed: true,
+            return _DeviceCheckFullscreenGate(
+              service: getIt<LockdownService>(),
+              child: TestMicAndSoundScreen(
+                recorder: getIt<AudioRecorderService>(),
+                player: DeviceCheckAudioPlayerImpl(
+                  volumeService: getIt<VolumeService>(),
+                ),
+                volumeService: getIt<VolumeService>(),
+                onComplete: () => context.read<ExamAttemptBloc>().add(
+                  SessionResolutionRequested(
+                    rawInput: state.sessionPublicId,
+                    deviceCheckConfirmed: true,
+                  ),
                 ),
               ),
             );
@@ -360,6 +388,164 @@ class StudentExamGateState extends State<StudentExamGate> {
         },
       ),
     );
+  }
+}
+
+/// Ensures the pre-attempt device check is shown only after the native window
+/// has entered fullscreen. The service deliberately keeps this state separate
+/// from the real attempt lockdown; the parent gate releases it on logout or
+/// when the app is disposed.
+class _DeviceCheckFullscreenGate extends StatefulWidget {
+  const _DeviceCheckFullscreenGate({
+    required this.service,
+    required this.child,
+    this.releaseOnDispose = false,
+  });
+
+  final LockdownService service;
+  final Widget child;
+  final bool releaseOnDispose;
+
+  @override
+  State<_DeviceCheckFullscreenGate> createState() =>
+      _DeviceCheckFullscreenGateState();
+}
+
+class _DeviceCheckFullscreenGateState
+    extends State<_DeviceCheckFullscreenGate> {
+  bool _ready = false;
+  LockdownActivationException? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_prepare());
+  }
+
+  Future<void> _prepare() async {
+    try {
+      await widget.service.enterDeviceCheckFullscreen();
+      if (!mounted) return;
+      setState(() => _ready = true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error is LockdownActivationException
+            ? error
+            : LockdownActivationException(
+                'Device-check fullscreen activation failed',
+                failedChecks: [error.toString()],
+                cause: error,
+              );
+      });
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _ready = false;
+      _error = null;
+    });
+    unawaited(_prepare());
+  }
+
+  @override
+  void dispose() {
+    if (widget.releaseOnDispose) {
+      unawaited(widget.service.exitDeviceCheckFullscreen());
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _error;
+    if (error != null) {
+      return Scaffold(
+        backgroundColor: AppColors.surfaceCanvas,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimensions.spacingXl),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimensions.spacingXl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.error,
+                        size: AppDimensions.statusBannerIconSize,
+                      ),
+                      const SizedBox(height: AppDimensions.spacingMd),
+                      Text(
+                        DeviceCheckStrings.fullscreenUnavailableTitle,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.headlineLg.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.spacingSm),
+                      const Text(
+                        DeviceCheckStrings.fullscreenUnavailableMessage,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyRegular,
+                      ),
+                      if (error.failedChecks.isNotEmpty) ...[
+                        const SizedBox(height: AppDimensions.spacingMd),
+                        for (final check in error.failedChecks)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppDimensions.spacingXs,
+                            ),
+                            child: Text(
+                              check,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
+                      const SizedBox(height: AppDimensions.spacingLg),
+                      PrimaryButton(
+                        label: DeviceCheckStrings.fullscreenRetryLabel,
+                        onPressed: _retry,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_ready) {
+      return Scaffold(
+        backgroundColor: AppColors.surfaceCanvas,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.brandPrimary),
+              const SizedBox(height: AppDimensions.spacingMd),
+              Text(
+                DeviceCheckStrings.fullscreenPreparingMessage,
+                style: AppTypography.bodyRegular.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widget.child;
   }
 }
 

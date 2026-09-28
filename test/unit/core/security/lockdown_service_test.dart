@@ -60,7 +60,6 @@ class _PlatformLogger extends Logger {
     DateTime? time,
   }) {}
 }
-
 const _emptyForbidden = ForbiddenAppsConfig(windows: [], macos: []);
 const _attemptId = 'attempt-1';
 
@@ -152,6 +151,74 @@ void main() {
       forbiddenConfigLoader: loader ?? stubLoader(_emptyForbidden),
     );
   }
+
+  group('device-check fullscreen', () {
+    test(
+      'enters fullscreen without activating lockdown or reporting audit',
+      () async {
+        service = build();
+
+        await service.enterDeviceCheckFullscreen();
+
+        expect(service.isDeviceCheckFullscreenActive, isTrue);
+        expect(service.isActive, isFalse);
+        expect(service.currentMode, LockdownMode.none);
+        verify(() => windowManager.enforceFullscreen()).called(1);
+        verifyNever(() => clipboard.blockExternalPaste());
+        verifyNever(() => shortcuts.blockSystemShortcuts());
+        verifyNever(() => reporter.reportViolation(any()));
+      },
+    );
+
+    test(
+      'is idempotent and releases only the pre-attempt fullscreen state',
+      () async {
+        service = build();
+
+        await service.enterDeviceCheckFullscreen();
+        await service.enterDeviceCheckFullscreen();
+        await service.exitDeviceCheckFullscreen();
+        await service.exitDeviceCheckFullscreen();
+
+        verify(() => windowManager.enforceFullscreen()).called(1);
+        verify(() => windowManager.exitFullscreen()).called(1);
+        expect(service.isDeviceCheckFullscreenActive, isFalse);
+      },
+    );
+
+    test('real lockdown takes ownership after the device check', () async {
+      service = build();
+
+      await service.enterDeviceCheckFullscreen();
+      await service.activateLockdown(
+        mode: LockdownMode.standard,
+        attemptPublicId: _attemptId,
+      );
+
+      expect(service.isDeviceCheckFullscreenActive, isFalse);
+      expect(service.isActive, isTrue);
+      verify(() => windowManager.enforceFullscreen()).called(2);
+    });
+
+    test(
+      'wraps fullscreen failures without leaving the service active',
+      () async {
+        when(() => windowManager.enforceFullscreen()).thenThrow(
+          const FullscreenEnforcementException('window handle unavailable'),
+        );
+        service = build();
+
+        await expectLater(
+          service.enterDeviceCheckFullscreen(),
+          throwsA(isA<LockdownActivationException>()),
+        );
+
+        expect(service.isDeviceCheckFullscreenActive, isFalse);
+        expect(service.isActive, isFalse);
+        verify(() => windowManager.exitFullscreen()).called(1);
+      },
+    );
+  });
 
   group('activateLockdown', () {
     test('LockdownMode.none is a documented no-op (no platform calls)', () async {

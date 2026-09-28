@@ -47,8 +47,8 @@ std::string Narrow(const wchar_t* value) {
 }  // namespace
 
 void LockdownPlugin::RegisterWithRegistrar(
-    flutter::PluginRegistrarWindows* registrar) {
-  auto plugin = std::make_unique<LockdownPlugin>(registrar);
+    flutter::PluginRegistrarWindows* registrar, HWND window_handle) {
+  auto plugin = std::make_unique<LockdownPlugin>(registrar, window_handle);
   auto* plugin_pointer = plugin.get();
 
   auto window_channel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -141,9 +141,13 @@ void LockdownPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-LockdownPlugin::LockdownPlugin(flutter::PluginRegistrarWindows* registrar)
+LockdownPlugin::LockdownPlugin(flutter::PluginRegistrarWindows* registrar,
+                               HWND window_handle)
     : registrar_(registrar),
-      hwnd_(registrar->GetView()->GetNativeWindow()),
+      // The registrar view is Flutter's child HWND. Fullscreen must be
+      // applied to the runner's top-level window, otherwise the child may
+      // report success while the native title bar remains visible.
+      hwnd_(window_handle),
       keyboard_hook_(nullptr),
       original_style_(0),
       original_ex_style_(0),

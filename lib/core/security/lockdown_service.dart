@@ -80,6 +80,7 @@ class LockdownService {
 
   LockdownMode _currentMode = LockdownMode.none;
   String? _currentAttemptId;
+  bool _deviceCheckFullscreenActive = false;
   final List<StreamSubscription<String>> _violationSubscriptions = [];
 
   /// Broadcast of the most recent [ViolationType] seen while the
@@ -102,6 +103,68 @@ class LockdownService {
   /// Convenience: returns true when [_currentMode] is anything except
   /// `none`. The UI's "lockdown active" badge uses this.
   bool get isActive => _currentMode != LockdownMode.none;
+
+  /// Returns true while the pre-attempt device check owns fullscreen.
+  ///
+  /// This is intentionally separate from [isActive]. Device-check fullscreen
+  /// does not install shortcut/clipboard/process hooks and has no attempt ID,
+  /// so it must not be treated as an active anti-cheat lockdown.
+  bool get isDeviceCheckFullscreenActive => _deviceCheckFullscreenActive;
+
+  /// Puts the candidate in fullscreen before the device check begins.
+  ///
+  /// Only the window state is changed here. Audit events are deliberately not
+  /// emitted because the backend has not created an attempt yet. The later
+  /// [activateLockdown] call reuses this fullscreen state and binds the full
+  /// enforcement stack to the real attempt ID.
+  Future<void> enterDeviceCheckFullscreen() async {
+    if (_deviceCheckFullscreenActive || _currentMode != LockdownMode.none) {
+      return;
+    }
+
+    try {
+      await _windowManager.enforceFullscreen();
+      _deviceCheckFullscreenActive = true;
+      _logger.i('Device-check fullscreen activated');
+    } on Object catch (e, stack) {
+      _logger.e(
+        'Device-check fullscreen activation failed',
+        error: e,
+        stackTrace: stack,
+      );
+      // The native implementation normally rolls back a partial window
+      // change. Keep the service safe if a platform implementation does not.
+      try {
+        await _windowManager.exitFullscreen();
+      } on Object catch (rollbackError) {
+        _logger.w(
+          'Device-check fullscreen rollback failed',
+          error: rollbackError,
+        );
+      }
+      throw LockdownActivationException(
+        'Device-check fullscreen activation failed',
+        failedChecks: ['enforceFullscreen: $e'],
+        cause: e,
+      );
+    }
+  }
+
+  /// Releases fullscreen that was entered only for the device check.
+  ///
+  /// This is a no-op once the real lockdown has taken ownership of the
+  /// window, or when the device check was never entered.
+  Future<void> exitDeviceCheckFullscreen() async {
+    if (!_deviceCheckFullscreenActive) return;
+
+    try {
+      await _windowManager.exitFullscreen();
+    } on Object catch (e) {
+      _logger.w('Device-check fullscreen teardown failed', error: e);
+    } finally {
+      _deviceCheckFullscreenActive = false;
+    }
+  }
 
   /// Idempotent bootstrap. Loads the bundled forbidden-apps JSON and
   /// keeps it cached — subsequent activates are cheap. The loader is
@@ -136,6 +199,7 @@ class LockdownService {
   }) async {
     if (mode == LockdownMode.none) {
       _logger.w('Attempted to activate lockdown with mode NONE — no-op');
+      await exitDeviceCheckFullscreen();
       _currentMode = LockdownMode.none;
       _currentAttemptId = null;
       return;
@@ -193,6 +257,9 @@ class LockdownService {
           failedChecks: failed,
         );
       }
+      // The real lockdown now owns the already-fullscreen window. Do not let
+      // a later device-check cleanup restore it underneath the attempt.
+      _deviceCheckFullscreenActive = false;
       _logger.i('Lockdown activated successfully');
     } catch (e) {
       await deactivateLockdown();
@@ -204,6 +271,7 @@ class LockdownService {
     if (_currentMode == LockdownMode.none) {
       // No-op idempotent path so callers can use this method as a
       // "reset" without first checking state.
+      await exitDeviceCheckFullscreen();
       return;
     }
     _logger.i('Deactivating lockdown');
@@ -228,6 +296,7 @@ class LockdownService {
 
     _currentMode = LockdownMode.none;
     _currentAttemptId = null;
+    _deviceCheckFullscreenActive = false;
     _logger.i('Lockdown deactivated');
   }
 
@@ -371,6 +440,7 @@ class LockdownService {
   /// to guarantee no listener outlives a discarded service instance
   /// during a hard-stop shutdown.
   Future<void> dispose() async {
+    await exitDeviceCheckFullscreen();
     if (!_violationStreamController.isClosed) {
       await _violationStreamController.close();
     }

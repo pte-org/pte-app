@@ -7,6 +7,12 @@ import 'package:get_it/get_it.dart';
 import 'package:pte_app/core/audio/volume_service.dart';
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
+import 'package:pte_app/core/constants/exam_chrome_config.dart';
+import 'package:pte_app/core/widgets/components/subheader_banner.dart';
+import 'package:pte_app/core/widgets/exam/exam_footer_bar.dart';
+import 'package:pte_app/core/widgets/exam/exam_header_bar.dart';
+import 'package:pte_app/core/widgets/exam/exam_shell.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/device_check/constants/device_check_strings.dart';
@@ -30,11 +36,13 @@ class TestMicAndSoundScreen extends StatefulWidget {
     super.key,
     required this.recorder,
     required this.player,
+    this.volumeService,
     this.onComplete,
   });
 
   final AudioRecorderService recorder;
   final DeviceCheckAudioPlayer player;
+  final VolumeService? volumeService;
 
   /// Called once after the student confirms both the microphone and sound
   /// checks. Null for the standalone developer preview.
@@ -46,17 +54,30 @@ class TestMicAndSoundScreen extends StatefulWidget {
 
 class _TestMicAndSoundScreenState extends State<TestMicAndSoundScreen> {
   late final DeviceCheckCubit _cubit;
+  late final VolumeService _volumeService;
+  late final bool _ownsVolumeService;
 
   @override
   void initState() {
     super.initState();
     _cubit = DeviceCheckCubit(recorder: widget.recorder, player: widget.player);
+    if (widget.volumeService != null) {
+      _volumeService = widget.volumeService!;
+      _ownsVolumeService = false;
+    } else if (GetIt.instance.isRegistered<VolumeService>()) {
+      _volumeService = GetIt.instance<VolumeService>();
+      _ownsVolumeService = false;
+    } else {
+      _volumeService = VolumeService();
+      _ownsVolumeService = true;
+    }
   }
 
   @override
   void dispose() {
     unawaited(_cubit.close());
     unawaited(widget.player.close());
+    if (_ownsVolumeService) _volumeService.dispose();
     super.dispose();
   }
 
@@ -68,44 +89,109 @@ class _TestMicAndSoundScreenState extends State<TestMicAndSoundScreen> {
         listenWhen: (previous, state) =>
             !previous.isComplete && state.isComplete,
         listener: (_, _) => widget.onComplete?.call(),
-        child: Scaffold(
-          appBar: AppBar(title: const Text(DeviceCheckStrings.screenTitle)),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-              child: BlocBuilder<DeviceCheckCubit, DeviceCheckState>(
-                builder: (context, state) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _DeviceCheckHeader(state: state),
-                      const SizedBox(height: AppDimensions.spacingMedium),
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.all(
-                            AppDimensions.spacingMedium,
+        child: ExamShell(
+          header: const ExamHeaderBar(
+            examTitle: ExamChromeConfig.defaultExamTitle,
+            candidateName: 'Candidate',
+            candidateId: ExamChromeConfig.unavailableCandidateId,
+            itemLabel: DeviceCheckStrings.screenSectionLabel,
+            timeLabel: '--:--',
+          ),
+          body: ColoredBox(
+            color: AppColors.surfaceCanvas,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppDimensions.contentMaxWidth,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppDimensions.spacingMd),
+                  child: BlocBuilder<DeviceCheckCubit, DeviceCheckState>(
+                    builder: (context, state) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SubheaderBanner(
+                            title: DeviceCheckStrings.screenTitle,
+                            subtitle: DeviceCheckStrings.screenSectionLabel,
                           ),
-                          child: _MicSection(state: state),
-                        ),
-                      ),
-                      const SizedBox(height: AppDimensions.spacingMedium),
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.all(
-                            AppDimensions.spacingMedium,
+                          const SizedBox(height: AppDimensions.spacingMd),
+                          _DeviceCheckHeader(state: state),
+                          const SizedBox(height: AppDimensions.spacingMd),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final sideBySide =
+                                  constraints.maxWidth >=
+                                  AppDimensions.templateSideBySideBreakpoint;
+                              final microphone = _DeviceCheckPanel(
+                                child: _MicSection(state: state),
+                              );
+                              final sound = _DeviceCheckPanel(
+                                child: _SoundSection(
+                                  state: state,
+                                  volumeService: _volumeService,
+                                ),
+                              );
+                              return sideBySide
+                                  ? Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(child: microphone),
+                                        const SizedBox(
+                                          width: AppDimensions.spacingMd,
+                                        ),
+                                        Expanded(child: sound),
+                                      ],
+                                    )
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        microphone,
+                                        const SizedBox(
+                                          height: AppDimensions.spacingMd,
+                                        ),
+                                        sound,
+                                      ],
+                                    );
+                            },
                           ),
-                          child: _SoundSection(state: state),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
+          footer: const ExamFooterBar(navigationActions: SizedBox.shrink()),
         ),
+      ),
+    );
+  }
+}
+
+class _DeviceCheckPanel extends StatelessWidget {
+  const _DeviceCheckPanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.spacingMd),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(AppDimensions.radiusDefault),
+        ),
+      ),
+      child: DefaultTextStyle.merge(
+        style: AppTypography.bodyRegular.copyWith(color: AppColors.textPrimary),
+        child: child,
       ),
     );
   }
@@ -124,9 +210,14 @@ class _DeviceCheckHeader extends StatelessWidget {
     ].where((completed) => completed).length;
     final progress = completedChecks / 2;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      color: AppColors.surfaceSubtle,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(AppDimensions.radiusDefault),
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.spacingMedium),
         child: Column(
@@ -134,7 +225,9 @@ class _DeviceCheckHeader extends StatelessWidget {
           children: [
             Text(
               DeviceCheckStrings.screenSubtitle,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: AppTypography.bodyRegular.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: AppDimensions.spacingMedium),
             Row(
@@ -142,14 +235,15 @@ class _DeviceCheckHeader extends StatelessWidget {
               children: [
                 Text(
                   DeviceCheckStrings.progressLabel,
-                  style: const TextStyle(
+                  style: AppTypography.bodyBold.copyWith(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   '$completedChecks/2',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: AppTypography.labelMeta.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -195,7 +289,7 @@ class _CheckStatus extends StatelessWidget {
         const SizedBox(width: AppDimensions.spacingSm),
         Text(
           label,
-          style: TextStyle(
+          style: AppTypography.bodyRegular.copyWith(
             color: complete ? AppColors.success : AppColors.textSecondary,
             fontWeight: complete ? FontWeight.bold : FontWeight.normal,
           ),
@@ -227,18 +321,17 @@ class _MicSection extends StatelessWidget {
       children: [
         Text(
           DeviceCheckStrings.micSectionTitle,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.headingSm.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
         const Text(
           DeviceCheckStrings.micInstructionText,
-          style: TextStyle(color: AppColors.textPrimary),
+          style: AppTypography.bodyRegular,
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
-        Row(
+        Wrap(
+          spacing: AppDimensions.spacingSm,
+          runSpacing: AppDimensions.spacingSm,
           children: [
             if (micPhase == MicCheckPhase.recording)
               PrimaryButton(
@@ -252,7 +345,6 @@ class _MicSection extends StatelessWidget {
                     ? cubit.startMicRecording
                     : null,
               ),
-            const SizedBox(width: AppDimensions.spacingMedium),
             PrimaryButton(
               label: DeviceCheckStrings.playMyRecordingButtonLabel,
               onPressed: canPlay ? cubit.playMicRecording : null,
@@ -263,7 +355,7 @@ class _MicSection extends StatelessWidget {
           const SizedBox(height: AppDimensions.spacingSm),
           Text(
             state.micErrorMessage!,
-            style: const TextStyle(color: AppColors.error),
+            style: AppTypography.bodyRegular.copyWith(color: AppColors.error),
           ),
         ],
         if (micPhase == MicCheckPhase.playedBack &&
@@ -271,16 +363,17 @@ class _MicSection extends StatelessWidget {
           const SizedBox(height: AppDimensions.spacingMedium),
           const Text(
             DeviceCheckStrings.micConfirmPrompt,
-            style: TextStyle(color: AppColors.textPrimary),
+            style: AppTypography.bodyBold,
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
-          Row(
+          Wrap(
+            spacing: AppDimensions.spacingSm,
+            runSpacing: AppDimensions.spacingSm,
             children: [
               PrimaryButton(
                 label: DeviceCheckStrings.confirmYesLabel,
                 onPressed: () => cubit.confirmMicHeard(true),
               ),
-              const SizedBox(width: AppDimensions.spacingMedium),
               PrimaryButton(
                 label: DeviceCheckStrings.confirmNoLabel,
                 onPressed: () => cubit.confirmMicHeard(false),
@@ -294,9 +387,10 @@ class _MicSection extends StatelessWidget {
 }
 
 class _SoundSection extends StatelessWidget {
-  const _SoundSection({required this.state});
+  const _SoundSection({required this.state, required this.volumeService});
 
   final DeviceCheckState state;
+  final VolumeService volumeService;
 
   @override
   Widget build(BuildContext context) {
@@ -312,15 +406,12 @@ class _SoundSection extends StatelessWidget {
       children: [
         Text(
           DeviceCheckStrings.soundSectionTitle,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.headingSm.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
         const Text(
           DeviceCheckStrings.soundInstructionText,
-          style: TextStyle(color: AppColors.textPrimary),
+          style: AppTypography.bodyRegular,
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
         PrimaryButton(
@@ -328,22 +419,23 @@ class _SoundSection extends StatelessWidget {
           onPressed: canPlayTestSound ? cubit.playTestSound : null,
         ),
         const SizedBox(height: AppDimensions.spacingMedium),
-        const _VolumeControl(),
+        _VolumeControl(volumeService: volumeService),
         if (soundPhase == SoundCheckPhase.played &&
             state.soundConfirmedHeardClearly == null) ...[
           const SizedBox(height: AppDimensions.spacingMedium),
           const Text(
             DeviceCheckStrings.soundConfirmPrompt,
-            style: TextStyle(color: AppColors.textPrimary),
+            style: AppTypography.bodyBold,
           ),
           const SizedBox(height: AppDimensions.spacingMedium),
-          Row(
+          Wrap(
+            spacing: AppDimensions.spacingSm,
+            runSpacing: AppDimensions.spacingSm,
             children: [
               PrimaryButton(
                 label: DeviceCheckStrings.confirmYesLabel,
                 onPressed: () => cubit.confirmSoundHeard(true),
               ),
-              const SizedBox(width: AppDimensions.spacingMedium),
               PrimaryButton(
                 label: DeviceCheckStrings.confirmNoLabel,
                 onPressed: () => cubit.confirmSoundHeard(false),
@@ -357,11 +449,12 @@ class _SoundSection extends StatelessWidget {
 }
 
 class _VolumeControl extends StatelessWidget {
-  const _VolumeControl();
+  const _VolumeControl({required this.volumeService});
+
+  final VolumeService volumeService;
 
   @override
   Widget build(BuildContext context) {
-    final volumeService = GetIt.instance<VolumeService>();
     return Row(
       children: [
         const Icon(Icons.volume_up, color: AppColors.textSecondary),
@@ -374,7 +467,7 @@ class _VolumeControl extends StatelessWidget {
                 value: volume,
                 min: 0.0,
                 max: 1.0,
-                activeColor: AppColors.primary,
+                activeColor: AppColors.brandPrimary,
                 onChanged: (v) => volumeService.value = v,
               );
             },

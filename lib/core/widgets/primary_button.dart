@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
 
 /// Standard elevated button with a built-in loading spinner — every
 /// primary action across the app (advance, submit, retry) uses this
@@ -25,16 +27,34 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
-      style: style,
+      style: style ?? _defaultStyle(),
       child: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               width: AppDimensions.advanceButtonSpinnerSize,
               height: AppDimensions.advanceButtonSpinnerSize,
               child: CircularProgressIndicator(
                 strokeWidth: AppDimensions.advanceButtonSpinnerStrokeWidth,
+                color: isLoading ? AppColors.textMuted : AppColors.onPrimary,
               ),
             )
           : Text(label),
+    );
+  }
+
+  ButtonStyle _defaultStyle() {
+    return ElevatedButton.styleFrom(
+      minimumSize: const Size(0, AppDimensions.buttonHeight),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
+      backgroundColor: AppColors.brandPrimary,
+      foregroundColor: AppColors.onPrimary,
+      disabledBackgroundColor: AppColors.inactive,
+      disabledForegroundColor: AppColors.textMuted,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(
+          Radius.circular(AppDimensions.radiusDefault),
+        ),
+      ),
+      textStyle: AppTypography.bodyBold,
     );
   }
 }

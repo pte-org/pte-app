@@ -18,9 +18,10 @@ namespace lockdown_plugin {
 
 class LockdownPlugin : public flutter::Plugin {
  public:
-  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
+  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar,
+                                    HWND window_handle);
 
-  explicit LockdownPlugin(flutter::PluginRegistrarWindows* registrar);
+  LockdownPlugin(flutter::PluginRegistrarWindows* registrar, HWND window_handle);
   ~LockdownPlugin() override;
 
   LockdownPlugin(const LockdownPlugin&) = delete;

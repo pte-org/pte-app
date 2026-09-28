@@ -161,6 +161,7 @@ void main() {
 
       expect(find.text('Did you hear yourself clearly?'), findsOneWidget);
 
+      await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'No'));
       await tester.tap(find.widgetWithText(ElevatedButton, 'No'));
       await tester.pump();
 
@@ -220,7 +221,9 @@ void main() {
       await tester.pump();
       playbackController.add(true);
       await tester.pump();
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Yes').first);
+      final micConfirmation = find.widgetWithText(ElevatedButton, 'Yes').first;
+      await tester.ensureVisible(micConfirmation);
+      await tester.tap(micConfirmation);
       await tester.pump();
 
       expect(completed, isFalse);
@@ -229,8 +232,9 @@ void main() {
       await tester.pump();
       playbackController.add(true);
       await tester.pump();
-      await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Yes'));
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Yes'));
+      final soundConfirmation = find.widgetWithText(ElevatedButton, 'Yes');
+      await tester.ensureVisible(soundConfirmation);
+      await tester.tap(soundConfirmation);
       await tester.pump();
 
       expect(completed, isTrue);

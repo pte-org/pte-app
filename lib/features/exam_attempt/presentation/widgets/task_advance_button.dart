@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/constants/exam_chrome_config.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
-import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/core/widgets/exam/exam_navigation_actions.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -145,30 +143,15 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
         builder: (context, state) {
           if (state is! AttemptInProgress) return const SizedBox.shrink();
           final task = state.task;
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OutlinedButton(
-                onPressed: !_isNavigating && task.canNavigatePrevious
-                    ? () => _navigate(task, TaskNavigationDirection.previous)
-                    : null,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppDimensions.buttonHeight),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.spacingMd,
-                  ),
-                ),
-                child: const Text(ExamChromeConfig.previousLabel),
-              ),
-              const SizedBox(width: AppDimensions.spacingMedium),
-              PrimaryButton(
-                label: ExamAttemptStrings.taskAdvanceButtonLabel,
-                onPressed: task.canNavigateNext
-                    ? () => _navigate(task, TaskNavigationDirection.next)
-                    : null,
-                isLoading: _isNavigating,
-              ),
-            ],
+          return ExamNavigationActions(
+            onPrevious: !_isNavigating && task.canNavigatePrevious
+                ? () => _navigate(task, TaskNavigationDirection.previous)
+                : null,
+            onNext: task.canNavigateNext
+                ? () => _navigate(task, TaskNavigationDirection.next)
+                : null,
+            nextLabel: ExamAttemptStrings.taskAdvanceButtonLabel,
+            nextLoading: _isNavigating,
           );
         },
       ),
