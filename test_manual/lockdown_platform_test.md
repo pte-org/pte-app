@@ -11,6 +11,64 @@
 
 ## Windows Tests
 
+## Phase 5 release-gate evidence (2026-09-28)
+
+This release gate is limited to the authenticated student desktop app. Proctor
+and host UI walkthroughs are deferred and are not inferred from this checklist.
+The Phase 3 backend/host-read contract evidence remains the source for that
+separate scope.
+
+### Build identity
+
+- Flutter: `3.41.9` / Dart `3.11.5`
+- App version: `1.0.0+1`
+- `pte-app` source: `2fc7e4b3f526c051407968a3a473ecdadcfae7e1`
+- Release source state also includes the uncommitted Phase 5 fixture and DI
+  wiring shown in the working tree; no commit or push was performed.
+- `pte-api` source used for contract review: `244ebc245c5d4f341aa933b14a0c000866159347`
+- `pte-web` source used for contract review: `e693cde8753ee8abc629764899780152159d84e0`
+- No credentials, tokens, or environment values are recorded here.
+
+### Release artifacts
+
+| Artifact | Command | Result | SHA-256 |
+|---|---|---|---|
+| Production release | `flutter build windows --release --dart-define=PTE_LOCKDOWN_ACTIVATION_FAILURE_FIXTURE=false` | Built successfully; startup smoke process observed | `B61AADDA7BC4608C885DA1867021FA5C65A6B7E4B7AD9BA59211DFED0B2D5B38` |
+| Controlled failure release | `flutter build windows --release --dart-define=PTE_LOCKDOWN_ACTIVATION_FAILURE_FIXTURE=true` | Built successfully; non-distributable | `D3CA9215D043AE864D9769892AC3CCFA88F05E5384CAFED8434F8A85BA3B521E` |
+
+The two artifacts were built after separate `flutter clean` runs and have
+different hashes. The production command does not enable `DEV_SKIP_AUTH` or
+the failure fixture.
+
+### Automated release-gate evidence
+
+- Failure fixture test: passed; the injected window channel fails before the
+  native fullscreen call.
+- Scoped analyzer: passed.
+- Production and controlled-failure Windows release builds: passed.
+- Native plugin sources and runner registration were inspected; no native
+  source change was required for this phase.
+
+### Authenticated Windows matrix
+
+The following rows require interactive execution with a fresh release binary
+and a real authenticated local session. They remain deferred until executed;
+source/unit evidence must not be substituted for desktop evidence.
+
+| Scenario | Expected result | Observed result | Status |
+|---|---|---|---|
+| Practice `NONE` | Windowed; task 1 opens; no hooks | Not run in this non-interactive pass | Deferred |
+| Practice `STANDARD` | Fullscreen/hooks before task 1 | Not run in this non-interactive pass | Deferred |
+| Controlled activation failure | Task is blocked; retryable error | Artifact built; interactive run pending | Deferred |
+| Fullscreen exit | Warning, local/server audit, attempt continues | Not run in this non-interactive pass | Deferred |
+| Blocked shortcut | Warning, local/server audit, attempt continues | Not run in this non-interactive pass | Deferred |
+| Clipboard change/paste | Warning, local/server audit, attempt continues | Not run in this non-interactive pass | Deferred |
+| Official `STRICT` | Existing strict behavior | Not run in this non-interactive pass | Deferred |
+| Offline then reconnect | One server row per client event ID | Not run in this non-interactive pass | Deferred |
+
+The release gate remains open for interactive student testing. Do not
+distribute the controlled-failure artifact.
+
 ### Test 1: Fullscreen Enforcement
 
 **Steps:**

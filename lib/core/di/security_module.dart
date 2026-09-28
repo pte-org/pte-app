@@ -7,6 +7,7 @@ import 'package:pte_app/core/platform/process_manager_channel.dart';
 import 'package:pte_app/core/platform/shortcut_interceptor_channel.dart';
 import 'package:pte_app/core/platform/window_manager_channel.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
+import 'package:pte_app/core/security/lockdown_activation_failure_fixture.dart';
 import 'package:pte_app/core/security/violation_retry_coordinator.dart';
 import 'package:pte_app/core/security/violation_reporter.dart';
 import 'package:pte_app/core/network/network_canary.dart';
@@ -25,12 +26,14 @@ import 'package:pte_app/core/storage/dao/local_violation_dao.dart';
 void setupSecurityModule() {
   final getIt = GetIt.instance;
 
+  final windowManager = lockdownActivationFailureFixtureEnabled
+      ? const LockdownActivationFailureWindowManager()
+      : const WindowManagerChannel();
+
   // Platform channels — cheap to construct, so eager singletons are
   // fine. None of them holds native resources beyond what the OS
   // allocates on first method call.
-  getIt.registerLazySingleton<WindowManagerChannel>(
-    () => const WindowManagerChannel(),
-  );
+  getIt.registerLazySingleton<WindowManagerChannel>(() => windowManager);
   getIt.registerLazySingleton<ProcessManagerChannel>(
     () => const ProcessManagerChannel(),
   );
