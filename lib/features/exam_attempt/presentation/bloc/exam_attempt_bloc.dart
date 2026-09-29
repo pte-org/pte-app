@@ -606,6 +606,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         _timerService.currentSnapshot,
         allTasks: allTasks,
         currentIndex: safeIndex,
+        examMode: response.examMode,
       ),
     );
   }
@@ -636,6 +637,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         attemptPublicId,
         event.task,
         _timerService.currentSnapshot,
+        examMode: 'PRACTICE',
       ),
     );
   }

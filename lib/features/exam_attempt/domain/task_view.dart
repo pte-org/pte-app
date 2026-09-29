@@ -280,6 +280,7 @@ class AttemptTaskResponse {
     this.attemptNumber = 1,
     this.remainingRetries = 0,
     this.canRetry = false,
+    this.examMode,
   });
 
   final String attemptPublicId;
@@ -308,6 +309,12 @@ class AttemptTaskResponse {
   final int remainingRetries;
   final bool canRetry;
 
+  /// Wire value of `PinnedExamSnapshot.examMode` — `"PRACTICE"` or
+  /// `"OFFICIAL_EXAM"`. Null only for legacy attempts predating the field;
+  /// treated as `"OFFICIAL_EXAM"` by consumers to avoid relaxing constraints
+  /// on unknown legacy data.
+  final String? examMode;
+
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {
     return AttemptTaskResponse(
       attemptPublicId: json['attemptPublicId'] as String,
@@ -321,6 +328,7 @@ class AttemptTaskResponse {
       attemptNumber: json['attemptNumber'] as int? ?? 1,
       remainingRetries: json['remainingRetries'] as int? ?? 0,
       canRetry: json['canRetry'] as bool? ?? false,
+      examMode: json['examMode'] as String?,
     );
   }
 }

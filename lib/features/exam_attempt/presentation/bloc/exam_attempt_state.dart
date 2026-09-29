@@ -39,6 +39,7 @@ final class AttemptInProgress extends ExamAttemptState {
     this.currentIndex = 0,
     this.submissionStatus = AttemptSubmissionStatus.ready,
     this.submissionError,
+    this.examMode,
   }) : allTasks = allTasks ?? [singleTask];
 
   final String attemptPublicId;
@@ -56,6 +57,12 @@ final class AttemptInProgress extends ExamAttemptState {
   final AttemptSubmissionStatus submissionStatus;
 
   final Exception? submissionError;
+
+  /// Wire value from server — `"PRACTICE"` or `"OFFICIAL_EXAM"`. Null only
+  /// for legacy attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
+  final String? examMode;
+
+  bool get isPractice => examMode == 'PRACTICE';
 
   TaskView get task => allTasks[currentIndex];
 
@@ -79,6 +86,7 @@ final class AttemptInProgress extends ExamAttemptState {
       submissionError: clearSubmissionError
           ? null
           : submissionError ?? this.submissionError,
+      examMode: examMode,
     );
   }
 }

@@ -65,6 +65,12 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
   Stream<bool> get hasFinishedPlaying => _hasFinishedPlayingController.stream;
 
   @override
+  Future<void> replay() async {
+    await _player.seek(Duration.zero);
+    await _player.play();
+  }
+
+  @override
   Future<void> close() async {
     _volumeService?.removeListener(_syncVolume);
     await _stateSubscription.cancel();
