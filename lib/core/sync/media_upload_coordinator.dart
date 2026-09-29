@@ -14,6 +14,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/rate_limit_backoff.dart';
+import 'package:pte_app/core/sync/submission_preparation_exception.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 
 /// Drives every `PendingMediaUploadTable` row through presign → upload →
@@ -74,7 +75,7 @@ class MediaUploadCoordinator {
   /// on `attemptPublicId|pinnedItemPublicId`; [scanAll]'s own `_isScanning`
   /// only single-flights the scan loop itself, not a directly-called
   /// [attemptUpload] racing it.
-  final Set<String> _inFlightRows = {};
+  final Map<String, Future<void>> _inFlightRows = {};
 
   /// Starts the background scan loop — a connectivity-restore subscription
   /// plus a periodic fallback tick, so an offline-recorded row is retried
@@ -105,8 +106,9 @@ class MediaUploadCoordinator {
   ) async {
     if (_backoff.isActive) return;
     final row = await _mediaDao.getRow(attemptPublicId, pinnedItemPublicId);
-    if (row == null || row.status == PendingMediaUploadStatus.ready.name)
+    if (row == null || row.status == PendingMediaUploadStatus.ready.name) {
       return;
+    }
     await _advance(row);
   }
 
@@ -130,52 +132,86 @@ class MediaUploadCoordinator {
     }
   }
 
+  /// Completes all locally captured recordings for one attempt for one
+  /// bounded pass. A recording that remains non-ready is reported to the
+  /// terminal-submit caller; the background coordinator remains active and
+  /// can retry it later without keeping this request open indefinitely.
+  Future<void> flushBeforeSubmit(String attemptPublicId) async {
+    if (_backoff.isActive) {
+      throw const SubmissionPreparationException(
+        kind: SubmissionPreparationKind.media,
+        pendingCount: 1,
+      );
+    }
+    final rows = await _mediaDao.queryNonReadyByAttempt(attemptPublicId);
+    for (final row in rows) {
+      await _advance(row);
+    }
+    final remaining = await _mediaDao.queryNonReadyByAttempt(attemptPublicId);
+    if (remaining.isNotEmpty) {
+      throw SubmissionPreparationException(
+        kind: SubmissionPreparationKind.media,
+        pendingCount: remaining.length,
+      );
+    }
+  }
+
   Future<void> _advance(PendingMediaUpload initial) async {
     final key = '${initial.attemptPublicId}|${initial.pinnedItemPublicId}';
-    if (!_inFlightRows.add(key)) return;
+    final existing = _inFlightRows[key];
+    if (existing != null) {
+      await existing;
+      return;
+    }
+    final future = _advanceInternal(initial);
+    _inFlightRows[key] = future;
     try {
-      var current = initial;
-      try {
-        while (current.status != PendingMediaUploadStatus.ready.name) {
-          current = await switch (PendingMediaUploadStatus.values.byName(
-            current.status,
-          )) {
-            PendingMediaUploadStatus.recorded => _presign(current),
-            PendingMediaUploadStatus.uploading => _upload(current),
-            PendingMediaUploadStatus.uploaded ||
-            PendingMediaUploadStatus.completing => _complete(current),
-            PendingMediaUploadStatus.ready => current,
-          };
-        }
-        await _submitToOutbox(current);
-        _backoff.reset();
-      } on RateLimitException catch (e) {
-        // Shares the same gateway rate limit as SyncEngine's answer
-        // submission (requestPresign/completeUpload both go through
-        // ApiClient) — back off every row, not just this one, until the
-        // cooldown elapses (phase-07 Design Constraints). The raw PUT to
-        // MinIO never throws this: it doesn't go through the gateway.
-        _backoff.registerRateLimited(retryAfter: e.retryAfter);
-        _logger.w('Media upload rate-limited, backing off', error: e);
-      } catch (e, stackTrace) {
-        // Left at whatever status it reached — retried on the next
-        // canary/periodic trigger, mirroring SyncEngine's leave-pending
-        // behavior. No terminal-rejected equivalent exists for the media
-        // pipeline (phase-06 Risks: unbounded retry is the correct
-        // behavior here, not a gap).
-        _logger.w(
-          'Media upload advance failed for ${current.pinnedItemPublicId}, left at ${current.status} for next tick',
-          error: e,
-          stackTrace: stackTrace,
-        );
-        await _mediaDao.markError(
-          current.attemptPublicId,
-          current.pinnedItemPublicId,
-          e.toString(),
-        );
-      }
+      await future;
     } finally {
-      _inFlightRows.remove(key);
+      unawaited(_inFlightRows.remove(key));
+    }
+  }
+
+  Future<void> _advanceInternal(PendingMediaUpload initial) async {
+    var current = initial;
+    try {
+      while (current.status != PendingMediaUploadStatus.ready.name) {
+        current = await switch (PendingMediaUploadStatus.values.byName(
+          current.status,
+        )) {
+          PendingMediaUploadStatus.recorded => _presign(current),
+          PendingMediaUploadStatus.uploading => _upload(current),
+          PendingMediaUploadStatus.uploaded ||
+          PendingMediaUploadStatus.completing => _complete(current),
+          PendingMediaUploadStatus.ready => current,
+        };
+      }
+      await _submitToOutbox(current);
+      _backoff.reset();
+    } on RateLimitException catch (e) {
+      // Shares the same gateway rate limit as SyncEngine's answer
+      // submission (requestPresign/completeUpload both go through
+      // ApiClient) — back off every row, not just this one, until the
+      // cooldown elapses (phase-07 Design Constraints). The raw PUT to
+      // MinIO never throws this: it doesn't go through the gateway.
+      _backoff.registerRateLimited(retryAfter: e.retryAfter);
+      _logger.w('Media upload rate-limited, backing off', error: e);
+    } catch (e, stackTrace) {
+      // Left at whatever status it reached — retried on the next
+      // canary/periodic trigger, mirroring SyncEngine's leave-pending
+      // behavior. No terminal-rejected equivalent exists for the media
+      // pipeline (phase-06 Risks: unbounded retry is the correct
+      // behavior here, not a gap).
+      _logger.w(
+        'Media upload advance failed for ${current.pinnedItemPublicId}, left at ${current.status} for next tick',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      await _mediaDao.markError(
+        current.attemptPublicId,
+        current.pinnedItemPublicId,
+        e.toString(),
+      );
     }
   }
 

@@ -17,6 +17,8 @@ class ExamHeaderBar extends StatelessWidget {
     this.timeContent,
     this.onAudioCheck,
     this.onForceSubmit,
+    this.finishLabel = ExamChromeConfig.finishExamLabel,
+    this.finishLoading = false,
   });
 
   final String examTitle;
@@ -27,6 +29,8 @@ class ExamHeaderBar extends StatelessWidget {
   final Widget? timeContent;
   final VoidCallback? onAudioCheck;
   final VoidCallback? onForceSubmit;
+  final String finishLabel;
+  final bool finishLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -84,14 +88,29 @@ class ExamHeaderBar extends StatelessWidget {
     );
   }
 
-  Widget _submitButton() {
-    return IconButton(
-      onPressed: onForceSubmit,
-      tooltip: ExamChromeConfig.submitExamTooltip,
-      icon: const Icon(Icons.send_outlined, size: 20),
-      color: AppColors.primary,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 36),
+  Widget _finishButton({required bool compact}) {
+    final button = TextButton.icon(
+      onPressed: finishLoading ? null : onForceSubmit,
+      icon: finishLoading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.send_outlined, size: 18),
+      label: compact ? const SizedBox.shrink() : Text(finishLabel),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, AppDimensions.buttonHeight),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingSm),
+        foregroundColor: AppColors.primary,
+        disabledForegroundColor: AppColors.textMuted,
+        textStyle: AppTypography.bodyBold,
+      ),
+    );
+    return Semantics(
+      button: true,
+      label: finishLabel,
+      child: Tooltip(message: finishLabel, child: button),
     );
   }
 
@@ -139,7 +158,7 @@ class ExamHeaderBar extends StatelessWidget {
         const SizedBox(width: AppDimensions.spacingSm),
         _timer(),
         const SizedBox(width: AppDimensions.spacingSm),
-        _submitButton(),
+        _finishButton(compact: true),
       ],
     );
   }
@@ -174,7 +193,7 @@ class ExamHeaderBar extends StatelessWidget {
         const SizedBox(width: AppDimensions.spacingLg),
         _timer(),
         const SizedBox(width: AppDimensions.spacingLg),
-        _submitButton(),
+        _finishButton(compact: false),
       ],
     );
   }

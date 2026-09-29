@@ -19,14 +19,31 @@ enum LockdownMode {
   /// and every violation recorded at critical severity.
   strict;
 
-  /// Parses the backend string. Tolerant of legacy casing (the existing
-  /// scheduling DTOs use `LockdownMode.valueOf` which is case-sensitive
-  /// server-side, but the wire format is always uppercase on disk).
+  /// Parses a server-pinned lockdown policy without inventing a fallback.
+  ///
+  /// A missing or unknown policy is a contract failure for a new attempt. It
+  /// must not become [LockdownMode.none], because that would turn malformed
+  /// policy data into an accidental bypass of the security contract.
   static LockdownMode fromString(String value) {
     final normalized = value.trim().toLowerCase();
-    return LockdownMode.values.firstWhere(
-      (mode) => mode.name == normalized,
-      orElse: () => LockdownMode.none,
-    );
+    for (final mode in LockdownMode.values) {
+      if (mode.name == normalized) return mode;
+    }
+    throw LockdownPolicyException('Unknown lockdown mode: $value', value);
   }
+}
+
+/// Raised when an attempt response does not contain a usable pinned policy.
+///
+/// This is intentionally separate from [LockdownActivationException]: the
+/// former means the server contract is unsafe/invalid, while the latter means
+/// a valid policy could not be installed on the device.
+class LockdownPolicyException implements Exception {
+  const LockdownPolicyException(this.message, [this.rawValue]);
+
+  final String message;
+  final String? rawValue;
+
+  @override
+  String toString() => 'LockdownPolicyException($message)';
 }

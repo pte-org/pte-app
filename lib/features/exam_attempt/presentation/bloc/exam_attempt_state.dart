@@ -8,6 +8,11 @@ sealed class ExamAttemptState {
   const ExamAttemptState();
 }
 
+/// Terminal-submit lifecycle owned by [ExamAttemptBloc]. A widget may render
+/// these values, but it must never infer native exit permission from a local
+/// route or from a completion screen.
+enum AttemptSubmissionStatus { ready, submitting, retryableFailure }
+
 final class AttemptIdle extends ExamAttemptState {
   const AttemptIdle();
 }
@@ -32,6 +37,8 @@ final class AttemptInProgress extends ExamAttemptState {
     this.timerSnapshot, {
     List<TaskView>? allTasks,
     this.currentIndex = 0,
+    this.submissionStatus = AttemptSubmissionStatus.ready,
+    this.submissionError,
     this.examMode,
   }) : allTasks = allTasks ?? [singleTask];
 
@@ -47,6 +54,10 @@ final class AttemptInProgress extends ExamAttemptState {
 
   final TimerSnapshot timerSnapshot;
 
+  final AttemptSubmissionStatus submissionStatus;
+
+  final Exception? submissionError;
+
   /// Wire value from server — `"PRACTICE"` or `"OFFICIAL_EXAM"`. Null only
   /// for legacy attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
   final String? examMode;
@@ -59,6 +70,9 @@ final class AttemptInProgress extends ExamAttemptState {
     List<TaskView>? allTasks,
     int? currentIndex,
     TimerSnapshot? timerSnapshot,
+    AttemptSubmissionStatus? submissionStatus,
+    Exception? submissionError,
+    bool clearSubmissionError = false,
   }) {
     final newAllTasks = allTasks ?? this.allTasks;
     final newIndex = currentIndex ?? this.currentIndex;
@@ -68,6 +82,10 @@ final class AttemptInProgress extends ExamAttemptState {
       timerSnapshot ?? this.timerSnapshot,
       allTasks: newAllTasks,
       currentIndex: newIndex,
+      submissionStatus: submissionStatus ?? this.submissionStatus,
+      submissionError: clearSubmissionError
+          ? null
+          : submissionError ?? this.submissionError,
       examMode: examMode,
     );
   }

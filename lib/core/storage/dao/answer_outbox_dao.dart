@@ -40,6 +40,14 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
     return (select(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).get();
   }
 
+  /// Counts tasks that have a non-empty local answer payload. An empty
+  /// payload is the explicit representation used when a student skips a
+  /// task, so this remains accurate for partial and zero-answer attempts.
+  Future<int> countAnsweredByAttempt(String attemptPublicId) async {
+    final rows = await queryByAttempt(attemptPublicId);
+    return rows.where((row) => row.payload.trim().isNotEmpty).length;
+  }
+
   Future<List<AnswerOutbox>> queryPendingByAttempt(String attemptPublicId) {
     return (select(answerOutboxTable)
           ..where(

@@ -21,11 +21,9 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 /// listening to this bloc's state changes, matching Phase 1's `AuthBloc`
 /// constraint.
 ///
-/// Depends on `SyncEngine` only, never `AnswerOutboxDao` directly — resume
-/// reconciliation is composed entirely through `SyncEngine.startSync` +
-/// `SyncEngine.flushNow`, so the outbox's own storage details stay inside
-/// Phase 2 (phase-03 Design Constraints: "the repository itself has no
-/// outbox dependency" applies equally to this Bloc).
+/// Depends on sync/media services rather than `AnswerOutboxDao` directly —
+/// terminal preparation and resume reconciliation stay behind those service
+/// contracts, so the outbox's storage details stay below the Bloc.
 class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   ExamAttemptBloc({
     required ExamAttemptRepository repository,
@@ -105,6 +103,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   ) async {
     emit(const AttemptStarting());
     String? sessionPublicId;
+    var exitGuardActivated = false;
     try {
       sessionPublicId = await _sessionEntryRepository.resolveSessionPublicId(
         event.rawInput,
@@ -128,6 +127,14 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         // the entire start — STRICT-mode attempts MUST NOT begin if
         // fullscreen/shortcut/clipboard hooks aren't installed.
         await _activateLockdownForResponse(response);
+        // The submit-before-exit guard applies to every real attempt,
+        // including Practice/NONE where anti-cheat fullscreen is disabled.
+        // It is a separate native gate and is released only after the
+        // backend acknowledges terminal submission.
+        await _lockdownService.activateAttemptExitGuard(
+          attemptPublicId: response.attemptPublicId,
+        );
+        exitGuardActivated = true;
 
         // Resume reconciliation: any Phase 2 outbox rows left over from a
         // prior app session for this attempt get an immediate flush
@@ -146,6 +153,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // STRICT/STANDARD activation failed. Surface as an
       // [AttemptError] so the UI can render the failure dialog; do
       // NOT touch SyncEngine — nothing was started yet.
+      await _rollbackFailedAttemptStart(exitGuardActivated: exitGuardActivated);
       emit(AttemptError(e));
     } catch (e) {
       // Any failure here — SessionResolutionException, a mapped
@@ -159,22 +167,46 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
           sessionPublicId != null) {
         emit(DeviceCheckRequired(sessionPublicId));
       } else {
+        await _rollbackFailedAttemptStart(
+          exitGuardActivated: exitGuardActivated,
+        );
         emit(AttemptError(_asAttemptException(e)));
       }
     }
   }
 
+  Future<void> _rollbackFailedAttemptStart({
+    required bool exitGuardActivated,
+  }) async {
+    if (exitGuardActivated) {
+      try {
+        await _lockdownService.abortAttemptExitGuard();
+      } on Object catch (_) {
+        // Best effort only; the failure state must still be emitted.
+      }
+    }
+    try {
+      await _lockdownService.deactivateLockdown();
+    } on Object catch (_) {
+      // The activation path already rolls back its own partial state. This
+      // second cleanup covers a later response/bridge failure.
+    }
+  }
+
   /// Maps the response's `lockdownMode` (Phase 1 wire value) to the
-  /// service's [LockdownMode] enum and activates accordingly. `none` /
-  /// null are silent no-ops. Anything else surfaces as a
-  /// [LockdownActivationException] the caller catches.
+  /// service's [LockdownMode] enum and activates accordingly. `NONE` is the
+  /// only silent no-op. A missing or unknown policy is a contract failure and
+  /// must reach the retryable attempt error instead of opening the task.
   Future<void> _activateLockdownForResponse(
     AttemptTaskResponse response,
   ) async {
     final wire = response.lockdownMode;
-    final mode = wire == null
-        ? LockdownMode.none
-        : LockdownMode.fromString(wire);
+    if (wire == null || wire.trim().isEmpty) {
+      throw const LockdownPolicyException(
+        'Attempt response is missing the pinned lockdown mode',
+      );
+    }
+    final mode = LockdownMode.fromString(wire);
     if (mode == LockdownMode.none) return;
     await _lockdownService.activateLockdown(
       mode: mode,
@@ -187,7 +219,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) {
     final currentState = state;
-    if (currentState is! AttemptInProgress) return;
+    if (currentState is! AttemptInProgress ||
+        currentState.submissionStatus != AttemptSubmissionStatus.ready) {
+      return;
+    }
     _lastAdvanceReason = event.reason;
 
     final nextIndex = currentState.currentIndex + 1;
@@ -201,10 +236,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _timerService.seedFromTask(nextTask);
     _timerService.startPolling(currentState.attemptPublicId);
     _heartbeatService.start(currentState.attemptPublicId);
-    emit(currentState.copyWith(
-      currentIndex: nextIndex,
-      timerSnapshot: _timerService.currentSnapshot,
-    ));
+    emit(
+      currentState.copyWith(
+        currentIndex: nextIndex,
+        timerSnapshot: _timerService.currentSnapshot,
+      ),
+    );
   }
 
   void _onNavigateTaskRequested(
@@ -212,7 +249,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) {
     final currentState = state;
-    if (currentState is! AttemptInProgress) return;
+    if (currentState is! AttemptInProgress ||
+        currentState.submissionStatus != AttemptSubmissionStatus.ready) {
+      return;
+    }
     _lastAdvanceReason = AdvanceReason.manual;
 
     final fromIndex = currentState.allTasks.indexWhere(
@@ -220,8 +260,8 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
     if (fromIndex < 0) return;
 
-    final targetIndex = fromIndex +
-        (event.direction == TaskNavigationDirection.next ? 1 : -1);
+    final targetIndex =
+        fromIndex + (event.direction == TaskNavigationDirection.next ? 1 : -1);
     if (targetIndex < 0 || targetIndex >= currentState.allTasks.length) return;
 
     final targetTask = currentState.allTasks[targetIndex];
@@ -229,10 +269,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _timerService.seedFromTask(targetTask);
     _timerService.startPolling(currentState.attemptPublicId);
     _heartbeatService.start(currentState.attemptPublicId);
-    emit(currentState.copyWith(
-      currentIndex: targetIndex,
-      timerSnapshot: _timerService.currentSnapshot,
-    ));
+    emit(
+      currentState.copyWith(
+        currentIndex: targetIndex,
+        timerSnapshot: _timerService.currentSnapshot,
+      ),
+    );
   }
 
   Exception _asAttemptException(Object error) =>
@@ -253,6 +295,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   ) {
     final currentState = state;
     if (currentState is! AttemptInProgress) return;
+    if (currentState.submissionStatus != AttemptSubmissionStatus.ready) {
+      return;
+    }
     final examJustExpired =
         event.snapshot.examRemaining == Duration.zero &&
         currentState.timerSnapshot.examRemaining > Duration.zero;
@@ -281,11 +326,34 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) async {
     final attemptPublicId = _attemptPublicId;
-    if (attemptPublicId == null || _forceSubmitInFlight) return;
+    final currentState = state;
+    if (attemptPublicId == null ||
+        _forceSubmitInFlight ||
+        currentState is! AttemptInProgress ||
+        currentState.submissionStatus == AttemptSubmissionStatus.submitting) {
+      return;
+    }
     _forceSubmitInFlight = true;
     _lastAdvanceReason = event.reason;
+    emit(
+      currentState.copyWith(
+        submissionStatus: AttemptSubmissionStatus.submitting,
+        clearSubmissionError: true,
+      ),
+    );
     try {
+      // A recorded response only enters the answer outbox after its media
+      // upload is ready. Resolve media first, then flush every answer row
+      // (including the currently displayed task) before asking the server to
+      // close the attempt.
+      await _mediaUploadCoordinator.flushBeforeSubmit(attemptPublicId);
+      await _syncEngine.flushBeforeSubmit(attemptPublicId);
       final response = await _repository.forceSubmit(attemptPublicId);
+      if (!response.completed || response.attemptStatus != 'SUBMITTED') {
+        throw const UnknownApiException(
+          'Server did not acknowledge the attempt as submitted.',
+        );
+      }
       // Same terminal outcome as the natural end-of-tasks path in
       // _emitFromResponse — force-submit and running out of tasks are
       // indistinguishable from the UI's perspective (phase-07 Design
@@ -298,7 +366,16 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         canRetry: response.canRetry,
       );
     } catch (e) {
-      emit(AttemptError(_asAttemptException(e)));
+      final latestState = state;
+      if (latestState is AttemptInProgress &&
+          latestState.attemptPublicId == attemptPublicId) {
+        emit(
+          latestState.copyWith(
+            submissionStatus: AttemptSubmissionStatus.retryableFailure,
+            submissionError: _asAttemptException(e),
+          ),
+        );
+      }
     } finally {
       _forceSubmitInFlight = false;
     }
@@ -320,9 +397,34 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       _timerService.startPolling(attemptPublicId);
       return;
     }
+    if (currentState.submissionStatus == AttemptSubmissionStatus.submitting) {
+      return;
+    }
 
+    AttemptTaskResponse? terminalResponse;
     try {
       final responses = await _repository.fetchAllTasks(attemptPublicId);
+      for (final response in responses) {
+        if (response.completed) {
+          terminalResponse = response;
+          break;
+        }
+      }
+      if (terminalResponse != null) {
+        if (terminalResponse.attemptStatus != 'SUBMITTED') {
+          throw const UnknownApiException(
+            'Server returned a terminal attempt without submission acknowledgement.',
+          );
+        }
+        await _completeAttempt(
+          terminalResponse.attemptPublicId,
+          emit,
+          attemptNumber: terminalResponse.attemptNumber,
+          remainingRetries: terminalResponse.remainingRetries,
+          canRetry: terminalResponse.canRetry,
+        );
+        return;
+      }
       final freshTasks = responses
           .where((r) => !r.completed && r.task != null)
           .map((r) => r.task!)
@@ -343,12 +445,26 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       _syncEngine.setActiveTask(resumeTask.pinnedItemPublicId);
       _timerService.seedFromTask(resumeTask);
       _timerService.startPolling(attemptPublicId);
-      emit(currentState.copyWith(
-        allTasks: freshTasks,
-        currentIndex: safeIndex,
-        timerSnapshot: _timerService.currentSnapshot,
-      ));
-    } catch (_) {
+      emit(
+        currentState.copyWith(
+          allTasks: freshTasks,
+          currentIndex: safeIndex,
+          timerSnapshot: _timerService.currentSnapshot,
+        ),
+      );
+    } catch (e) {
+      if (terminalResponse != null) {
+        final latestState = state;
+        if (latestState is AttemptInProgress &&
+            latestState.attemptPublicId == attemptPublicId) {
+          emit(
+            latestState.copyWith(
+              submissionStatus: AttemptSubmissionStatus.retryableFailure,
+              submissionError: _asAttemptException(e),
+            ),
+          );
+        }
+      }
       _timerService.startPolling(attemptPublicId);
     }
   }
@@ -364,6 +480,12 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     int remainingRetries = 0,
     bool canRetry = false,
   }) async {
+    // Server acknowledgement is necessary but not sufficient for leaving the
+    // guarded shell: the native bridge must also accept the explicit unlock.
+    // If it fails, let the caller keep the attempt active and expose Retry;
+    // forceSubmit is idempotent, so the next retry can re-run this boundary.
+    await _lockdownService.allowExitAfterSubmission();
+
     _attemptPublicId = null;
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
@@ -375,12 +497,21 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // student's UI in a half-restored state while the timer is still
     // ticking (phase-04 Design Constraints). Teardown itself is
     // idempotent — running it twice in a row is a no-op.
+    // Native close permission was granted above, after the server
+    // acknowledgement, so a local completion screen cannot be the unlock
+    // signal by itself.
     try {
       await _lockdownService.deactivateLockdown();
     } on Object catch (_) {
       // Lockdown teardown must never throw out of this path — the
       // attempt is terminal, the student's screen state must reflect
       // that even if a platform call glitched on the way out.
+    }
+    try {
+      await _lockdownService.deactivateAttemptExitGuard();
+    } on Object catch (_) {
+      // The native permission is already open; a failed flag teardown cannot
+      // turn the completion surface into an unacknowledged exit path.
     }
     final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
     _lastAdvanceReason = AdvanceReason.manual;
@@ -400,6 +531,11 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) async {
     if (response.completed) {
+      if (response.attemptStatus != 'SUBMITTED') {
+        throw const UnknownApiException(
+          'Server returned a terminal attempt without submission acknowledgement.',
+        );
+      }
       await _completeAttempt(
         response.attemptPublicId,
         emit,
@@ -430,7 +566,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // Falls back to single-task mode on error — exam still runs correctly.
     List<TaskView> allTasks;
     try {
-      final responses = await _repository.fetchAllTasks(response.attemptPublicId);
+      final responses = await _repository.fetchAllTasks(
+        response.attemptPublicId,
+      );
       allTasks = responses
           .where((r) => !r.completed && r.task != null)
           .map((r) => r.task!)

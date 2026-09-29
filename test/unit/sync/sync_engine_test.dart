@@ -11,6 +11,7 @@ import 'package:pte_app/core/storage/answer_sync_status.dart';
 import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/rate_limit_backoff.dart';
+import 'package:pte_app/core/sync/submission_preparation_exception.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
@@ -43,7 +44,8 @@ AnswerOutbox _row({
   );
 }
 
-Response<void> _okResponse() => Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
+Response<void> _okResponse() =>
+    Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
 
 void main() {
   late _MockAnswerOutboxDao dao;
@@ -71,7 +73,9 @@ void main() {
     'flushes exactly the pending rows for the started attempt, never a different attemptPublicId '
     'and never terminalRejected/synced rows',
     () async {
-      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
       when(
         () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
@@ -81,63 +85,103 @@ void main() {
       ).thenAnswer((_) async => _okResponse());
       when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-      final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
       engine.startSync('attempt-1');
       canaryController.add(null);
       await Future<void>.delayed(Duration.zero);
 
       verify(() => dao.queryPendingByAttempt('attempt-1')).called(1);
       verify(
-        () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+        () => apiClient.saveAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'p1',
+          payload: 'payload',
+        ),
       ).called(1);
       verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
     },
   );
 
-  test('a 409 response results in markTerminalRejected, never a retry loop', () async {
-    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-    when(
-      () => apiClient.saveAnswer(
-        attemptPublicId: any(named: 'attemptPublicId'),
-        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-        payload: any(named: 'payload'),
-      ),
-    ).thenThrow(const ConflictException('NOT_CURRENT_TASK'));
-    when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
+  test(
+    'a 409 response results in markTerminalRejected, never a retry loop',
+    () async {
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenThrow(const ConflictException('NOT_CURRENT_TASK'));
+      when(
+        () => dao.markTerminalRejected(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
-    canaryController.add(null);
-    await Future<void>.delayed(Duration.zero);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      canaryController.add(null);
+      await Future<void>.delayed(Duration.zero);
 
-    verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK')).called(1);
-    verifyNever(() => dao.markSynced(any(), any()));
-  });
+      verify(
+        () => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK'),
+      ).called(1);
+      verifyNever(() => dao.markSynced(any(), any()));
+    },
+  );
 
-  test('a ValidationException also results in markTerminalRejected — retrying the same malformed payload forever cannot succeed', () async {
-    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-    when(
-      () => apiClient.saveAnswer(
-        attemptPublicId: any(named: 'attemptPublicId'),
-        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-        payload: any(named: 'payload'),
-      ),
-    ).thenThrow(const ValidationException('Request rejected (400)'));
-    when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
+  test(
+    'a ValidationException also results in markTerminalRejected — retrying the same malformed payload forever cannot succeed',
+    () async {
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenThrow(const ValidationException('Request rejected (400)'));
+      when(
+        () => dao.markTerminalRejected(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
-    canaryController.add(null);
-    await Future<void>.delayed(Duration.zero);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      canaryController.add(null);
+      await Future<void>.delayed(Duration.zero);
 
-    verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'Request rejected (400)')).called(1);
-    verifyNever(() => dao.markSynced(any(), any()));
-  });
+      verify(
+        () => dao.markTerminalRejected(
+          'attempt-1',
+          'p1',
+          'Request rejected (400)',
+        ),
+      ).called(1);
+      verifyNever(() => dao.markSynced(any(), any()));
+    },
+  );
 
   test(
     'an AuthException leaves the row pending (session-level failure, not a row-specific one — retries indefinitely by design)',
     () async {
-      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
       when(
         () => apiClient.saveAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
@@ -146,7 +190,11 @@ void main() {
         ),
       ).thenThrow(const AuthException('Authentication failed (401)'));
 
-      final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
       engine.startSync('attempt-1');
       canaryController.add(null);
       await Future<void>.delayed(Duration.zero);
@@ -156,68 +204,185 @@ void main() {
     },
   );
 
-  test('a NetworkException leaves the row untouched for the next tick (no mark* call)', () async {
-    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-    when(
-      () => apiClient.saveAnswer(
-        attemptPublicId: any(named: 'attemptPublicId'),
-        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-        payload: any(named: 'payload'),
-      ),
-    ).thenThrow(const NetworkException('connection refused'));
+  test(
+    'a NetworkException leaves the row untouched for the next tick (no mark* call)',
+    () async {
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenThrow(const NetworkException('connection refused'));
 
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
-    canaryController.add(null);
-    await Future<void>.delayed(Duration.zero);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      canaryController.add(null);
+      await Future<void>.delayed(Duration.zero);
 
-    verifyNever(() => dao.markSynced(any(), any()));
-    verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
-    verifyNever(() => dao.markPending(any(), any()));
-  });
+      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
+      verifyNever(() => dao.markPending(any(), any()));
+    },
+  );
 
-  test('starting for a second, different attemptPublicId while running throws StateError', () {
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
+  test(
+    'starting for a second, different attemptPublicId while running throws StateError',
+    () {
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
 
-    expect(() => engine.startSync('attempt-2'), throwsA(isA<StateError>()));
-  });
+      expect(() => engine.startSync('attempt-2'), throwsA(isA<StateError>()));
+    },
+  );
 
-  test('starting again with the same attemptPublicId while running is a no-op, not an error', () {
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
+  test(
+    'starting again with the same attemptPublicId while running is a no-op, not an error',
+    () {
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
 
-    expect(() => engine.startSync('attempt-1'), returnsNormally);
-  });
+      expect(() => engine.startSync('attempt-1'), returnsNormally);
+    },
+  );
 
-  test('flushNow triggers an immediate flush pass for the running attempt, independent of any canary/periodic trigger', () async {
-    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-    when(
-      () => apiClient.saveAnswer(
-        attemptPublicId: any(named: 'attemptPublicId'),
-        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-        payload: any(named: 'payload'),
-      ),
-    ).thenAnswer((_) async => _okResponse());
-    when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+  test(
+    'flushNow triggers an immediate flush pass for the running attempt, independent of any canary/periodic trigger',
+    () async {
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async => _okResponse());
+      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
-    await engine.flushNow('attempt-1');
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      await engine.flushNow('attempt-1');
 
-    verify(
-      () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
-    ).called(1);
-  });
+      verify(
+        () => apiClient.saveAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'p1',
+          payload: 'payload',
+        ),
+      ).called(1);
+    },
+  );
 
-  test('flushNow is a no-op if attemptPublicId is not the currently running attempt', () async {
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
-    engine.startSync('attempt-1');
+  test(
+    'flushNow is a no-op if attemptPublicId is not the currently running attempt',
+    () async {
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
 
-    await engine.flushNow('attempt-2');
+      await engine.flushNow('attempt-2');
 
-    verifyNever(() => dao.queryPendingByAttempt(any()));
-  });
+      verifyNever(() => dao.queryPendingByAttempt(any()));
+    },
+  );
+
+  test(
+    'flushBeforeSubmit includes the active task and succeeds only after all pending rows are synced',
+    () async {
+      var pendingReads = 0;
+      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async {
+        pendingReads++;
+        return pendingReads == 1
+            ? [_row(pinnedItemPublicId: 'active')]
+            : const [];
+      });
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async => _okResponse());
+      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      engine.setActiveTask('active');
+
+      await engine.flushBeforeSubmit('attempt-1');
+
+      verify(
+        () => apiClient.saveAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'active',
+          payload: 'payload',
+        ),
+      ).called(1);
+      expect(pendingReads, 3);
+    },
+  );
+
+  test(
+    'flushBeforeSubmit remains retryable when a transient answer row stays pending',
+    () async {
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'active')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenThrow(const NetworkException('offline'));
+
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+
+      await expectLater(
+        engine.flushBeforeSubmit('attempt-1'),
+        throwsA(
+          isA<SubmissionPreparationException>().having(
+            (error) => error.kind,
+            'kind',
+            SubmissionPreparationKind.answers,
+          ),
+        ),
+      );
+    },
+  );
 
   test(
     'a pending row matching setActiveTask is never selected by a canary- or periodic-triggered flush, '
@@ -229,8 +394,12 @@ void main() {
         return Timer(const Duration(days: 999), () {});
       }
 
-      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'active')]);
-      when(() => dao.getAnswer('attempt-1', 'active')).thenAnswer((_) async => _row(pinnedItemPublicId: 'active'));
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'active')]);
+      when(
+        () => dao.getAnswer('attempt-1', 'active'),
+      ).thenAnswer((_) async => _row(pinnedItemPublicId: 'active'));
       when(
         () => apiClient.submitAnswer(
           attemptPublicId: any(named: 'attemptPublicId'),
@@ -240,7 +409,12 @@ void main() {
       ).thenAnswer((_) async => _okResponse());
       when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-      final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary, createPeriodicTimer: fakePeriodicTimer);
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+        createPeriodicTimer: fakePeriodicTimer,
+      );
       engine.startSync('attempt-1');
       engine.setActiveTask('active');
 
@@ -260,7 +434,11 @@ void main() {
       await engine.flushOne('active');
 
       verify(
-        () => apiClient.submitAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'active', payload: 'payload'),
+        () => apiClient.submitAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'active',
+          payload: 'payload',
+        ),
       ).called(1);
     },
   );
@@ -269,7 +447,9 @@ void main() {
     test(
       'NotCurrentTaskException marks terminal-rejected AND emits on taskRejectedExternally',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -277,18 +457,28 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).thenThrow(const NotCurrentTaskException('NOT_CURRENT_TASK'));
-        when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markTerminalRejected(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         var rejectedCount = 0;
-        final sub = engine.taskRejectedExternally.listen((_) => rejectedCount++);
+        final sub = engine.taskRejectedExternally.listen(
+          (_) => rejectedCount++,
+        );
         addTearDown(sub.cancel);
 
         engine.startSync('attempt-1');
         canaryController.add(null);
         await Future<void>.delayed(Duration.zero);
 
-        verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK')).called(1);
+        verify(
+          () => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK'),
+        ).called(1);
         expect(rejectedCount, 1);
       },
     );
@@ -303,7 +493,9 @@ void main() {
       'the generic-fallback ConflictException (e.g. ANSWER_ALREADY_SUBMITTED, or an unrecognized future 409 code) '
       'marks terminal-rejected but does NOT emit on taskRejectedExternally',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -311,18 +503,32 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).thenThrow(const ConflictException('ANSWER_ALREADY_SUBMITTED'));
-        when(() => dao.markTerminalRejected(any(), any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markTerminalRejected(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         var rejectedCount = 0;
-        final sub = engine.taskRejectedExternally.listen((_) => rejectedCount++);
+        final sub = engine.taskRejectedExternally.listen(
+          (_) => rejectedCount++,
+        );
         addTearDown(sub.cancel);
 
         engine.startSync('attempt-1');
         canaryController.add(null);
         await Future<void>.delayed(Duration.zero);
 
-        verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'ANSWER_ALREADY_SUBMITTED')).called(1);
+        verify(
+          () => dao.markTerminalRejected(
+            'attempt-1',
+            'p1',
+            'ANSWER_ALREADY_SUBMITTED',
+          ),
+        ).called(1);
         expect(rejectedCount, 0);
       },
     );
@@ -346,7 +552,9 @@ void main() {
         // Pass 1: one pending row, submitAnswer throws RateLimitException
         // with no server-supplied Retry-After — falls back to the
         // exponential backoff starting at baseInterval (1s).
-        when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -355,7 +563,12 @@ void main() {
           ),
         ).thenThrow(const RateLimitException('Rate limited (429)'));
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary, backoff: backoff);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+          backoff: backoff,
+        );
         engine.startSync('attempt-1');
 
         await engine.flushNow('attempt-1');
@@ -367,7 +580,11 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).called(1);
-        expect(backoff.isActive, isTrue, reason: 'a 429 must arm the cooldown immediately');
+        expect(
+          backoff.isActive,
+          isTrue,
+          reason: 'a 429 must arm the cooldown immediately',
+        );
         verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
 
         // Pass 2: still within the cooldown window (same fake time) — the
@@ -388,7 +605,11 @@ void main() {
 
         // Advance the fake clock past the 1s cooldown window.
         currentTime = currentTime.add(const Duration(seconds: 2));
-        expect(backoff.isActive, isFalse, reason: 'the cooldown window has elapsed per the fake clock');
+        expect(
+          backoff.isActive,
+          isFalse,
+          reason: 'the cooldown window has elapsed per the fake clock',
+        );
 
         // Pass 3: cooldown elapsed — now succeeds and must reset the backoff.
         when(
@@ -401,7 +622,11 @@ void main() {
 
         await engine.flushNow('attempt-1');
         verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
-        expect(backoff.isActive, isFalse, reason: 'a successful flush must reset() the backoff');
+        expect(
+          backoff.isActive,
+          isFalse,
+          reason: 'a successful flush must reset() the backoff',
+        );
 
         // Pass 4: a fresh 429 immediately after reset must be treated as
         // the first cooldown again (i.e. reset() actually cleared prior
@@ -419,37 +644,61 @@ void main() {
       },
     );
 
-    test('a Retry-After-bearing RateLimitException uses the server-supplied duration verbatim, not the exponential default', () async {
-      var currentTime = DateTime(2026, 1, 1, 0, 0, 0);
-      final backoff = RateLimitBackoff(now: () => currentTime);
+    test(
+      'a Retry-After-bearing RateLimitException uses the server-supplied duration verbatim, not the exponential default',
+      () async {
+        var currentTime = DateTime(2026, 1, 1, 0, 0, 0);
+        final backoff = RateLimitBackoff(now: () => currentTime);
 
-      when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-      when(
-        () => apiClient.saveAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
-      ).thenThrow(const RateLimitException('Rate limited (429)', retryAfter: Duration(seconds: 10)));
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => apiClient.saveAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenThrow(
+          const RateLimitException(
+            'Rate limited (429)',
+            retryAfter: Duration(seconds: 10),
+          ),
+        );
 
-      final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary, backoff: backoff);
-      engine.startSync('attempt-1');
-      await engine.flushNow('attempt-1');
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+          backoff: backoff,
+        );
+        engine.startSync('attempt-1');
+        await engine.flushNow('attempt-1');
 
-      currentTime = currentTime.add(const Duration(seconds: 5));
-      expect(backoff.isActive, isTrue, reason: 'only 5 of the 10 server-supplied seconds have elapsed');
+        currentTime = currentTime.add(const Duration(seconds: 5));
+        expect(
+          backoff.isActive,
+          isTrue,
+          reason: 'only 5 of the 10 server-supplied seconds have elapsed',
+        );
 
-      currentTime = currentTime.add(const Duration(seconds: 6));
-      expect(backoff.isActive, isFalse, reason: 'now past the 10s server-supplied window');
-    });
+        currentTime = currentTime.add(const Duration(seconds: 6));
+        expect(
+          backoff.isActive,
+          isFalse,
+          reason: 'now past the 10s server-supplied window',
+        );
+      },
+    );
   });
 
   group('Encryption support (Phase 3)', () {
     test(
       'startSync with a non-null encryptionPublicKey causes _flushOne to call submitEncryptedAnswer instead of submitAnswer',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1'))
-            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveEncryptedAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -464,7 +713,11 @@ void main() {
         const encryptionPublicKey =
             'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmkRv1ibV6X9T/mPzAkvP68kJ7v+nhkV99yPj3EMYdGtrS4t8+41k6UJFKNKFe4ea7AfGQnl68XFgwQsezrOqEe5D2ildsNi6t8+MGfxbYFmN2QH4F/u2eTPjCH31RNeeuY0p0pjlL7nD2hX9GhGjRzz1juhu0Mvc5qPIVEsJKMjPpY/vhpccmPLtDU240hq5roEOV/NObL8HywJjiP8i9NUimPvDq8aA5f5lMdBj0ui3skCaF1J4lBVOST5KRjDBmAEGMloMbZstN2Q5LiVZWk1AQzL18zHQ9sNp0FzxlyD/iVXsYJEYCzYB4KoGttreCDyhzIeYnqZnyZia70jCwQIDAQAB';
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         engine.startSync('attempt-1', encryptionPublicKey: encryptionPublicKey);
         canaryController.add(null);
         await Future<void>.delayed(Duration.zero);
@@ -488,8 +741,9 @@ void main() {
     test(
       'startSync without encryptionPublicKey (null) keeps calling submitAnswer for STANDARD attempts',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1'))
-            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -499,7 +753,11 @@ void main() {
         ).thenAnswer((_) async => _okResponse());
         when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         // No encryptionPublicKey provided
         engine.startSync('attempt-1');
         canaryController.add(null);
@@ -521,8 +779,9 @@ void main() {
     test(
       'startSync with explicit null encryptionPublicKey keeps the STANDARD submission path',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1'))
-            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -532,13 +791,21 @@ void main() {
         ).thenAnswer((_) async => _okResponse());
         when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         engine.startSync('attempt-1', encryptionPublicKey: null);
         canaryController.add(null);
         await Future<void>.delayed(Duration.zero);
 
         verify(
-          () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
+          () => apiClient.saveAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            payload: 'payload',
+          ),
         ).called(1);
       },
     );
@@ -546,8 +813,9 @@ void main() {
     test(
       'submitEncryptedAnswer() 409 NOT_CURRENT_TASK during encrypted submission marks terminal-rejected',
       () async {
-        when(() => dao.queryPendingByAttempt('attempt-1'))
-            .thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+        when(
+          () => dao.queryPendingByAttempt('attempt-1'),
+        ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
         when(
           () => apiClient.saveEncryptedAnswer(
             attemptPublicId: any(named: 'attemptPublicId'),
@@ -557,57 +825,80 @@ void main() {
             ciphertext: any(named: 'ciphertext'),
           ),
         ).thenThrow(const NotCurrentTaskException('NOT_CURRENT_TASK'));
-        when(() => dao.markTerminalRejected(any(), any(), any()))
-            .thenAnswer((_) async {});
+        when(
+          () => dao.markTerminalRejected(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
         const encryptionPublicKey =
             'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmkRv1ibV6X9T/mPzAkvP68kJ7v+nhkV99yPj3EMYdGtrS4t8+41k6UJFKNKFe4ea7AfGQnl68XFgwQsezrOqEe5D2ildsNi6t8+MGfxbYFmN2QH4F/u2eTPjCH31RNeeuY0p0pjlL7nD2hX9GhGjRzz1juhu0Mvc5qPIVEsJKMjPpY/vhpccmPLtDU240hq5roEOV/NObL8HywJjiP8i9NUimPvDq8aA5f5lMdBj0ui3skCaF1J4lBVOST5KRjDBmAEGMloMbZstN2Q5LiVZWk1AQzL18zHQ9sNp0FzxlyD/iVXsYJEYCzYB4KoGttreCDyhzIeYnqZnyZia70jCwQIDAQAB';
 
-        final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary);
+        final engine = SyncEngine(
+          outboxDao: dao,
+          apiClient: apiClient,
+          canary: canary,
+        );
         var rejectedCount = 0;
-        final sub = engine.taskRejectedExternally.listen((_) => rejectedCount++);
+        final sub = engine.taskRejectedExternally.listen(
+          (_) => rejectedCount++,
+        );
         addTearDown(sub.cancel);
 
         engine.startSync('attempt-1', encryptionPublicKey: encryptionPublicKey);
         canaryController.add(null);
         await Future<void>.delayed(Duration.zero);
 
-        verify(() => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK')).called(1);
+        verify(
+          () => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK'),
+        ).called(1);
         expect(rejectedCount, 1);
       },
     );
   });
 
-  test('a canary event and a periodic tick firing at effectively the same instant never overlap', () async {
-    void Function(Timer)? periodicCallback;
-    Timer fakePeriodicTimer(Duration period, void Function(Timer) callback) {
-      periodicCallback = callback;
-      return Timer(const Duration(days: 999), () {});
-    }
+  test(
+    'a canary event and a periodic tick firing at effectively the same instant never overlap',
+    () async {
+      void Function(Timer)? periodicCallback;
+      Timer fakePeriodicTimer(Duration period, void Function(Timer) callback) {
+        periodicCallback = callback;
+        return Timer(const Duration(days: 999), () {});
+      }
 
-    when(() => dao.queryPendingByAttempt('attempt-1')).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
-    when(
-      () => apiClient.saveAnswer(
-        attemptPublicId: any(named: 'attemptPublicId'),
-        pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-        payload: any(named: 'payload'),
-      ),
-    ).thenAnswer((_) async {
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      return _okResponse();
-    });
-    when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.queryPendingByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [_row(pinnedItemPublicId: 'p1')]);
+      when(
+        () => apiClient.saveAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        return _okResponse();
+      });
+      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
 
-    final engine = SyncEngine(outboxDao: dao, apiClient: apiClient, canary: canary, createPeriodicTimer: fakePeriodicTimer);
-    engine.startSync('attempt-1');
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+        createPeriodicTimer: fakePeriodicTimer,
+      );
+      engine.startSync('attempt-1');
 
-    // Fire both triggers back to back, before either's in-flight submitAnswer resolves.
-    periodicCallback!(Timer(Duration.zero, () {}));
-    canaryController.add(null);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Fire both triggers back to back, before either's in-flight submitAnswer resolves.
+      periodicCallback!(Timer(Duration.zero, () {}));
+      canaryController.add(null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-    verify(
-      () => apiClient.saveAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'p1', payload: 'payload'),
-    ).called(1);
-  });
+      verify(
+        () => apiClient.saveAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'p1',
+          payload: 'payload',
+        ),
+      ).called(1);
+    },
+  );
 }

@@ -32,32 +32,41 @@ void main() {
         ),
       );
       when(
-        () => apiClient.get<List<dynamic>>(
-          '/api/proctor/exam-sessions/session-1/violations',
+        () => apiClient.get<Map<String, dynamic>>(
+          '/api/v1/exam-sessions/session-1/security-audit',
+          queryParameters: {'limit': 50},
         ),
       ).thenAnswer(
         (_) async => Response(
           requestOptions: RequestOptions(path: ''),
-          data: [
-            {
-              'publicId': 'violation-1',
-              'attemptPublicId': 'attempt-1',
-              'violationType': 'TAB_SWITCH',
-              'detail': 'Window focus changed',
-              'sequenceNo': 1,
-              'hash': 'abc123',
-              'detectedAt': '2026-07-28T01:03:04Z',
-            },
-          ],
+          data: {
+            'entries': [
+              {
+                'publicId': 'violation-1',
+                'source': 'PROCTOR',
+                'attemptPublicId': 'attempt-1',
+                'studentPublicId': null,
+                'violationType': 'TAB_SWITCH',
+                'severity': 'WARNING',
+                'clientEventId': null,
+                'detail': 'Window focus changed',
+                'detectedAt': '2026-07-28T01:03:04Z',
+              },
+            ],
+            'nextCursor': 'next-page',
+          },
         ),
       );
 
       final notifications = await repository.loadNotifications();
       final violations = await repository.loadViolations('session-1');
+      final page = await repository.loadViolationPage('session-1');
 
       expect(notifications.single.sentAt, DateTime.utc(2026, 7, 28, 1, 2, 3));
-      expect(violations.single.sequenceNo, 1);
-      expect(violations.single.hash, 'abc123');
+      expect(violations.single.source, 'PROCTOR');
+      expect(violations.single.severity, 'WARNING');
+      expect(violations.single.clientEventId, isNull);
+      expect(page.nextCursor, 'next-page');
     },
   );
 

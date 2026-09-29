@@ -26,16 +26,22 @@ class HostAuditRepositoryImpl implements HostAuditRepository {
   @override
   Future<List<ViolationAuditEvent>> loadViolations(
     String sessionPublicId,
-  ) async {
-    final response = await _apiClient.get<List<dynamic>>(
-      '/api/proctor/exam-sessions/$sessionPublicId/violations',
+  ) async => (await loadViolationPage(sessionPublicId)).items;
+
+  @override
+  Future<ViolationAuditPageData> loadViolationPage(
+    String sessionPublicId, {
+    String? cursor,
+  }) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/api/v1/exam-sessions/$sessionPublicId/security-audit',
+      queryParameters: {
+        'limit': 50,
+        ...?cursor == null ? null : {'cursor': cursor},
+      },
     );
-    return (response.data ?? const [])
-        .map(
-          (value) => ViolationAuditModel.fromJson(
-            value as Map<String, dynamic>,
-          ).toEntity(),
-        )
-        .toList(growable: false);
+    return ViolationAuditPageModel.fromJson(
+      response.data ?? const <String, dynamic>{},
+    ).toEntity();
   }
 }

@@ -22,16 +22,31 @@ class ViolationAuditEvent {
     required this.attemptPublicId,
     required this.violationType,
     required this.detail,
-    required this.sequenceNo,
-    required this.hash,
     required this.detectedAt,
+    this.source = 'PROCTOR',
+    this.severity = 'WARNING',
+    this.clientEventId,
+    this.studentPublicId,
+    this.sequenceNo,
+    this.hash,
   });
 
   final String publicId;
   final String attemptPublicId;
   final String violationType;
-  final String detail;
-  final int sequenceNo;
-  final String hash;
+  final String? detail;
   final DateTime detectedAt;
+  final String source;
+  final String severity;
+  final String? clientEventId;
+  final String? studentPublicId;
+  final int? sequenceNo;
+  final String? hash;
+}
+
+class ViolationAuditPageData {
+  const ViolationAuditPageData({required this.items, this.nextCursor});
+
+  final List<ViolationAuditEvent> items;
+  final String? nextCursor;
 }

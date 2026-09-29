@@ -12,7 +12,9 @@ class ExamChromeConfig {
   static const String previousLabel = 'Previous';
   static const String nextLabel = 'Next';
   static const String audioCheckTooltip = 'Audio check';
-  static const String submitExamTooltip = 'Submit exam';
+  static const String finishExamLabel = 'Finish exam';
+  static const String finishExamTooltip = 'Finish exam';
+  static const String submittingExamLabel = 'Submitting…';
   static const String unavailableItemLabel = 'Item --';
 
   static String itemLabel({required int? orderIndex, required int totalTasks}) {

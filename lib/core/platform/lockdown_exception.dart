@@ -17,6 +17,13 @@ final class FullscreenEnforcementException extends LockdownException {
   const FullscreenEnforcementException(super.message);
 }
 
+/// The native runner could not install or release the app-level exit gate.
+/// This is deliberately separate from fullscreen: practice attempts may use
+/// the exit guard even when anti-cheat fullscreen is disabled.
+final class ExitGuardException extends LockdownException {
+  const ExitGuardException(super.message);
+}
+
 /// Process enumeration or termination failed (CreateToolhelp32Snapshot
 /// failed on Windows, or insufficient permissions for TerminateProcess).
 final class ProcessManagementException extends LockdownException {

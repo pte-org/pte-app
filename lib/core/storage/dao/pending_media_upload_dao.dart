@@ -85,6 +85,19 @@ class PendingMediaUploadDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Non-ready media rows belonging to one attempt. Terminal submission uses
+  /// this scoped query so it never blocks on another student's local upload.
+  Future<List<PendingMediaUpload>> queryNonReadyByAttempt(
+    String attemptPublicId,
+  ) {
+    return (select(pendingMediaUploadTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.status.equals(PendingMediaUploadStatus.ready.name).not(),
+        ))
+        .get();
+  }
+
   Future<void> markUploading(
     String attemptPublicId,
     String pinnedItemPublicId, {

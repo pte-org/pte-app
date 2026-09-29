@@ -18,9 +18,10 @@ namespace lockdown_plugin {
 
 class LockdownPlugin : public flutter::Plugin {
  public:
-  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
+  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar,
+                                    HWND window_handle);
 
-  explicit LockdownPlugin(flutter::PluginRegistrarWindows* registrar);
+  LockdownPlugin(flutter::PluginRegistrarWindows* registrar, HWND window_handle);
   ~LockdownPlugin() override;
 
   LockdownPlugin(const LockdownPlugin&) = delete;
@@ -40,6 +41,10 @@ class LockdownPlugin : public flutter::Plugin {
   void EnforceFullscreen(const MethodCall& call,
                          std::unique_ptr<MethodResult> result);
   void ExitFullscreen(const MethodCall& call,
+                      std::unique_ptr<MethodResult> result);
+  void SetExitGuardActive(const MethodCall& call,
+                          std::unique_ptr<MethodResult> result);
+  void SetExitAllowed(const MethodCall& call,
                       std::unique_ptr<MethodResult> result);
   void GetRunningProcesses(const MethodCall& call,
                            std::unique_ptr<MethodResult> result);
@@ -78,6 +83,12 @@ class LockdownPlugin : public flutter::Plugin {
   RECT original_rect_;
   bool original_window_state_saved_;
   bool fullscreen_enforced_;
+  // The app-level submit-before-exit gate is independent from fullscreen.
+  // Both flags are read on the runner UI thread by HandleWindowMessage;
+  // atomics make the permission transition safe if teardown races a native
+  // message callback.
+  std::atomic<bool> exit_guard_active_{false};
+  std::atomic<bool> exit_allowed_{false};
   // True once registration finishes, and the keyboard hook must consult
   // [shortcuts_blocked_] before forwarding events. Accessed from the
   // hook callback (arbitrary thread) and from method-channel handlers

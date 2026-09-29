@@ -19,15 +19,18 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 
-class _MockExamAttemptRepository extends Mock implements ExamAttemptRepository {}
+class _MockExamAttemptRepository extends Mock
+    implements ExamAttemptRepository {}
 
-class _MockSessionEntryRepository extends Mock implements SessionEntryRepository {}
+class _MockSessionEntryRepository extends Mock
+    implements SessionEntryRepository {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
 class _MockTimerService extends Mock implements TimerService {}
 
-class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+class _MockMediaUploadCoordinator extends Mock
+    implements MediaUploadCoordinator {}
 
 class _MockLockdownService extends Mock implements LockdownService {}
 
@@ -49,7 +52,10 @@ TaskView _task({String pinnedItemPublicId = 'item-1'}) {
 class _FakeTimerSnapshot extends Fake implements TimerSnapshot {}
 
 class _StubAttemptTaskResponse {
-  static AttemptTaskResponse make({String? lockdownMode, String attemptId = 'attempt-1'}) {
+  static AttemptTaskResponse make({
+    String? lockdownMode,
+    String attemptId = 'attempt-1',
+  }) {
     return AttemptTaskResponse(
       attemptPublicId: attemptId,
       attemptStatus: 'IN_PROGRESS',
@@ -84,19 +90,31 @@ void main() {
     lockdownService = _MockLockdownService();
     heartbeatService = _MockHeartbeatService();
 
-    when(() => sessionEntryRepository.resolveSessionPublicId(any()))
-        .thenAnswer((_) async => 'session-1');
-    when(() => syncEngine.taskRejectedExternally)
-        .thenAnswer((_) => const Stream<void>.empty());
-    when(() => timerService.ticks)
-        .thenAnswer((_) => const Stream<TimerSnapshot>.empty());
-    when(() => timerService.taskAdvancedExternally)
-        .thenAnswer((_) => const Stream<void>.empty());
+    when(
+      () => sessionEntryRepository.resolveSessionPublicId(any()),
+    ).thenAnswer((_) async => 'session-1');
+    when(
+      () => syncEngine.taskRejectedExternally,
+    ).thenAnswer((_) => const Stream<void>.empty());
+    when(
+      () => timerService.ticks,
+    ).thenAnswer((_) => const Stream<TimerSnapshot>.empty());
+    when(
+      () => timerService.taskAdvancedExternally,
+    ).thenAnswer((_) => const Stream<void>.empty());
     when(() => timerService.currentSnapshot).thenReturn(
-      const TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 30), currentOrderIndex: 1),
+      const TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 30),
+        currentOrderIndex: 1,
+      ),
     );
-    when(() => syncEngine.startSync(any(), encryptionPublicKey: any(named: 'encryptionPublicKey')))
-        .thenReturn(null);
+    when(
+      () => syncEngine.startSync(
+        any(),
+        encryptionPublicKey: any(named: 'encryptionPublicKey'),
+      ),
+    ).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async => 0);
     when(() => syncEngine.stopSync()).thenReturn(null);
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
@@ -108,32 +126,52 @@ void main() {
     when(() => heartbeatService.start(any())).thenReturn(null);
     when(() => heartbeatService.stop()).thenReturn(null);
     when(() => heartbeatService.dispose()).thenReturn(null);
-    when(() => lockdownService.activateLockdown(
-          mode: any(named: 'mode'),
-          attemptPublicId: any(named: 'attemptPublicId'),
-        )).thenAnswer((_) async {});
+    when(
+      () => lockdownService.activateLockdown(
+        mode: any(named: 'mode'),
+        attemptPublicId: any(named: 'attemptPublicId'),
+      ),
+    ).thenAnswer((_) async {});
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
-    when(() => repository.fetchAllTasks(any())).thenAnswer(
-      (_) async => [_StubAttemptTaskResponse.make()],
-    );
+    when(
+      () => lockdownService.activateAttemptExitGuard(
+        attemptPublicId: any(named: 'attemptPublicId'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.allowExitAfterSubmission(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.deactivateAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.abortAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => mediaUploadCoordinator.flushBeforeSubmit(any()),
+    ).thenAnswer((_) async {});
+    when(() => syncEngine.flushBeforeSubmit(any())).thenAnswer((_) async {});
+    when(
+      () => repository.fetchAllTasks(any()),
+    ).thenAnswer((_) async => [_StubAttemptTaskResponse.make()]);
     when(() => repository.forceSubmit(any())).thenAnswer(
       (_) async => const AttemptTaskResponse(
         attemptPublicId: 'attempt-1',
-        attemptStatus: 'COMPLETED',
+        attemptStatus: 'SUBMITTED',
         completed: true,
       ),
     );
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
-        repository: repository,
-        sessionEntryRepository: sessionEntryRepository,
-        syncEngine: syncEngine,
-        timerService: timerService,
-        mediaUploadCoordinator: mediaUploadCoordinator,
-        lockdownService: lockdownService,
-        heartbeatService: heartbeatService,
-      );
+    repository: repository,
+    sessionEntryRepository: sessionEntryRepository,
+    syncEngine: syncEngine,
+    timerService: timerService,
+    mediaUploadCoordinator: mediaUploadCoordinator,
+    lockdownService: lockdownService,
+    heartbeatService: heartbeatService,
+  );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
     'STRICT-mode attempt activates lockdown with the wire value parsed to LockdownMode.strict',
@@ -145,12 +183,23 @@ void main() {
     build: buildBloc,
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 's')),
     verify: (_) {
-      verify(() => lockdownService.activateLockdown(
-            mode: LockdownMode.strict,
-            attemptPublicId: 'attempt-1',
-          )).called(1);
-      verify(() => syncEngine.startSync('attempt-1', encryptionPublicKey: any(named: 'encryptionPublicKey')))
-          .called(1);
+      verify(
+        () => lockdownService.activateLockdown(
+          mode: LockdownMode.strict,
+          attemptPublicId: 'attempt-1',
+        ),
+      ).called(1);
+      verify(
+        () => syncEngine.startSync(
+          'attempt-1',
+          encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
+      ).called(1);
+      verify(
+        () => lockdownService.activateAttemptExitGuard(
+          attemptPublicId: 'attempt-1',
+        ),
+      ).called(1);
     },
   );
 
@@ -164,29 +213,77 @@ void main() {
     build: buildBloc,
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 's')),
     verify: (_) {
-      verifyNever(() => lockdownService.activateLockdown(
-            mode: any(named: 'mode'),
-            attemptPublicId: any(named: 'attemptPublicId'),
-          ));
-      verify(() => syncEngine.startSync('attempt-1', encryptionPublicKey: any(named: 'encryptionPublicKey')))
-          .called(1);
+      verifyNever(
+        () => lockdownService.activateLockdown(
+          mode: any(named: 'mode'),
+          attemptPublicId: any(named: 'attemptPublicId'),
+        ),
+      );
+      verify(
+        () => syncEngine.startSync(
+          'attempt-1',
+          encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
+      ).called(1);
+      verify(
+        () => lockdownService.activateAttemptExitGuard(
+          attemptPublicId: 'attempt-1',
+        ),
+      ).called(1);
     },
   );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
-    'null lockdownMode is treated as NONE — no lockdown activation, no error',
+    'null lockdownMode fails closed before sync or task render',
+    setUp: () {
+      when(
+        () => repository.startOrResumeAttempt(any()),
+      ).thenAnswer((_) async => _StubAttemptTaskResponse.make());
+    },
+    build: buildBloc,
+    act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 's')),
+    verify: (bloc) {
+      verifyNever(
+        () => lockdownService.activateLockdown(
+          mode: any(named: 'mode'),
+          attemptPublicId: any(named: 'attemptPublicId'),
+        ),
+      );
+      verifyNever(
+        () => syncEngine.startSync(
+          any(),
+          encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
+      );
+      expect(bloc.state, isA<AttemptError>());
+      expect(
+        (bloc.state as AttemptError).error,
+        isA<LockdownPolicyException>(),
+      );
+    },
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'unknown lockdownMode fails closed before sync or task render',
     setUp: () {
       when(() => repository.startOrResumeAttempt(any())).thenAnswer(
-        (_) async => _StubAttemptTaskResponse.make(),
+        (_) async => _StubAttemptTaskResponse.make(lockdownMode: 'FUTURE'),
       );
     },
     build: buildBloc,
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 's')),
-    verify: (_) {
-      verifyNever(() => lockdownService.activateLockdown(
-            mode: any(named: 'mode'),
-            attemptPublicId: any(named: 'attemptPublicId'),
-          ));
+    verify: (bloc) {
+      verifyNever(
+        () => syncEngine.startSync(
+          any(),
+          encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
+      );
+      expect(bloc.state, isA<AttemptError>());
+      expect(
+        (bloc.state as AttemptError).error,
+        isA<LockdownPolicyException>(),
+      );
     },
   );
 
@@ -196,13 +293,17 @@ void main() {
       when(() => repository.startOrResumeAttempt(any())).thenAnswer(
         (_) async => _StubAttemptTaskResponse.make(lockdownMode: 'STRICT'),
       );
-      when(() => lockdownService.activateLockdown(
-            mode: any(named: 'mode'),
-            attemptPublicId: any(named: 'attemptPublicId'),
-          )).thenThrow(const LockdownActivationException(
-        'Hook failed',
-        failedChecks: ['blockSystemShortcuts: hook failed'],
-      ));
+      when(
+        () => lockdownService.activateLockdown(
+          mode: any(named: 'mode'),
+          attemptPublicId: any(named: 'attemptPublicId'),
+        ),
+      ).thenThrow(
+        const LockdownActivationException(
+          'Hook failed',
+          failedChecks: ['blockSystemShortcuts: hook failed'],
+        ),
+      );
     },
     build: buildBloc,
     act: (bloc) => bloc.add(const SessionResolutionRequested(rawInput: 's')),
@@ -210,11 +311,15 @@ void main() {
       expect(bloc.state, isA<AttemptError>());
       final error = (bloc.state as AttemptError).error;
       expect(error, isA<LockdownActivationException>());
-      expect(
-        (error as LockdownActivationException).failedChecks,
-        ['blockSystemShortcuts: hook failed'],
+      expect((error as LockdownActivationException).failedChecks, [
+        'blockSystemShortcuts: hook failed',
+      ]);
+      verifyNever(
+        () => syncEngine.startSync(
+          any(),
+          encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
       );
-      verifyNever(() => syncEngine.startSync(any(), encryptionPublicKey: any(named: 'encryptionPublicKey')));
     },
   );
 
@@ -236,7 +341,11 @@ void main() {
     },
     skip: 2,
     verify: (_) {
-      verify(() => lockdownService.deactivateLockdown()).called(greaterThanOrEqualTo(1));
+      verify(
+        () => lockdownService.deactivateLockdown(),
+      ).called(greaterThanOrEqualTo(1));
+      verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+      verify(() => lockdownService.deactivateAttemptExitGuard()).called(1);
     },
   );
 
@@ -249,7 +358,9 @@ void main() {
       // act already having closed it (mirrors the >=1 assertion above,
       // line 233, for the same double-invocation reason) — deactivateLockdown
       // is idempotent, so a second call is harmless.
-      verify(() => lockdownService.deactivateLockdown()).called(greaterThanOrEqualTo(1));
+      verify(
+        () => lockdownService.deactivateLockdown(),
+      ).called(greaterThanOrEqualTo(1));
     },
   );
 }

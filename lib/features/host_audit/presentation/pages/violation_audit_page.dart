@@ -73,16 +73,25 @@ class _ViolationCard extends StatelessWidget {
               '${AppStrings.violationTypeLabel}: ${item.violationType}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            Text('${AppStrings.auditSourceLabel}: ${item.source}'),
+            Text('${AppStrings.severityLabel}: ${item.severity}'),
             Text('${AppStrings.publicIdLabel}: ${item.publicId}'),
             Text('${AppStrings.attemptLabel}: ${item.attemptPublicId}'),
             Text('${AppStrings.violationDetailLabel}: ${item.detail}'),
-            Text('${AppStrings.sequenceLabel}: ${item.sequenceNo}'),
+            if (item.studentPublicId != null)
+              Text('${AppStrings.studentLabel}: ${item.studentPublicId}'),
+            if (item.clientEventId != null)
+              Text('${AppStrings.clientEventIdLabel}: ${item.clientEventId}'),
             Text(
               '${AppStrings.detectedAtLabel}: '
               '${AuditTimestampFormatter.format(item.detectedAt, missingLabel: AppStrings.notSent)}',
             ),
-            const Text(AppStrings.integrityHashLabel),
-            SelectableText(item.hash),
+            if (item.sequenceNo != null)
+              Text('${AppStrings.sequenceLabel}: ${item.sequenceNo}'),
+            if (item.hash != null) ...[
+              const Text(AppStrings.integrityHashLabel),
+              SelectableText(item.hash!),
+            ],
           ],
         ),
       ),

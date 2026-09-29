@@ -5,9 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/platform/lockdown_exception.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/core/sync/submission_preparation_exception.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -71,12 +73,13 @@ AttemptTaskResponse _inProgressResponse({
     attemptStatus: 'IN_PROGRESS',
     completed: false,
     task: _task(pinnedItemPublicId: pinnedItemPublicId),
+    lockdownMode: 'NONE',
   );
 }
 
 const _completedResponse = AttemptTaskResponse(
   attemptPublicId: 'attempt-1',
-  attemptStatus: 'COMPLETED',
+  attemptStatus: 'SUBMITTED',
   completed: true,
 );
 
@@ -110,6 +113,24 @@ void main() {
     when(() => heartbeatService.stop()).thenReturn(null);
     when(() => heartbeatService.dispose()).thenReturn(null);
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
+    when(
+      () => lockdownService.activateAttemptExitGuard(
+        attemptPublicId: any(named: 'attemptPublicId'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.allowExitAfterSubmission(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.deactivateAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.abortAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => mediaUploadCoordinator.flushBeforeSubmit(any()),
+    ).thenAnswer((_) async {});
+    when(() => syncEngine.flushBeforeSubmit(any())).thenAnswer((_) async {});
     when(() => syncEngine.setActiveTask(any())).thenReturn(null);
     when(() => syncEngine.startSync(any())).thenReturn(null);
     when(() => syncEngine.flushNow(any())).thenAnswer((_) async {});
@@ -135,12 +156,12 @@ void main() {
     );
     // Default stubs for the prefetch-all-tasks flow introduced in Phase 3.
     // Tests that need specific task lists override these in their own setUp.
-    when(() => repository.fetchAllTasks(any())).thenAnswer(
-      (_) async => [_inProgressResponse()],
-    );
-    when(() => repository.forceSubmit(any())).thenAnswer(
-      (_) async => _completedResponse,
-    );
+    when(
+      () => repository.fetchAllTasks(any()),
+    ).thenAnswer((_) async => [_inProgressResponse()]);
+    when(
+      () => repository.forceSubmit(any()),
+    ).thenAnswer((_) async => _completedResponse);
   });
 
   ExamAttemptBloc buildBloc() => ExamAttemptBloc(
@@ -159,9 +180,9 @@ void main() {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) =>
@@ -175,15 +196,39 @@ void main() {
   );
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
+    'completed:true without SUBMITTED acknowledgement fails closed',
+    setUp: () {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async => const AttemptTaskResponse(
+          attemptPublicId: 'attempt-1',
+          attemptStatus: 'COMPLETED',
+          completed: true,
+        ),
+      );
+    },
+    build: buildBloc,
+    act: (bloc) =>
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+    expect: () => [isA<AttemptStarting>(), isA<AttemptError>()],
+    verify: (_) {
+      verifyNever(() => lockdownService.allowExitAfterSubmission());
+      verifyNever(() => syncEngine.startSync(any()));
+    },
+  );
+
+  blocTest<ExamAttemptBloc, ExamAttemptState>(
     'resuming an in-progress attempt calls SyncEngine.startSync then flushNow before AttemptInProgress is emitted '
     '(immediate flush of any leftover outbox rows, not a passive wait)',
     setUp: () {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _inProgressResponse(),
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _inProgressResponse());
     },
     build: buildBloc,
     act: (bloc) =>
@@ -263,9 +308,7 @@ void main() {
     setUp: () {
       when(
         () => repository.startOrResumeAttempt('deep-link-session'),
-      ).thenAnswer(
-        (_) async => _inProgressResponse(),
-      );
+      ).thenAnswer((_) async => _inProgressResponse());
     },
     build: () => ExamAttemptBloc(
       repository: repository,
@@ -289,9 +332,9 @@ void main() {
       when(
         () => sessionEntryRepository.resolveSessionPublicId('session-1'),
       ).thenAnswer((_) async => 'session-1');
-      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) async {
@@ -441,9 +484,9 @@ void main() {
         ],
       );
       // forceSubmit fires when NextTaskRequested goes past the last item.
-      when(() => repository.forceSubmit('attempt-1')).thenAnswer(
-        (_) async => _completedResponse,
-      );
+      when(
+        () => repository.forceSubmit('attempt-1'),
+      ).thenAnswer((_) async => _completedResponse);
     },
     build: buildBloc,
     act: (bloc) async {
@@ -455,6 +498,7 @@ void main() {
     },
     expect: () => [
       isA<AttemptStarting>(),
+      isA<AttemptInProgress>(),
       isA<AttemptInProgress>(),
       isA<AttemptInProgress>(),
       isA<AttemptCompleted>(),
@@ -476,9 +520,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
@@ -489,6 +533,7 @@ void main() {
       },
       expect: () => [
         isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
         isA<AttemptInProgress>(),
         isA<AttemptCompleted>(),
       ],
@@ -505,9 +550,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // Single-task allTasks: NextTaskRequested → ForceSubmitRequested.
       },
       build: buildBloc,
@@ -518,6 +563,7 @@ void main() {
       },
       expect: () => [
         isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
         isA<AttemptInProgress>(),
         isA<AttemptCompleted>(),
       ],
@@ -559,6 +605,7 @@ void main() {
         isA<AttemptStarting>(),
         isA<AttemptInProgress>(),
         isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
         isA<AttemptCompleted>(),
       ],
       verify: (bloc) {
@@ -576,9 +623,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) async {
@@ -589,10 +636,15 @@ void main() {
       expect: () => [
         isA<AttemptStarting>(),
         isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
         isA<AttemptCompleted>(),
       ],
       verify: (_) {
-        verify(() => repository.forceSubmit('attempt-1')).called(1);
+        verifyInOrder([
+          () => mediaUploadCoordinator.flushBeforeSubmit('attempt-1'),
+          () => syncEngine.flushBeforeSubmit('attempt-1'),
+          () => repository.forceSubmit('attempt-1'),
+        ]);
         verify(() => syncEngine.stopSync()).called(1);
         verify(() => timerService.stop()).called(1);
         verify(() => mediaUploadCoordinator.stop()).called(1);
@@ -600,14 +652,14 @@ void main() {
     );
 
     blocTest<ExamAttemptBloc, ExamAttemptState>(
-      'a forceSubmit() failure emits AttemptError, not a crash or hang',
+      'a forceSubmit() failure stays on the attempt in a retryable state',
       setUp: () {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         when(
           () => repository.forceSubmit('attempt-1'),
         ).thenThrow(const NetworkException('connection refused'));
@@ -621,14 +673,102 @@ void main() {
       expect: () => [
         isA<AttemptStarting>(),
         isA<AttemptInProgress>(),
-        isA<AttemptError>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
       ],
-      verify: (_) {
+      verify: (bloc) {
+        final failed = bloc.state as AttemptInProgress;
+        expect(
+          failed.submissionStatus,
+          AttemptSubmissionStatus.retryableFailure,
+        );
+        expect(failed.submissionError, isA<NetworkException>());
         // Failure must NOT run the teardown sequence — the attempt is
         // still considered running.
         verifyNever(() => syncEngine.stopSync());
         verifyNever(() => timerService.stop());
         verifyNever(() => mediaUploadCoordinator.stop());
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a native unlock failure stays guarded and exposes retry after server acknowledgement',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => lockdownService.allowExitAfterSubmission(),
+        ).thenThrow(const ExitGuardException('native bridge unavailable'));
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+      ],
+      verify: (bloc) {
+        final failed = bloc.state as AttemptInProgress;
+        expect(
+          failed.submissionStatus,
+          AttemptSubmissionStatus.retryableFailure,
+        );
+        expect(failed.submissionError, isA<ExitGuardException>());
+        verifyNever(() => syncEngine.stopSync());
+        verifyNever(() => timerService.stop());
+        verifyNever(() => mediaUploadCoordinator.stop());
+        verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'pending terminal preparation keeps the attempt guarded and never calls forceSubmit',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => mediaUploadCoordinator.flushBeforeSubmit('attempt-1'),
+        ).thenThrow(
+          const SubmissionPreparationException(
+            kind: SubmissionPreparationKind.media,
+            pendingCount: 1,
+          ),
+        );
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+      ],
+      verify: (bloc) {
+        final failed = bloc.state as AttemptInProgress;
+        expect(
+          failed.submissionStatus,
+          AttemptSubmissionStatus.retryableFailure,
+        );
+        expect(failed.submissionError, isA<SubmissionPreparationException>());
+        verifyNever(() => repository.forceSubmit(any()));
+        verifyNever(() => syncEngine.stopSync());
       },
     );
 
@@ -651,9 +791,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         when(() => repository.forceSubmit('attempt-1')).thenAnswer((_) async {
           // Never resolves within this test — the first call stays "in
           // flight" for the whole test, which is exactly the window the
@@ -673,7 +813,11 @@ void main() {
         bloc.add(const ForceSubmitRequested());
         await Future<void>.delayed(Duration.zero);
       },
-      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+      ],
       verify: (_) {
         verify(() => repository.forceSubmit('attempt-1')).called(1);
       },
@@ -687,9 +831,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         // fetchAllTasks is called twice: once on start, once on resume.
       },
       build: buildBloc,
@@ -730,9 +874,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
         var callCount = 0;
         when(() => repository.fetchAllTasks('attempt-1')).thenAnswer((_) async {
           callCount++;
@@ -751,6 +895,40 @@ void main() {
       verify: (_) {
         // Second startPolling call is the fallback timer re-arm.
         verify(() => timerService.startPolling('attempt-1')).called(2);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'AppResumed reconciles a server-submitted attempt before rearming the task shell',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        var callCount = 0;
+        when(() => repository.fetchAllTasks('attempt-1')).thenAnswer((_) async {
+          callCount++;
+          return callCount == 1
+              ? [_inProgressResponse()]
+              : [_completedResponse];
+        });
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const AppResumed());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptCompleted>(),
+      ],
+      verify: (_) {
+        verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+        verify(() => lockdownService.deactivateAttemptExitGuard()).called(1);
       },
     );
   });
@@ -807,9 +985,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) =>
@@ -859,9 +1037,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _completedResponse,
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _completedResponse);
       },
       build: buildBloc,
       act: (bloc) =>
@@ -879,9 +1057,9 @@ void main() {
         when(
           () => sessionEntryRepository.resolveSessionPublicId('session-1'),
         ).thenAnswer((_) async => 'session-1');
-        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-          (_) async => _inProgressResponse(),
-        );
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
       },
       build: buildBloc,
       act: (bloc) async {
@@ -912,9 +1090,9 @@ void main() {
           when(
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
-          when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => _inProgressResponse(),
-          );
+          when(
+            () => repository.startOrResumeAttempt('session-1'),
+          ).thenAnswer((_) async => _inProgressResponse());
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
               phase: TimerPhase.prep,
@@ -944,6 +1122,7 @@ void main() {
           isA<AttemptStarting>(),
           isA<AttemptInProgress>(),
           isA<AttemptInProgress>(),
+          isA<AttemptInProgress>(),
           isA<AttemptCompleted>(),
         ],
         verify: (_) {
@@ -958,9 +1137,9 @@ void main() {
           when(
             () => sessionEntryRepository.resolveSessionPublicId('session-1'),
           ).thenAnswer((_) async => 'session-1');
-          when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
-            (_) async => _inProgressResponse(),
-          );
+          when(
+            () => repository.startOrResumeAttempt('session-1'),
+          ).thenAnswer((_) async => _inProgressResponse());
           when(() => timerService.currentSnapshot).thenReturn(
             const TimerSnapshot(
               phase: TimerPhase.prep,
@@ -996,4 +1175,3 @@ void main() {
 /// constructs it — `blocTest`'s `setUp`/`act` don't share a closure scope
 /// otherwise.
 StreamController<void>? _rejectedControllerForTest;
-

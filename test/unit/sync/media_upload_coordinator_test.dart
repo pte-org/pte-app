@@ -17,6 +17,7 @@ import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/rate_limit_backoff.dart';
+import 'package:pte_app/core/sync/submission_preparation_exception.dart';
 import 'package:pte_app/core/sync/sync_engine.dart' show PeriodicTimerFactory;
 
 class _MockPendingMediaUploadDao extends Mock
@@ -151,6 +152,53 @@ void main() {
       backoff: backoff,
     );
   }
+
+  test(
+    'flushBeforeSubmit is a no-op for an attempt without pending media',
+    () async {
+      when(
+        () => mediaDao.queryNonReadyByAttempt('attempt-1'),
+      ).thenAnswer((_) async => const []);
+
+      final coordinator = buildCoordinator();
+
+      await coordinator.flushBeforeSubmit('attempt-1');
+
+      verify(() => mediaDao.queryNonReadyByAttempt('attempt-1')).called(2);
+    },
+  );
+
+  test(
+    'flushBeforeSubmit returns a bounded retryable failure when media remains non-ready',
+    () async {
+      final row = _row(status: PendingMediaUploadStatus.recorded);
+      when(
+        () => mediaDao.queryNonReadyByAttempt('attempt-1'),
+      ).thenAnswer((_) async => [row]);
+      when(
+        () => mediaRepository.requestPresign(
+          any(),
+          sizeBytes: any(named: 'sizeBytes'),
+        ),
+      ).thenThrow(const NetworkException('offline'));
+      when(
+        () => mediaDao.markError('attempt-1', 'item-1', any()),
+      ).thenAnswer((_) async {});
+
+      final coordinator = buildCoordinator();
+
+      await expectLater(
+        coordinator.flushBeforeSubmit('attempt-1'),
+        throwsA(
+          isA<SubmissionPreparationException>().having(
+            (error) => error.kind,
+            'kind',
+            SubmissionPreparationKind.media,
+          ),
+        ),
+      );
+    },
+  );
 
   /// Stubs every DAO/network call needed for a clean recorded -> ready run.
   void stubHappyPath({

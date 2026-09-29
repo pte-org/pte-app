@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/local_violation_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
+import 'package:pte_app/core/security/models/violation_event.dart';
 import 'package:pte_app/core/storage/tables/answer_outbox_table.dart';
 import 'package:pte_app/core/storage/tables/local_violations_table.dart';
 import 'package:pte_app/core/storage/tables/pending_media_upload_table.dart';
@@ -30,19 +31,23 @@ class AppDatabase extends _$AppDatabase {
   // violations. Fresh databases skip the migration entirely; existing
   // installs run the additive schema migration below.
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS '
+        'ux_local_violations_client_event_id '
+        'ON local_violations_table (client_event_id)',
+      );
     },
     onUpgrade: (m, from, to) async {
       if (from < 3) {
         // LocalViolationsTable is purely additive — no backfill needed.
-        // The DAO will fall back to safe defaults when reading rows
-        // written before the table existed (see
-        // [LocalViolationDao._safeType]).
+        // The new table is empty on this upgrade path; future persisted rows
+        // still pass through the DAO's strict compatibility checks.
         await m.createTable(localViolationsTable);
       }
       if (from < 4) {
@@ -97,6 +102,40 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(
           pendingMediaUploadTable,
           pendingMediaUploadTable.cloudinarySignature,
+        );
+      }
+      if (from >= 3 && from < 5) {
+        // SQLite needs a temporary SQL default to add this non-null column to
+        // an existing table. The old rows are backfilled before uniqueness is
+        // enforced below.
+        await m.addColumn(
+          localViolationsTable,
+          localViolationsTable.clientEventId,
+        );
+        await m.addColumn(localViolationsTable, localViolationsTable.terminal);
+        await m.addColumn(
+          localViolationsTable,
+          localViolationsTable.terminalReason,
+        );
+      }
+      if (from < 5) {
+        final legacyRows = await customSelect(
+          'SELECT id, client_event_id FROM local_violations_table',
+        ).get();
+        for (final row in legacyRows) {
+          final clientEventId = row.data['client_event_id'];
+          if (clientEventId == null || clientEventId.toString().isEmpty) {
+            await customStatement(
+              'UPDATE local_violations_table '
+              'SET client_event_id = ? WHERE id = ?',
+              [newClientEventId(), row.data['id']],
+            );
+          }
+        }
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS '
+          'ux_local_violations_client_event_id '
+          'ON local_violations_table (client_event_id)',
         );
       }
     },

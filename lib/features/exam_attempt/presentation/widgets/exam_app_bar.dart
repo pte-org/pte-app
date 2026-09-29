@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/exam_chrome_config.dart';
 import 'package:pte_app/core/constants/app_typography.dart';
+import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/widgets/exam/exam_header_bar.dart';
 import 'package:pte_app/core/widgets/confirm_dialog.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
@@ -15,9 +17,14 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 
 /// Feature-bound adapter from [ExamAttemptState] to the pure design header.
 class ExamAppBar extends StatelessWidget {
-  const ExamAppBar({super.key, required this.totalTasks});
+  const ExamAppBar({
+    super.key,
+    required this.totalTasks,
+    this.outboxDao,
+  });
 
   final int totalTasks;
+  final AnswerOutboxDao? outboxDao;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +36,15 @@ class ExamAppBar extends StatelessWidget {
           orderIndex: snapshot?.currentOrderIndex,
           totalTasks: totalTasks,
         );
+        final submissionStatus =
+            inProgress?.submissionStatus ?? AttemptSubmissionStatus.ready;
+        final finishLabel = switch (submissionStatus) {
+          AttemptSubmissionStatus.ready => ExamChromeConfig.finishExamLabel,
+          AttemptSubmissionStatus.submitting =>
+            ExamChromeConfig.submittingExamLabel,
+          AttemptSubmissionStatus.retryableFailure =>
+            ExamAttemptStrings.forceSubmitRetryLabel,
+        };
         return ExamHeaderBar(
           examTitle: ExamChromeConfig.defaultExamTitle,
           candidateName: 'Candidate',
@@ -36,17 +52,37 @@ class ExamAppBar extends StatelessWidget {
           itemLabel: item,
           timeLabel: ExamChromeConfig.formatDuration(snapshot?.remaining),
           timeContent: const _ExamGlobalTimerLabel(),
-          onForceSubmit: () => _confirmAndForceSubmit(context),
+          onForceSubmit: submissionStatus == AttemptSubmissionStatus.submitting
+              ? null
+              : () => _confirmAndForceSubmit(context),
+          finishLabel: finishLabel,
+          finishLoading: submissionStatus == AttemptSubmissionStatus.submitting,
         );
       },
     );
   }
 
   Future<void> _confirmAndForceSubmit(BuildContext context) async {
+    final state = context.read<ExamAttemptBloc>().state;
+    if (state is! AttemptInProgress ||
+        state.submissionStatus == AttemptSubmissionStatus.submitting) {
+      return;
+    }
+    final answeredTasks = await (outboxDao?.countAnsweredByAttempt(
+          state.attemptPublicId,
+        ) ??
+        Future<int>.value(0));
+    if (!context.mounted) return;
+    final total = state.task.totalTasks > 0 ? state.task.totalTasks : totalTasks;
+    final unanswered = total - answeredTasks;
+    final unansweredTasks = unanswered < 0 ? 0 : unanswered;
     final confirmed = await showConfirmDialog(
       context,
       title: ExamAttemptStrings.forceSubmitDialogTitle,
-      message: ExamAttemptStrings.forceSubmitDialogMessage,
+      message: ExamAttemptStrings.forceSubmitDialogMessage(
+        answeredTasks: answeredTasks,
+        unansweredTasks: unansweredTasks,
+      ),
       confirmLabel: ExamAttemptStrings.forceSubmitDialogConfirm,
       cancelLabel: ExamAttemptStrings.forceSubmitDialogCancel,
     );
@@ -61,14 +97,50 @@ class ExamAppBar extends StatelessWidget {
 /// exam time left regardless of which task is active or which mode is used.
 /// Falls back to the per-task `timerSnapshot.remaining` for attempts created
 /// before the backend started populating `examEndTime`.
-class _ExamGlobalTimerLabel extends StatefulWidget {
+class _ExamGlobalTimerLabel extends StatelessWidget {
   const _ExamGlobalTimerLabel();
 
   @override
-  State<_ExamGlobalTimerLabel> createState() => _ExamGlobalTimerLabelState();
+  Widget build(BuildContext context) {
+    return BlocSelector<ExamAttemptBloc, ExamAttemptState,
+        _ExamGlobalTimerSelection?>(
+      selector: (state) {
+        if (state is! AttemptInProgress) return null;
+        return _ExamGlobalTimerSelection(
+          examEndTime: state.task.examEndTime,
+          fallbackRemaining: state.timerSnapshot.remaining,
+        );
+      },
+      builder: (context, selection) => _ExamGlobalTimerText(
+        selection: selection,
+      ),
+    );
+  }
 }
 
-class _ExamGlobalTimerLabelState extends State<_ExamGlobalTimerLabel> {
+class _ExamGlobalTimerSelection extends Equatable {
+  const _ExamGlobalTimerSelection({
+    required this.examEndTime,
+    required this.fallbackRemaining,
+  });
+
+  final DateTime? examEndTime;
+  final Duration fallbackRemaining;
+
+  @override
+  List<Object?> get props => [examEndTime, fallbackRemaining];
+}
+
+class _ExamGlobalTimerText extends StatefulWidget {
+  const _ExamGlobalTimerText({required this.selection});
+
+  final _ExamGlobalTimerSelection? selection;
+
+  @override
+  State<_ExamGlobalTimerText> createState() => _ExamGlobalTimerTextState();
+}
+
+class _ExamGlobalTimerTextState extends State<_ExamGlobalTimerText> {
   Timer? _ticker;
   Duration? _remaining;
 
@@ -84,11 +156,19 @@ class _ExamGlobalTimerLabelState extends State<_ExamGlobalTimerLabel> {
     });
   }
 
+  @override
+  void didUpdateWidget(covariant _ExamGlobalTimerText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selection != widget.selection) {
+      _update();
+    }
+  }
+
   Duration? _compute() {
-    final state = context.read<ExamAttemptBloc>().state;
-    if (state is! AttemptInProgress) return null;
-    final examEndTime = state.task.examEndTime;
-    if (examEndTime == null) return state.timerSnapshot.remaining;
+    final selection = widget.selection;
+    if (selection == null) return null;
+    final examEndTime = selection.examEndTime;
+    if (examEndTime == null) return selection.fallbackRemaining;
     final diff = examEndTime.difference(DateTime.now());
     return diff.isNegative ? Duration.zero : diff;
   }
