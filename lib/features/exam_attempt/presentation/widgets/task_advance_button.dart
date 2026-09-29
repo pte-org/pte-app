@@ -143,15 +143,20 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
         builder: (context, state) {
           if (state is! AttemptInProgress) return const SizedBox.shrink();
           final task = state.task;
+          final canNavigate =
+              state.submissionStatus == AttemptSubmissionStatus.ready;
           return ExamNavigationActions(
-            onPrevious: !_isNavigating && task.canNavigatePrevious
+            onPrevious: canNavigate && !_isNavigating && task.canNavigatePrevious
                 ? () => _navigate(task, TaskNavigationDirection.previous)
                 : null,
-            onNext: task.canNavigateNext
+            onNext: canNavigate && task.canNavigateNext
                 ? () => _navigate(task, TaskNavigationDirection.next)
                 : null,
-            nextLabel: ExamAttemptStrings.taskAdvanceButtonLabel,
-            nextLoading: _isNavigating,
+            nextLabel: state.submissionStatus == AttemptSubmissionStatus.submitting
+                ? ExamAttemptStrings.forceSubmitSubmittingLabel
+                : ExamAttemptStrings.taskAdvanceButtonLabel,
+            nextLoading: _isNavigating ||
+                state.submissionStatus == AttemptSubmissionStatus.submitting,
           );
         },
       ),

@@ -4,6 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
@@ -114,5 +115,52 @@ void main() {
         reason: 'BlocSelector must rebuild the countdown widget when the TimerSnapshot slice changes');
     // snapshotB's remaining is 12 seconds.
     expect(afterText.data, '00:12');
+  });
+
+  testWidgets(
+    'finish action opens an incomplete-submit confirmation and dispatches the terminal event',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+
+      await tester.tap(find.byTooltip('Finish exam'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Submit exam now?'), findsOneWidget);
+      expect(
+        find.text(
+          'You have answered 0 tasks and left 5 tasks unanswered. '
+          'Unanswered tasks will be submitted blank. '
+          'This ends your attempt immediately and cannot be undone.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Submit'), findsOneWidget);
+
+      await tester.tap(find.text('Submit'));
+      await tester.pump();
+
+      verify(() => bloc.add(const ForceSubmitRequested())).called(1);
+    },
+  );
+
+  testWidgets('finish action is disabled while terminal submission is in flight', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    stateController.add(
+      AttemptInProgress(
+        'attempt-1',
+        _task(),
+        snapshotA,
+        submissionStatus: AttemptSubmissionStatus.submitting,
+      ),
+    );
+    await tester.pump();
+
+    final button = tester.widget<TextButton>(
+      find.byType(TextButton).last,
+    );
+    expect(button.onPressed, isNull);
+    expect(find.byTooltip('Submitting…'), findsOneWidget);
   });
 }

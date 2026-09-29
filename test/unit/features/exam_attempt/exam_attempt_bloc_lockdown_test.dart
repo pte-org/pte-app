@@ -134,12 +134,30 @@ void main() {
     ).thenAnswer((_) async {});
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
     when(
+      () => lockdownService.activateAttemptExitGuard(
+        attemptPublicId: any(named: 'attemptPublicId'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.allowExitAfterSubmission(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.deactivateAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => lockdownService.abortAttemptExitGuard(),
+    ).thenAnswer((_) async {});
+    when(
+      () => mediaUploadCoordinator.flushBeforeSubmit(any()),
+    ).thenAnswer((_) async {});
+    when(() => syncEngine.flushBeforeSubmit(any())).thenAnswer((_) async {});
+    when(
       () => repository.fetchAllTasks(any()),
     ).thenAnswer((_) async => [_StubAttemptTaskResponse.make()]);
     when(() => repository.forceSubmit(any())).thenAnswer(
       (_) async => const AttemptTaskResponse(
         attemptPublicId: 'attempt-1',
-        attemptStatus: 'COMPLETED',
+        attemptStatus: 'SUBMITTED',
         completed: true,
       ),
     );
@@ -177,6 +195,11 @@ void main() {
           encryptionPublicKey: any(named: 'encryptionPublicKey'),
         ),
       ).called(1);
+      verify(
+        () => lockdownService.activateAttemptExitGuard(
+          attemptPublicId: 'attempt-1',
+        ),
+      ).called(1);
     },
   );
 
@@ -200,6 +223,11 @@ void main() {
         () => syncEngine.startSync(
           'attempt-1',
           encryptionPublicKey: any(named: 'encryptionPublicKey'),
+        ),
+      ).called(1);
+      verify(
+        () => lockdownService.activateAttemptExitGuard(
+          attemptPublicId: 'attempt-1',
         ),
       ).called(1);
     },
@@ -316,6 +344,8 @@ void main() {
       verify(
         () => lockdownService.deactivateLockdown(),
       ).called(greaterThanOrEqualTo(1));
+      verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+      verify(() => lockdownService.deactivateAttemptExitGuard()).called(1);
     },
   );
 

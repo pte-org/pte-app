@@ -4,12 +4,10 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 /// Attempt lifecycle only (start/resume/advance/force-submit) — depends on
 /// nothing beyond what an implementation needs to reach `ApiClient`. Never
-/// import or depend on Phase 2's `AnswerOutboxDao`/`SyncEngine` here;
-/// answer submission is a different concern with different retry/
-/// persistence semantics. The one place those two concerns compose is the
-/// resume-reconciliation step in `ExamAttemptBloc`, which reads the
-/// outbox DAO itself rather than asking this repository to (phase-03
-/// Design Constraints).
+/// import or depend on `AnswerOutboxDao`/`SyncEngine` here; answer submission
+/// preparation is a different concern with different retry/persistence
+/// semantics. The two concerns compose in `ExamAttemptBloc`, which owns the
+/// terminal preparation sequence and resume reconciliation.
 abstract class ExamAttemptRepository {
   Future<AttemptPreflight> preflight(String sessionPublicId);
 
@@ -30,8 +28,7 @@ abstract class ExamAttemptRepository {
     required TaskNavigationDirection direction,
   });
 
-  /// Stubbed for shape-completeness now so Phase 7 (force-submit, FR-10)
-  /// doesn't need to touch this repository — intentionally unwired to any
-  /// `ExamAttemptBloc` event in this phase.
+  /// Requests the server's idempotent terminal submission operation. The
+  /// caller must complete answer/media preparation before invoking it.
   Future<AttemptTaskResponse> forceSubmit(String attemptPublicId);
 }

@@ -63,6 +63,14 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // The submit-before-exit gate must see close/minimize messages before
+  // Flutter's child controller can consume them. It returns immediately and
+  // never performs Dart/network work on the native message thread.
+  if (lockdown_plugin::LockdownPlugin::HandleWindowMessage(message, wparam,
+                                                            lparam)) {
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -71,10 +79,6 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     if (result) {
       return *result;
     }
-  }
-
-  if (lockdown_plugin::LockdownPlugin::HandleWindowMessage(message, wparam, lparam)) {
-    return 0;
   }
 
   switch (message) {

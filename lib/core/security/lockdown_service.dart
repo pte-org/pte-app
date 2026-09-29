@@ -30,7 +30,8 @@ class LockdownActivationException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => 'LockdownActivationException($message, '
+  String toString() =>
+      'LockdownActivationException($message, '
       'failedChecks=$failedChecks)';
 }
 
@@ -56,15 +57,16 @@ class LockdownService {
     required Logger logger,
     Future<ForbiddenAppsConfig> Function({
       Future<String> Function(String)? assetLoader,
-    })? forbiddenConfigLoader,
-  })  : _windowManager = windowManager,
-        _processManager = processManager,
-        _clipboard = clipboard,
-        _shortcuts = shortcuts,
-        _violationReporter = violationReporter,
-        _logger = logger,
-        _forbiddenConfigLoader =
-            forbiddenConfigLoader ?? ForbiddenAppsConfig.load;
+    })?
+    forbiddenConfigLoader,
+  }) : _windowManager = windowManager,
+       _processManager = processManager,
+       _clipboard = clipboard,
+       _shortcuts = shortcuts,
+       _violationReporter = violationReporter,
+       _logger = logger,
+       _forbiddenConfigLoader =
+           forbiddenConfigLoader ?? ForbiddenAppsConfig.load;
 
   final WindowManagerChannel _windowManager;
   final ProcessManagerChannel _processManager;
@@ -74,13 +76,19 @@ class LockdownService {
   final Logger _logger;
   final Future<ForbiddenAppsConfig> Function({
     Future<String> Function(String)? assetLoader,
-  }) _forbiddenConfigLoader;
+  })
+  _forbiddenConfigLoader;
 
   ForbiddenAppsConfig? _forbiddenAppsConfig;
 
   LockdownMode _currentMode = LockdownMode.none;
   String? _currentAttemptId;
   bool _deviceCheckFullscreenActive = false;
+  bool _attemptExitGuardActive = false;
+  bool _exitAllowed = false;
+  bool _violationMonitoringActive = false;
+  final Map<ViolationType, DateTime> _lastViolationAt = {};
+  static const _violationDebounce = Duration(seconds: 1);
   final List<StreamSubscription<String>> _violationSubscriptions = [];
 
   /// Broadcast of the most recent [ViolationType] seen while the
@@ -110,6 +118,119 @@ class LockdownService {
   /// does not install shortcut/clipboard/process hooks and has no attempt ID,
   /// so it must not be treated as an active anti-cheat lockdown.
   bool get isDeviceCheckFullscreenActive => _deviceCheckFullscreenActive;
+
+  /// True while the native runner refuses app-level close/minimize actions
+  /// for the current attempt. This is intentionally separate from
+  /// [isActive], because Practice can enable the submit-before-exit gate
+  /// without enabling anti-cheat fullscreen.
+  bool get isAttemptExitGuardActive => _attemptExitGuardActive;
+
+  /// True only after the server-acknowledged terminal submission path grants
+  /// the native runner permission to close the exam window.
+  bool get isExitAllowed => _exitAllowed;
+
+  /// Installs the app-level exit guard for a real attempt. It does not change
+  /// fullscreen, clipboard, shortcuts, or process policy; those remain owned
+  /// by [activateLockdown] and the server-pinned lockdown mode.
+  Future<void> activateAttemptExitGuard({
+    required String attemptPublicId,
+  }) async {
+    if (_attemptExitGuardActive && _currentAttemptId == attemptPublicId) {
+      return;
+    }
+
+    _logger.i('Activating app-level exit guard for $attemptPublicId');
+    _lastViolationAt.clear();
+    try {
+      // Refuse first, then turn the native gate on. Native defaults to the
+      // blocked posture, so a transient message between these calls cannot
+      // become an accidental exit window.
+      await _windowManager.setExitAllowed(false);
+      await _windowManager.setExitGuardActive(true);
+      _attemptExitGuardActive = true;
+      _exitAllowed = false;
+      _currentAttemptId = attemptPublicId;
+      if (!_violationMonitoringActive) {
+        _startViolationMonitoring();
+      }
+    } on Object {
+      // If activation failed after changing the native permission, restore a
+      // harmless non-guard posture before surfacing the failure.
+      try {
+        await _windowManager.setExitGuardActive(false);
+        await _windowManager.setExitAllowed(true);
+      } on Object catch (rollbackError) {
+        _logger.w('Exit guard rollback failed', error: rollbackError);
+      }
+      rethrow;
+    }
+  }
+
+  /// Grants native close permission after the backend has acknowledged the
+  /// terminal submit. Calling this before that boundary is a contract bug and
+  /// is therefore intentionally not inferred from a widget state.
+  Future<void> allowExitAfterSubmission() async {
+    if (!_attemptExitGuardActive || _exitAllowed) return;
+    await _windowManager.setExitAllowed(true);
+    _exitAllowed = true;
+    _logger.i('App-level exit guard unlocked after submission acknowledgement');
+  }
+
+  /// Releases a guard whose attempt never reached the task shell (for
+  /// example, a post-start bootstrap failure). This is deliberately separate
+  /// from [deactivateAttemptExitGuard]: normal teardown refuses to remove a
+  /// still-blocked guard without server acknowledgement.
+  Future<void> abortAttemptExitGuard() async {
+    if (!_attemptExitGuardActive) return;
+
+    Object? firstError;
+    StackTrace? firstStack;
+    try {
+      await _windowManager.setExitAllowed(true);
+    } on Object catch (e, stack) {
+      firstError = e;
+      firstStack = stack;
+    }
+    try {
+      await _windowManager.setExitGuardActive(false);
+    } on Object catch (e, stack) {
+      firstError ??= e;
+      firstStack ??= stack;
+    }
+
+    _attemptExitGuardActive = false;
+    _exitAllowed = true;
+    if (_currentMode == LockdownMode.none) {
+      _stopViolationMonitoring();
+      _currentAttemptId = null;
+    }
+    _logger.i('App-level exit guard aborted before the attempt started');
+
+    if (firstError != null) {
+      Error.throwWithStackTrace(firstError, firstStack!);
+    }
+  }
+
+  /// Removes the native guard after the submitted state has been exposed.
+  /// [allowExitAfterSubmission] must run first; this method does not grant
+  /// permission on its own.
+  Future<void> deactivateAttemptExitGuard() async {
+    if (!_attemptExitGuardActive) return;
+    if (!_exitAllowed) {
+      _logger.w(
+        'Refusing to deactivate app-level exit guard before submission acknowledgement',
+      );
+      return;
+    }
+    await _windowManager.setExitGuardActive(false);
+    _attemptExitGuardActive = false;
+    _exitAllowed = true;
+    if (_currentMode == LockdownMode.none) {
+      _stopViolationMonitoring();
+      _currentAttemptId = null;
+    }
+    _logger.i('App-level exit guard deactivated');
+  }
 
   /// Puts the candidate in fullscreen before the device check begins.
   ///
@@ -219,10 +340,7 @@ class LockdownService {
     _currentAttemptId = attemptPublicId;
     final failed = <String>[];
 
-    Future<void> step(
-      String label,
-      Future<void> Function() body,
-    ) async {
+    Future<void> step(String label, Future<void> Function() body) async {
       try {
         await body();
         _logger.d('Lockdown step OK: $label');
@@ -276,7 +394,12 @@ class LockdownService {
     }
     _logger.i('Deactivating lockdown');
 
-    _stopViolationMonitoring();
+    // The app-level exit guard may remain active while anti-cheat controls
+    // are being torn down (for example, a process lifecycle interruption).
+    // Keep its warning/audit stream alive until the explicit guard release.
+    if (!_attemptExitGuardActive) {
+      _stopViolationMonitoring();
+    }
 
     // Each step is wrapped in its own try/catch — on the deactivate
     // path a partial failure is less catastrophic than on the
@@ -295,7 +418,9 @@ class LockdownService {
     await safe('unblockShortcuts', _shortcuts.unblock);
 
     _currentMode = LockdownMode.none;
-    _currentAttemptId = null;
+    if (!_attemptExitGuardActive) {
+      _currentAttemptId = null;
+    }
     _deviceCheckFullscreenActive = false;
     _logger.i('Lockdown deactivated');
   }
@@ -339,9 +464,7 @@ class LockdownService {
     for (final processName in runningForbidden) {
       try {
         final ok = await _processManager.terminateProcess(processName);
-        _logger.i(
-          'Terminated forbidden app $processName: $ok',
-        );
+        _logger.i('Terminated forbidden app $processName: $ok');
       } catch (e) {
         _logger.e('Failed to terminate $processName', error: e);
       }
@@ -360,46 +483,41 @@ class LockdownService {
   }
 
   void _startViolationMonitoring() {
+    if (_violationMonitoringActive) return;
+    _violationMonitoringActive = true;
     _logger.d('Starting violation monitoring');
     _violationSubscriptions.add(
       _windowManager.violations.listen(
         (event) => _handleViolation(ViolationType.fullscreenExit, event),
-        onError: (Object e) => _logger.w(
-          'window event stream error',
-          error: e,
-        ),
+        onError: (Object e) => _logger.w('window event stream error', error: e),
       ),
     );
     _violationSubscriptions.add(
       _processManager.violations.listen(
         (event) => _handleViolation(ViolationType.forbiddenAppDetected, event),
-        onError: (Object e) => _logger.w(
-          'process event stream error',
-          error: e,
-        ),
+        onError: (Object e) =>
+            _logger.w('process event stream error', error: e),
       ),
     );
     _violationSubscriptions.add(
       _shortcuts.violations.listen(
         (event) => _handleViolation(ViolationType.shortcutBlocked, event),
-        onError: (Object e) => _logger.w(
-          'shortcut event stream error',
-          error: e,
-        ),
+        onError: (Object e) =>
+            _logger.w('shortcut event stream error', error: e),
       ),
     );
     _violationSubscriptions.add(
       _clipboard.violations.listen(
         (event) => _handleViolation(ViolationType.clipboardPaste, event),
-        onError: (Object e) => _logger.w(
-          'clipboard event stream error',
-          error: e,
-        ),
+        onError: (Object e) =>
+            _logger.w('clipboard event stream error', error: e),
       ),
     );
   }
 
   void _stopViolationMonitoring() {
+    if (!_violationMonitoringActive) return;
+    _violationMonitoringActive = false;
     _logger.d('Stopping violation monitoring');
     for (final subscription in _violationSubscriptions) {
       subscription.cancel();
@@ -407,10 +525,7 @@ class LockdownService {
     _violationSubscriptions.clear();
   }
 
-  Future<void> _handleViolation(
-    ViolationType type,
-    String? metadata,
-  ) async {
+  Future<void> _handleViolation(ViolationType type, String? metadata) async {
     final attemptId = _currentAttemptId;
     if (attemptId == null) {
       _logger.w(
@@ -418,6 +533,13 @@ class LockdownService {
       );
       return;
     }
+    final now = DateTime.now();
+    final previous = _lastViolationAt[type];
+    if (previous != null && now.difference(previous) < _violationDebounce) {
+      _logger.d('Debounced repeated violation: ${type.name}');
+      return;
+    }
+    _lastViolationAt[type] = now;
     _logger.w('Violation detected: ${type.name}');
     if (!_violationStreamController.isClosed) {
       _violationStreamController.add(type);
@@ -430,7 +552,7 @@ class LockdownService {
         attemptPublicId: attemptId,
         type: type,
         severity: severity,
-        timestamp: DateTime.now(),
+        timestamp: now,
         metadata: metadata,
       ),
     );
@@ -440,6 +562,8 @@ class LockdownService {
   /// to guarantee no listener outlives a discarded service instance
   /// during a hard-stop shutdown.
   Future<void> dispose() async {
+    await deactivateAttemptExitGuard();
+    await deactivateLockdown();
     await exitDeviceCheckFullscreen();
     if (!_violationStreamController.isClosed) {
       await _violationStreamController.close();

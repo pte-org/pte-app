@@ -82,4 +82,59 @@ void main() {
 
     verifyNever(() => bloc.add(any(that: isA<AppResumed>())));
   });
+
+  testWidgets('retryable submit failure keeps the exam visible and exposes Retry submit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    stateController.add(
+      AttemptInProgress(
+        'attempt-1',
+        _task(),
+        snapshot,
+        submissionStatus: AttemptSubmissionStatus.retryableFailure,
+        submissionError: Exception('offline'),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text(
+        'The server did not confirm submission. Your exam is still open; retry when ready.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Retry submit'), findsOneWidget);
+
+    await tester.tap(find.text('Retry submit'));
+    verify(() => bloc.add(const ForceSubmitRequested())).called(1);
+  });
+
+  testWidgets('submitting state blocks the task surface with acknowledgement progress', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    stateController.add(
+      AttemptInProgress(
+        'attempt-1',
+        _task(),
+        snapshot,
+        submissionStatus: AttemptSubmissionStatus.submitting,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text(
+        'Submitting your exam. Keep this window open until submission is confirmed.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is IgnorePointer && widget.ignoring,
+      ),
+      findsOneWidget,
+    );
+  });
 }
