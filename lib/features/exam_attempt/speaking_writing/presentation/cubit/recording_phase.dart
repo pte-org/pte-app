@@ -3,4 +3,4 @@
 /// mutually exclusive (never both true at once). Used by `AutoRecordState`,
 /// shared by every auto-record speaking task's screen (Read Aloud, Repeat
 /// Sentence, Describe Image).
-enum RecordingPhase { idle, recording, recorded }
+enum RecordingPhase { idle, recording, recorded, unavailable }

@@ -8,7 +8,6 @@ import 'package:pte_app/core/widgets/components/exam_textarea.dart';
 import 'package:pte_app/core/widgets/templates/free_text_template.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/text_editor_toolbar.dart';
 
 /// Pure UI body for Summarize Written Text — header + passage + editor +
 /// word-count footer. No `ExamScaffold` dependency so the Chrome dev
@@ -20,10 +19,12 @@ class SummarizeWrittenTextBody extends StatefulWidget {
   const SummarizeWrittenTextBody({
     super.key,
     required this.task,
+    this.initialAnswer,
     this.persistDraft,
   });
 
   final TaskView task;
+  final String? initialAnswer;
   final ValueChanged<String>? persistDraft;
 
   @override
@@ -39,7 +40,9 @@ class _SummarizeWrittenTextBodyState extends State<SummarizeWrittenTextBody> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController()..addListener(_onDraftChanged);
+    _controller = TextEditingController(text: widget.initialAnswer ?? '')
+      ..addListener(_onDraftChanged);
+    _wordCount = _countWords(_controller.text);
   }
 
   void _onDraftChanged() {
@@ -108,7 +111,6 @@ class _EditorBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          TextEditorToolbar(controller: controller),
           SizedBox(
             height: 320,
             child: Padding(

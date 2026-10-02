@@ -1,3 +1,4 @@
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/features/exam_attempt/listening/constants/listening_strings.dart';
 
 /// Maps a listening `TaskView.taskType` to its `ExamTaskHeaderBanner` title —
@@ -5,15 +6,18 @@ import 'package:pte_app/features/exam_attempt/listening/constants/listening_stri
 /// per-feature mapping (each feature owns its own title strings) even
 /// though the banner widget itself is shared.
 String listeningTaskHeaderTitle(String taskType) {
-  return switch (taskType) {
+  return switch (TaskTypeCodes.canonicalize(taskType)) {
     'WRITE_FROM_DICTATION' => ListeningStrings.headerTitleWriteFromDictation,
     'SUMMARIZE_SPOKEN_TEXT' => ListeningStrings.headerTitleSummarizeSpokenText,
     'MC_LISTENING_SINGLE' => ListeningStrings.headerTitleMcListeningSingle,
     'MC_LISTENING_MULTIPLE' => ListeningStrings.headerTitleMcListeningMultiple,
     'SELECT_MISSING_WORD' => ListeningStrings.headerTitleSelectMissingWord,
-    'HIGHLIGHT_INCORRECT_WORDS' => ListeningStrings.headerTitleHighlightIncorrectWords,
-    'HIGHLIGHT_CORRECT_SUMMARY' => ListeningStrings.headerTitleHighlightCorrectSummary,
-    'FILL_BLANKS_LISTENING' => ListeningStrings.headerTitleFillBlanksListening,
+    'HIGHLIGHT_INCORRECT_WORDS' =>
+      ListeningStrings.headerTitleHighlightIncorrectWords,
+    'HIGHLIGHT_CORRECT_SUMMARY' =>
+      ListeningStrings.headerTitleHighlightCorrectSummary,
+    TaskTypeCodes.fillInTheBlanksTypeIn =>
+      ListeningStrings.headerTitleFillBlanksListening,
     _ => '',
   };
 }

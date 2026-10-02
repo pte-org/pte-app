@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/device_check/constants/device_check_strings.dart';
 import 'package:pte_app/features/device_check/domain/device_check_audio_player.dart';
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_cubit.dart';
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_state.dart';
@@ -56,7 +57,28 @@ void main() {
       ).thenThrow(Exception('permission denied')),
       build: buildCubit,
       act: (cubit) => cubit.startMicRecording(),
-      expect: () => [const DeviceCheckState(micPhase: MicCheckPhase.idle)],
+      expect: () => [
+        const DeviceCheckState(
+          micPhase: MicCheckPhase.idle,
+          micErrorMessage: DeviceCheckStrings.microphoneCheckFailedMessage,
+        ),
+      ],
+    );
+
+    blocTest<DeviceCheckCubit, DeviceCheckState>(
+      'shows a device error without entering recording when no input device exists',
+      setUp: () => when(
+        () => recorder.start(any()),
+      ).thenThrow(const AudioInputUnavailableException()),
+      build: buildCubit,
+      act: (cubit) => cubit.startMicRecording(),
+      expect: () => [
+        const DeviceCheckState(
+          micPhase: MicCheckPhase.idle,
+          micErrorMessage: DeviceCheckStrings.microphoneUnavailableMessage,
+        ),
+      ],
+      verify: (_) => verifyNever(() => recorder.stop()),
     );
 
     blocTest<DeviceCheckCubit, DeviceCheckState>(

@@ -12,22 +12,21 @@ import 'package:pte_app/core/storage/answer_sync_status.dart';
 import 'package:pte_app/core/storage/app_database.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/rate_limit_backoff.dart';
+import 'package:pte_app/core/sync/submission_preparation_exception.dart';
 
 /// Matches [Timer.periodic]'s signature so a fake factory can be injected
 /// for deterministic tests (no real wall-clock waits).
-typedef PeriodicTimerFactory = Timer Function(Duration period, void Function(Timer timer) callback);
+typedef PeriodicTimerFactory =
+    Timer Function(Duration period, void Function(Timer timer) callback);
 
 /// Orchestrates outbox flushing: ties storage ([AnswerOutboxDao]), network
 /// ([ApiClient]), and the connectivity canary ([NetworkCanary]) together.
 /// Not a `Bloc` — a plain Dart service the exam-delivery `Bloc` starts and
 /// stops (Phase 3 onward); must not import `flutter_bloc` types.
 ///
-/// The single most important behavioral constraint here: a background
-/// flush (canary or periodic tick) must never flush the row for the task
-/// currently displayed to the student — see [setActiveTask] — because a
-/// successful submit advances the attempt's current-task pointer on the
-/// server. Only an explicit [flushOne] call (navigate-away / force-submit)
-/// flushes the active row (phase-02 Design Constraints).
+/// Background passes save drafts without moving the attempt pointer.
+/// The active-task exclusion prevents sync racing with the screen being edited;
+/// explicit [flushOne] calls may submit-and-advance when requested.
 class SyncEngine {
   SyncEngine({
     required AnswerOutboxDao outboxDao,
@@ -38,14 +37,14 @@ class SyncEngine {
     Logger? logger,
     RateLimitBackoff? backoff,
     EncryptionHelper? encryptionHelper,
-  })  : _outboxDao = outboxDao,
-        _apiClient = apiClient,
-        _canary = canary,
-        _periodicInterval = periodicInterval,
-        _createPeriodicTimer = createPeriodicTimer ?? Timer.periodic,
-        _logger = logger ?? Logger(),
-        _backoff = backoff ?? RateLimitBackoff(),
-        _encryptionHelper = encryptionHelper ?? EncryptionHelper();
+  }) : _outboxDao = outboxDao,
+       _apiClient = apiClient,
+       _canary = canary,
+       _periodicInterval = periodicInterval,
+       _createPeriodicTimer = createPeriodicTimer ?? Timer.periodic,
+       _logger = logger ?? Logger(),
+       _backoff = backoff ?? RateLimitBackoff(),
+       _encryptionHelper = encryptionHelper ?? EncryptionHelper();
 
   final AnswerOutboxDao _outboxDao;
   final ApiClient _apiClient;
@@ -66,8 +65,10 @@ class SyncEngine {
   StreamSubscription<void>? _canarySubscription;
   Timer? _periodicTimer;
   bool _isFlushing = false;
+  Future<void>? _flushInFlight;
 
-  final StreamController<void> _taskRejectedController = StreamController<void>.broadcast();
+  final StreamController<void> _taskRejectedController =
+      StreamController<void>.broadcast();
 
   /// Emits whenever a background flush discovers the currently-displayed
   /// task has already been closed out server-side (`NotCurrentTaskException`)
@@ -105,10 +106,16 @@ class SyncEngine {
       );
     }
     _runningAttemptId = attemptPublicId;
-    _encryptionPublicKey =
-        encryptionPublicKey == null ? null : _encryptionHelper.parsePublicKey(encryptionPublicKey);
-    _canarySubscription = _canary.available.listen((_) => unawaited(_flush(attemptPublicId)));
-    _periodicTimer = _createPeriodicTimer(_periodicInterval, (_) => unawaited(_flush(attemptPublicId)));
+    _encryptionPublicKey = encryptionPublicKey == null
+        ? null
+        : _encryptionHelper.parsePublicKey(encryptionPublicKey);
+    _canarySubscription = _canary.available.listen(
+      (_) => unawaited(_flush(attemptPublicId)),
+    );
+    _periodicTimer = _createPeriodicTimer(
+      _periodicInterval,
+      (_) => unawaited(_flush(attemptPublicId)),
+    );
   }
 
   void stopSync() {
@@ -139,19 +146,78 @@ class SyncEngine {
     return _flush(attemptPublicId);
   }
 
+  /// Flushes every pending answer before terminal submit, including the task
+  /// currently displayed. Background flushes intentionally exclude that task
+  /// to avoid racing the editor; terminal submission is the explicit action
+  /// that may bypass that exclusion.
+  ///
+  /// The method is deliberately bounded to one pass. A network failure leaves
+  /// the row pending and returns a retryable preparation failure rather than
+  /// holding the exam hostage in an unbounded wait.
+  Future<void> flushBeforeSubmit(String attemptPublicId) async {
+    if (_runningAttemptId != attemptPublicId) {
+      throw const SubmissionPreparationException(
+        kind: SubmissionPreparationKind.answers,
+        pendingCount: 1,
+      );
+    }
+    await _flush(attemptPublicId, includeActiveTask: true);
+    // If a background pass was already in flight, the first await above may
+    // have waited for that pass's active-task-excluding snapshot. Run one
+    // fresh pass so the displayed task is covered as well.
+    await _flush(attemptPublicId, includeActiveTask: true);
+    final pending = await _outboxDao.queryPendingByAttempt(attemptPublicId);
+    if (pending.isNotEmpty) {
+      throw SubmissionPreparationException(
+        kind: SubmissionPreparationKind.answers,
+        pendingCount: pending.length,
+      );
+    }
+  }
+
   /// Flushes exactly one row by id, bypassing the active-task exclusion.
   /// Used only by the flush-before-navigate hook (Phase 5/6) and
   /// force-submit (Phase 7) — an explicit action the student actually took,
   /// unlike a background tick.
-  Future<void> flushOne(String pinnedItemPublicId) async {
+  Future<void> flushOne(
+    String pinnedItemPublicId, {
+    bool advance = true,
+  }) async {
     final attemptId = _runningAttemptId;
     if (attemptId == null) return;
     final row = await _outboxDao.getAnswer(attemptId, pinnedItemPublicId);
     if (row == null || row.status != AnswerSyncStatus.pending.name) return;
-    await _flushOne(row);
+    await _flushOne(row, advance: advance);
   }
 
-  Future<void> _flush(String attemptPublicId) async {
+  Future<void> _flush(
+    String attemptPublicId, {
+    bool includeActiveTask = false,
+  }) {
+    final inFlight = _flushInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _runFlush(
+      attemptPublicId,
+      includeActiveTask: includeActiveTask,
+    );
+    _flushInFlight = future;
+    unawaited(
+      future.then<void>(
+        (_) {
+          if (identical(_flushInFlight, future)) _flushInFlight = null;
+        },
+        onError: (Object error, StackTrace stack) {
+          if (identical(_flushInFlight, future)) _flushInFlight = null;
+        },
+      ),
+    );
+    return future;
+  }
+
+  Future<void> _runFlush(
+    String attemptPublicId, {
+    required bool includeActiveTask,
+  }) async {
     if (_isFlushing || _backoff.isActive) return;
     _isFlushing = true;
     try {
@@ -159,8 +225,12 @@ class SyncEngine {
       final activeTaskId = _activeTaskId;
       var flushedAny = false;
       for (final answer in pending) {
-        if (activeTaskId != null && answer.pinnedItemPublicId == activeTaskId) continue;
-        await _flushOne(answer);
+        if (!includeActiveTask &&
+            activeTaskId != null &&
+            answer.pinnedItemPublicId == activeTaskId) {
+          continue;
+        }
+        await _flushOne(answer, advance: false);
         flushedAny = true;
         // A 429 mid-pass must stop the rest of this pass immediately, not
         // just skip retrying the row that received it — the remaining
@@ -168,7 +238,9 @@ class SyncEngine {
         // rate-limit window and needlessly compound the backoff's
         // exponential growth within a single tick (phase-07 Design
         // Constraints).
-        if (_backoff.isActive) break;
+        if (_backoff.isActive) {
+          break;
+        }
       }
       if (flushedAny) {
         await _outboxDao.checkpointWal();
@@ -178,34 +250,59 @@ class SyncEngine {
     }
   }
 
-  Future<void> _flushOne(AnswerOutbox answer) async {
+  Future<void> _flushOne(AnswerOutbox answer, {required bool advance}) async {
     try {
       final publicKey = _encryptionPublicKey;
       if (publicKey != null) {
         final encrypted = await _encryptAnswer(answer, publicKey);
         if (encrypted == null) return;
-        await _apiClient.submitEncryptedAnswer(
-          attemptPublicId: answer.attemptPublicId,
-          pinnedItemPublicId: answer.pinnedItemPublicId,
-          wrappedKey: encrypted.wrappedKey,
-          iv: encrypted.iv,
-          ciphertext: encrypted.ciphertext,
-        );
+        if (advance) {
+          await _apiClient.submitEncryptedAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            wrappedKey: encrypted.wrappedKey,
+            iv: encrypted.iv,
+            ciphertext: encrypted.ciphertext,
+          );
+        } else {
+          await _apiClient.saveEncryptedAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            wrappedKey: encrypted.wrappedKey,
+            iv: encrypted.iv,
+            ciphertext: encrypted.ciphertext,
+          );
+        }
       } else {
-        await _apiClient.submitAnswer(
-          attemptPublicId: answer.attemptPublicId,
-          pinnedItemPublicId: answer.pinnedItemPublicId,
-          payload: answer.payload,
-        );
+        if (advance) {
+          await _apiClient.submitAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            payload: answer.payload,
+          );
+        } else {
+          await _apiClient.saveAnswer(
+            attemptPublicId: answer.attemptPublicId,
+            pinnedItemPublicId: answer.pinnedItemPublicId,
+            payload: answer.payload,
+          );
+        }
       }
-      await _outboxDao.markSynced(answer.attemptPublicId, answer.pinnedItemPublicId);
+      await _outboxDao.markSynced(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+      );
       _backoff.reset();
     } on NotCurrentTaskException catch (e) {
       // The server has already closed this task out from under the
       // client — the local "current task" view is stale, so the UI must
       // re-fetch next-task rather than sit on a task the server considers
       // done (phase-07 Design Constraints).
-      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+      await _outboxDao.markTerminalRejected(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+        e.message,
+      );
       _taskRejectedController.add(null);
     } on ConflictException catch (e) {
       // Generic fallback — an already-submitted answer or any other/future
@@ -217,13 +314,21 @@ class SyncEngine {
       // until the server-side exception producing it was deleted in
       // client-side-exam-timer Phase 5 — removed here in Phase 7 since the
       // server can no longer send it.
-      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+      await _outboxDao.markTerminalRejected(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+        e.message,
+      );
     } on ValidationException catch (e) {
       // The server rejected this exact payload as malformed — retrying
       // the same bytes forever cannot succeed, unlike a network/server
       // blip (QUAL-201, Phase 2 quality gate). Not a 409, but
       // non-retryable for the same underlying reason.
-      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, e.message);
+      await _outboxDao.markTerminalRejected(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+        e.message,
+      );
     } on RateLimitException catch (e) {
       // A signal about the whole client's request rate, not this one row
       // — back off every flush attempt (not just this row) until the
@@ -254,12 +359,22 @@ class SyncEngine {
   /// STRICT attempt must surface a clear error, never silently fall back to
   /// the plain-payload path. Returns `null` (caller returns early) on
   /// failure, the successful [EncryptedPayload] otherwise.
-  Future<EncryptedPayload?> _encryptAnswer(AnswerOutbox answer, RSAPublicKey publicKey) async {
+  Future<EncryptedPayload?> _encryptAnswer(
+    AnswerOutbox answer,
+    RSAPublicKey publicKey,
+  ) async {
     try {
       return _encryptionHelper.encrypt(answer.payload, publicKey);
     } catch (e) {
-      _logger.e('Answer encryption failed, marking terminal-rejected', error: e);
-      await _outboxDao.markTerminalRejected(answer.attemptPublicId, answer.pinnedItemPublicId, 'ENCRYPTION_FAILED');
+      _logger.e(
+        'Answer encryption failed, marking terminal-rejected',
+        error: e,
+      );
+      await _outboxDao.markTerminalRejected(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+        'ENCRYPTION_FAILED',
+      );
       return null;
     }
   }

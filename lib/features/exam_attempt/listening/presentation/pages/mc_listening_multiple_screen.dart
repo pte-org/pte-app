@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/templates/multi_select_template.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
@@ -24,6 +24,8 @@ class McListeningMultipleScreen extends StatelessWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
+    this.isPractice = false,
   });
 
   final TaskView task;
@@ -31,6 +33,8 @@ class McListeningMultipleScreen extends StatelessWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
+  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +44,9 @@ class McListeningMultipleScreen extends StatelessWidget {
         audioPlayerService: audioPlayerService,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
-        audioSource: task.audioPromptRef ?? '',
+        audioSource: task.audioUrl ?? '',
+        initialPayload: initialAnswerPayload,
+        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -55,21 +61,44 @@ class McListeningMultipleScreen extends StatelessWidget {
                 instruction:
                     TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
                     'Select all the correct responses.',
-                stimulus: AudioStimulusPlayer(
-                  label: state.hasFinishedPlaying
-                      ? 'Audio finished'
-                      : 'Playing audio',
-                  playing: !state.hasFinishedPlaying,
-                  progress: state.hasFinishedPlaying ? 1 : 0,
+                stimulus: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AudioListeningStatusCard(
+                      statusLabel: !state.hasStartedPlaying
+                          ? 'Tap to listen'
+                          : state.hasFinishedPlaying
+                              ? 'Audio finished'
+                              : 'Playing audio...',
+                      progress: !state.hasStartedPlaying
+                          ? 0.0
+                          : state.hasFinishedPlaying
+                              ? 1.0
+                              : state.progress,
+                    ),
+                    if (isPractice) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          if (!state.hasStartedPlaying) {
+                            context.read<McListeningMultipleCubit>().startPlayback();
+                          } else {
+                            context.read<McListeningMultipleCubit>().replayAudio();
+                          }
+                        },
+                        icon: const Icon(Icons.play_circle_outline),
+                        label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
+                      ),
+                    ],
+                  ],
                 ),
-                response: SingleChildScrollView(
-                  child: ListeningMultipleOptionList(
-                    options: task.options ?? const [],
-                    selectedOrderIndexes: state.selectedOrderIndexes,
-                    onToggle: (orderIndex) => context
-                        .read<McListeningMultipleCubit>()
-                        .toggleOption(orderIndex),
-                  ),
+                response: ListeningMultipleOptionList(
+                  options: task.options ?? const [],
+                  selectedOrderIndexes: state.selectedOrderIndexes,
+                  onToggle: (orderIndex) => context
+                      .read<McListeningMultipleCubit>()
+                      .toggleOption(orderIndex),
                 ),
               );
             },

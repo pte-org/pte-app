@@ -16,12 +16,14 @@ class SummarizeWrittenTextScreen extends StatelessWidget {
     required this.attemptPublicId,
     required this.outboxDao,
     required this.syncEngine,
+    this.initialAnswerPayload,
   });
 
   final TaskView task;
   final String attemptPublicId;
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
+  final String? initialAnswerPayload;
 
   @override
   Widget build(BuildContext context) {
@@ -30,18 +32,21 @@ class SummarizeWrittenTextScreen extends StatelessWidget {
         outboxDao: outboxDao,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
+        initialPayload: initialAnswerPayload,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
           body: SummarizeWrittenTextBody(
             task: task,
+            initialAnswer: initialAnswerPayload,
             persistDraft: innerContext.read<WriteEssayCubit>().draftChanged,
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<WriteEssayCubit>(),
             pinnedItemPublicId: task.pinnedItemPublicId,
             syncEngine: syncEngine,
+            autoAdvanceOnExpiration: false,
           ),
         ),
       ),

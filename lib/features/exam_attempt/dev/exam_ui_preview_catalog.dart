@@ -1,3 +1,4 @@
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/listening/dev/listening_task_fixtures.dart';
 import 'package:pte_app/features/exam_attempt/reading/dev/reading_task_fixtures.dart';
@@ -25,7 +26,8 @@ class ExamUiPreviewCatalog {
   ];
 
   static ExamTaskUiModel modelFor(String taskType) => models.singleWhere(
-    (model) => model.taskType == taskType,
+    (model) =>
+        model.taskType == (TaskTypeCodes.canonicalize(taskType) ?? taskType),
     orElse: () => throw ArgumentError.value(taskType, 'taskType'),
   );
 }

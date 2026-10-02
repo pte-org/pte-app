@@ -16,6 +16,15 @@ class AppStrings {
   static const String loginTitle = 'Candidate Sign-In';
   static const String loginUsernameLabel = 'Login username';
   static const String loginPasswordLabel = 'Login password';
+  static const String loginSessionIdLabel = 'Exam session ID (optional)';
+  static const String loginSessionIdRequiredLabel = 'Exam session ID';
+  static const String loginSessionIdHint =
+      'Enter the session ID provided by your exam host. Students must provide '
+      'one before they can open an exam.';
+  static const String loginSessionIdRequiredHint =
+      'Enter the session ID provided by your exam host to continue.';
+  static const String loginSessionIdRequired =
+      'Exam session ID is required for student sign-in';
   static const String loginSubmit = 'Log in';
   static const String loginEmailLabel = loginUsernameLabel;
   static const String loginEmailRequired = 'Login username is required';
@@ -128,6 +137,10 @@ class AppStrings {
   static const String sentAtLabel = 'Sent at';
   static const String notSent = 'Not sent';
   static const String violationTypeLabel = 'Violation type';
+  static const String auditSourceLabel = 'Source';
+  static const String severityLabel = 'Severity';
+  static const String clientEventIdLabel = 'Client event ID';
+  static const String studentLabel = 'Student';
   static const String violationDetailLabel = 'Detail';
   static const String sequenceLabel = 'Sequence';
   static const String integrityHashLabel = 'Integrity hash';
@@ -145,10 +158,6 @@ class AppStrings {
   static const String liveViolationsTitle = 'Live violations';
   static const String liveCommandConfirmation = 'Confirm proctor command?';
   static const String liveViolationConfirmation = 'Confirm violation flag?';
-
-  static const String sessionEntryTitle = 'Enter session ID';
-  static const String sessionEntryFieldLabel = 'Session ID';
-  static const String sessionEntryStartButton = 'Start';
 
   static const String examPhasePrepLabel = 'Preparation';
   static const String examPhaseResponseLabel = 'Response';
@@ -225,7 +234,7 @@ class AppStrings {
 
   static const String devReadingPreviewTitle = 'Reading task preview';
   static const String devReadingPreviewBlankGroupsUnavailableLabel =
-      'FILL_BLANKS_READING_WRITING (blankGroups unavailable)';
+      'FILL_IN_THE_BLANKS_DROPDOWN (blankGroups unavailable)';
 
   static const String readingInstructionsTitle = 'Reading';
   static const String readingInstructionsBody =
@@ -237,11 +246,13 @@ class AppStrings {
 
   static const String sectionCompletedTimeUpTitle = 'Time is up';
   static const String sectionCompletedTimeUpMessage =
-      'The time allowed for this section has ended. Your answers so far have been saved.';
-  static const String sectionCompletedNaturalTitle =
-      'Reading Section Completed';
+      'The time allowed for this exam has ended. Your answers so far have been saved.';
+  static const String sectionCompletedNaturalTitle = 'Exam completed';
   static const String sectionCompletedNaturalMessage =
-      'You have answered every question in this section.';
+      'You have completed every question in this exam.';
+  static const String examAttemptNumberLabel = 'Attempt';
+  static const String examRetriesRemainingMessage = 'Retries remaining';
+  static const String examRetryButton = 'Try again';
   static const String sectionCompletedContinueButton = 'Continue';
 
   // Writing task — text-editor toolbar tooltips.

@@ -35,7 +35,7 @@ void setupAuthModule() {
     () => TokenRefresher(
       refreshDio: _newGatewayDio(),
       tokenStore: getIt(),
-      refreshEndpoint: '/api/iam/auth/refresh',
+      refreshEndpoint: '/api/v1/auth/refresh',
     ),
   );
 

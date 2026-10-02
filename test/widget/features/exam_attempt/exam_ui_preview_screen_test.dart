@@ -33,7 +33,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ExamUiPreviewTaskBody(
-            model: ExamUiPreviewCatalog.modelFor('FILL_BLANKS_READING_WRITING'),
+            model: ExamUiPreviewCatalog.modelFor('FILL_IN_THE_BLANKS_DROPDOWN'),
           ),
         ),
       ),

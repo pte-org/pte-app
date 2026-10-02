@@ -1,3 +1,5 @@
+import 'package:pte_app/core/constants/task_type_meta.dart';
+
 /// A single reorderable option within a task (e.g. one word-bank tile, one
 /// heading choice). `orderIndex` is a decimal string, not an int — matches
 /// the same reordering convention used by the outbox's submit payload
@@ -18,9 +20,9 @@ class TaskOption {
   }
 }
 
-/// One independently-choosable blank within a `FILL_BLANKS_READING_WRITING`
+/// One independently-choosable blank within a `FILL_IN_THE_BLANKS_DROPDOWN`
 /// task — its [options] are distinct from every other blank's, unlike the
-/// shared word bank [TaskView.options] carries for `FILL_BLANKS_READING`.
+/// shared word bank [TaskView.options] carries for `FILL_IN_THE_BLANKS_DRAG_AND_DROP`.
 class BlankGroup {
   const BlankGroup({required this.blankIndex, required this.options});
 
@@ -44,13 +46,13 @@ class BlankGroup {
 ///
 /// [options] is reused across several reading task types beyond its
 /// original MC-choice purpose: for `MC_READING_MULTIPLE` it's the checkbox
-/// choices, for `FILL_BLANKS_READING` it's the shared drag-and-drop word
+/// choices, for `FILL_IN_THE_BLANKS_DRAG_AND_DROP` it's the shared drag-and-drop word
 /// bank, and for `RE_ORDER_PARAGRAPHS` it's the shuffled paragraph list
 /// (`TaskOption.text` = a paragraph's full text, `TaskOption.orderIndex` =
 /// its stable correct-position identity — **never** its current on-screen
 /// position, which is exactly what the student is rearranging). [options]
 /// and [blankGroups] are mutually exclusive per task — only
-/// `FILL_BLANKS_READING_WRITING` ever populates [blankGroups], where every
+/// `FILL_IN_THE_BLANKS_DROPDOWN` ever populates [blankGroups], where every
 /// blank needs its own distinct option list that a flat [options] list
 /// can't express.
 class TaskView {
@@ -74,6 +76,12 @@ class TaskView {
     this.preListenSeconds,
     this.preRecordSeconds,
     this.imageUrl,
+    this.audioUrl,
+    this.taskTypeCode,
+    this.runtime,
+    this.taskTypeDisplayName,
+    this.canNavigatePrevious = false,
+    this.canNavigateNext = false,
   });
 
   final String pinnedItemPublicId;
@@ -81,9 +89,25 @@ class TaskView {
   final int totalTasks;
   final String section;
   final String taskType;
+
+  /// Additive canonical code. [taskType] remains populated for legacy wire
+  /// compatibility; [canonicalTaskType] is the alias-normalized identity
+  /// used by the registry and presentation adapters.
+  final String? taskTypeCode;
+
+  /// Immutable server runtime metadata for new snapshots. Null means this is
+  /// an older response and the app must use the alias-aware legacy registry.
+  final TaskRuntimeProfile? runtime;
+  final String? taskTypeDisplayName;
+  final bool canNavigatePrevious;
+  final bool canNavigateNext;
+
+  String get canonicalTaskType =>
+      TaskTypeCodes.canonicalize(taskTypeCode ?? taskType) ?? taskType;
   final String title;
   final String? promptText;
   final String? audioPromptRef;
+
   /// The raw MediaObject public ID — never a directly-loadable URL. Kept
   /// for parity with the backend DTO (`imagePromptRef` stays present there
   /// too, unchanged), but no screen should read this to display an image;
@@ -94,6 +118,7 @@ class TaskView {
   final int? maxWordCount;
   final List<TaskOption>? options;
   final List<BlankGroup>? blankGroups;
+
   /// The client-side-exam-timer refactor's ONLY timing signal per task
   /// (FR-01) — [TimerService.seedFromTask] computes its own local wall-clock
   /// deadlines directly from these two ints, anchored to `DateTime.now()` at
@@ -126,11 +151,69 @@ class TaskView {
 
   /// Resolved, directly-fetchable presigned URL for [imagePromptRef] — null
   /// unless the server resolved one (mandatory for DESCRIBE_IMAGE, absent
-  /// for every other task type today). Unlike Speaking's audio prompts
-  /// (played on demand via a separate replay-limited endpoint), a static
-  /// image has no such concern, so it's embedded directly here
-  /// (plans/phat-describe-image-e2e).
+  /// for every other task type today).
   final String? imageUrl;
+
+  /// Resolved presigned audio URL for LISTENING tasks — null for Speaking
+  /// tasks (which use the /audio on-demand endpoint for replay-limit
+  /// enforcement) and any task type without an audio prompt.
+  final String? audioUrl;
+
+  TaskView copyWith({
+    String? pinnedItemPublicId,
+    int? orderIndex,
+    int? totalTasks,
+    String? section,
+    String? taskType,
+    String? taskTypeCode,
+    TaskRuntimeProfile? runtime,
+    String? taskTypeDisplayName,
+    bool? canNavigatePrevious,
+    bool? canNavigateNext,
+    String? title,
+    String? promptText,
+    String? audioPromptRef,
+    String? imagePromptRef,
+    int? minWordCount,
+    int? maxWordCount,
+    List<TaskOption>? options,
+    List<BlankGroup>? blankGroups,
+    int? prepSeconds,
+    int? responseSeconds,
+    DateTime? examEndTime,
+    int? preListenSeconds,
+    int? preRecordSeconds,
+    String? imageUrl,
+    String? audioUrl,
+  }) {
+    return TaskView(
+      pinnedItemPublicId: pinnedItemPublicId ?? this.pinnedItemPublicId,
+      orderIndex: orderIndex ?? this.orderIndex,
+      totalTasks: totalTasks ?? this.totalTasks,
+      section: section ?? this.section,
+      taskType: taskType ?? this.taskType,
+      taskTypeCode: taskTypeCode ?? this.taskTypeCode,
+      runtime: runtime ?? this.runtime,
+      taskTypeDisplayName: taskTypeDisplayName ?? this.taskTypeDisplayName,
+      canNavigatePrevious: canNavigatePrevious ?? this.canNavigatePrevious,
+      canNavigateNext: canNavigateNext ?? this.canNavigateNext,
+      title: title ?? this.title,
+      promptText: promptText ?? this.promptText,
+      audioPromptRef: audioPromptRef ?? this.audioPromptRef,
+      imagePromptRef: imagePromptRef ?? this.imagePromptRef,
+      minWordCount: minWordCount ?? this.minWordCount,
+      maxWordCount: maxWordCount ?? this.maxWordCount,
+      options: options ?? this.options,
+      blankGroups: blankGroups ?? this.blankGroups,
+      prepSeconds: prepSeconds ?? this.prepSeconds,
+      responseSeconds: responseSeconds ?? this.responseSeconds,
+      examEndTime: examEndTime ?? this.examEndTime,
+      preListenSeconds: preListenSeconds ?? this.preListenSeconds,
+      preRecordSeconds: preRecordSeconds ?? this.preRecordSeconds,
+      imageUrl: imageUrl ?? this.imageUrl,
+      audioUrl: audioUrl ?? this.audioUrl,
+    );
+  }
 
   factory TaskView.fromJson(Map<String, dynamic> json) {
     return TaskView(
@@ -139,6 +222,11 @@ class TaskView {
       totalTasks: json['totalTasks'] as int,
       section: json['section'] as String,
       taskType: json['taskType'] as String,
+      taskTypeCode: json['taskTypeCode'] as String?,
+      runtime: _readRuntime(json['runtime']),
+      taskTypeDisplayName: json['taskTypeDisplayName'] as String?,
+      canNavigatePrevious: json['canNavigatePrevious'] as bool? ?? false,
+      canNavigateNext: json['canNavigateNext'] as bool? ?? false,
       title: json['title'] as String,
       promptText: json['promptText'] as String?,
       audioPromptRef: json['audioPromptRef'] as String?,
@@ -153,11 +241,25 @@ class TaskView {
           .toList(),
       prepSeconds: json['prepSeconds'] as int,
       responseSeconds: json['responseSeconds'] as int,
-      examEndTime: json['examEndTime'] == null ? null : DateTime.parse(json['examEndTime'] as String),
+      examEndTime: json['examEndTime'] == null
+          ? null
+          : DateTime.parse(json['examEndTime'] as String),
       preListenSeconds: json['preListenSeconds'] as int?,
       preRecordSeconds: json['preRecordSeconds'] as int?,
       imageUrl: json['imageUrl'] as String?,
+      audioUrl: json['audioUrl'] as String?,
     );
+  }
+
+  static TaskRuntimeProfile? _readRuntime(Object? rawRuntime) {
+    if (rawRuntime == null) return null;
+    if (rawRuntime is Map) {
+      return TaskRuntimeProfile.fromJson(Map<String, dynamic>.from(rawRuntime));
+    }
+    // A present but malformed runtime object is deliberately represented as
+    // an invalid profile so the dispatcher fails closed instead of falling
+    // back to a mutable/legacy task-type guess.
+    return const TaskRuntimeProfile();
   }
 }
 
@@ -175,6 +277,10 @@ class AttemptTaskResponse {
     this.task,
     this.encryptionPublicKey,
     this.lockdownMode,
+    this.attemptNumber = 1,
+    this.remainingRetries = 0,
+    this.canRetry = false,
+    this.examMode,
   });
 
   final String attemptPublicId;
@@ -192,20 +298,37 @@ class AttemptTaskResponse {
   /// attempt snapshot (`PinnedExamSnapshot.lockdownMode`) and the
   /// `exam-delivery` mapper projects it back out here. Wire values
   /// match `pte-api`'s `LockdownMode` enum uppercase
-  /// (`NONE`/`STANDARD`/`STRICT`), and `null` is tolerated for older
-  /// deployments that predate Phase 1 — [ExamAttemptBloc] treats
-  /// `null` as `none` to avoid regressing legacy backends
-  /// (phase-04 Design Constraints).
+  /// (`NONE`/`STANDARD`/`STRICT`). New in-progress attempt responses must
+  /// contain this value; [ExamAttemptBloc] fails closed when it is missing or
+  /// unknown. Completed responses may omit it because no task will be opened.
   final String? lockdownMode;
+
+  /// Server-assigned sequence and quota metadata; retry authorization never
+  /// relies on a client-side counter.
+  final int attemptNumber;
+  final int remainingRetries;
+  final bool canRetry;
+
+  /// Wire value of `PinnedExamSnapshot.examMode` — `"PRACTICE"` or
+  /// `"OFFICIAL_EXAM"`. Null only for legacy attempts predating the field;
+  /// treated as `"OFFICIAL_EXAM"` by consumers to avoid relaxing constraints
+  /// on unknown legacy data.
+  final String? examMode;
 
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {
     return AttemptTaskResponse(
       attemptPublicId: json['attemptPublicId'] as String,
       attemptStatus: json['attemptStatus'] as String,
       completed: json['completed'] as bool,
-      task: json['task'] == null ? null : TaskView.fromJson(json['task'] as Map<String, dynamic>),
+      task: json['task'] == null
+          ? null
+          : TaskView.fromJson(json['task'] as Map<String, dynamic>),
       encryptionPublicKey: json['encryptionPublicKey'] as String?,
       lockdownMode: json['lockdownMode'] as String?,
+      attemptNumber: json['attemptNumber'] as int? ?? 1,
+      remainingRetries: json['remainingRetries'] as int? ?? 0,
+      canRetry: json['canRetry'] as bool? ?? false,
+      examMode: json['examMode'] as String?,
     );
   }
 }

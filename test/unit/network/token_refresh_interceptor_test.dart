@@ -31,7 +31,7 @@ class _FakeAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    if (options.path == '/api/iam/auth/refresh') {
+    if (options.path == '/api/v1/auth/refresh') {
       refreshCallCount++;
       // Simulate real refresh latency so two near-simultaneous 401s both
       // land inside the single-flight window.
@@ -89,7 +89,7 @@ void main() {
         refresher: TokenRefresher(
           refreshDio: refreshDio,
           tokenStore: tokenStore,
-          refreshEndpoint: '/api/iam/auth/refresh',
+          refreshEndpoint: '/api/v1/auth/refresh',
         ),
       ));
   });

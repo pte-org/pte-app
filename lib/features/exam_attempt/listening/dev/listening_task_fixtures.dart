@@ -107,7 +107,7 @@ class ListeningTaskFixtures {
   );
 
   static TaskView get fillBlanksListening => _base(
-    taskType: 'FILL_BLANKS_LISTENING',
+    taskType: 'FILL_IN_THE_BLANKS_TYPE_IN',
     audioPromptRef: 'assets/audio/listening_sample_fill_blanks.wav',
     promptText:
         'And one particular crop, almond in the US and now in Australia, is transforming the world of '

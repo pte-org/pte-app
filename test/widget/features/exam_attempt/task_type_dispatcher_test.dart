@@ -6,6 +6,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:pte_app/core/storage/app_database.dart';
+import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
@@ -231,8 +233,12 @@ void main() {
     // AudioPromptCubit (constructed by every audio-prompt Speaking screen,
     // e.g. RepeatSentenceScreen) subscribes to these in its constructor
     // regardless of whether playback ever actually triggers.
-    when(() => audioPlayerService.position).thenAnswer((_) => const Stream<Duration>.empty());
-    when(() => audioPlayerService.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.position,
+    ).thenAnswer((_) => const Stream<Duration>.empty());
+    when(
+      () => audioPlayerService.duration,
+    ).thenAnswer((_) => const Stream<Duration?>.empty());
     when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
     when(() => audioPlayerService.close()).thenAnswer((_) async {});
     when(
@@ -345,7 +351,7 @@ void main() {
       );
 
       testWidgets(
-        'an unsupported taskType renders the placeholder text, not a blank screen',
+        'an unsupported taskType renders a terminal update state, not a blank screen',
         (tester) async {
           // Not READ_ALOUD — Phase 6 wired that taskType to a real screen, so
           // this needs a genuinely unsupported type to still exercise the
@@ -364,9 +370,85 @@ void main() {
           await tester.pumpWidget(buildSubject(task));
 
           expect(
-            find.text('Unsupported task type: UNKNOWN_TASK_TYPE'),
+            find.text(ExamAttemptStrings.unsupportedTaskTitle),
             findsOneWidget,
           );
+          expect(
+            find.text(ExamAttemptStrings.unsupportedTaskMessage),
+            findsOneWidget,
+          );
+          expect(find.textContaining('UNKNOWN_TASK_TYPE'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'resolves a supported task from the server renderer profile before dispatching',
+        (tester) async {
+          final task = TaskView(
+            pinnedItemPublicId: 'item-runtime',
+            orderIndex: 1,
+            totalTasks: 5,
+            section: 'READING',
+            taskType: 'MC_READING_SINGLE',
+            taskTypeCode: 'MC_READING_SINGLE',
+            runtime: const TaskRuntimeProfile(
+              taskTypeCode: 'MC_READING_SINGLE',
+              profileKey: 'PTE.MC_READING_SINGLE',
+              profileVersion: 1,
+              behaviorKey: 'SELECT_OPTION',
+              rendererKey: 'MC_READING_SINGLE_V1',
+              answerSchemaVersion: 1,
+              scoringProfileKey: 'OBJECTIVE',
+              scoringProfileVersion: 1,
+              status: 'ACTIVE',
+            ),
+            title: 'Runtime task',
+            options: const [
+              TaskOption(text: 'Option A', orderIndex: '1'),
+              TaskOption(text: 'Option B', orderIndex: '2'),
+            ],
+            prepSeconds: 30,
+            responseSeconds: 60,
+          );
+
+          await tester.pumpWidget(buildSubject(task));
+
+          expect(find.byType(McOptionList), findsOneWidget);
+          expect(
+            find.text(ExamAttemptStrings.unsupportedTaskTitle),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets(
+        'blocks an unknown server renderer even when the legacy task type is known',
+        (tester) async {
+          final task = TaskView(
+            pinnedItemPublicId: 'item-unknown-renderer',
+            orderIndex: 1,
+            totalTasks: 5,
+            section: 'READING',
+            taskType: 'MC_READING_SINGLE',
+            taskTypeCode: 'MC_READING_SINGLE',
+            runtime: const TaskRuntimeProfile(
+              taskTypeCode: 'MC_READING_SINGLE',
+              rendererKey: 'FUTURE_RENDERER_V1',
+              answerSchemaVersion: 1,
+              status: 'ACTIVE',
+            ),
+            title: 'Unsupported runtime',
+            prepSeconds: 30,
+            responseSeconds: 60,
+          );
+
+          await tester.pumpWidget(buildSubject(task));
+
+          expect(
+            find.text(ExamAttemptStrings.unsupportedTaskTitle),
+            findsOneWidget,
+          );
+          expect(find.byType(McOptionList), findsNothing);
         },
       );
     },

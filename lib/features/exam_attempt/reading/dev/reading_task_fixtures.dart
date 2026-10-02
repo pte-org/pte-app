@@ -2,7 +2,7 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 /// Hand-built [TaskView] samples, one per reading task type, for widget
 /// tests and the `kDebugMode`-gated dev preview screen. Not sourced from a
-/// real backend response — `FILL_BLANKS_READING_WRITING` in particular has
+/// real backend response — `FILL_IN_THE_BLANKS_DROPDOWN` in particular has
 /// no live backend content until the plan's backend phases ship
 /// `blankGroups`-populated data (see `ninh-pte-reading-task-types` plan.md).
 class ReadingTaskFixtures {
@@ -66,7 +66,7 @@ class ReadingTaskFixtures {
   );
 
   static TaskView get fillBlanksReading => _base(
-    taskType: 'FILL_BLANKS_READING',
+    taskType: 'FILL_IN_THE_BLANKS_DRAG_AND_DROP',
     promptText:
         'An anti-fairy tale which, unlike an ordinary one, has a {{0}}, rather than a happy ending, '
         'with the main characters suffering loss. While fairy tales paint a magical world, anti-fairy '
@@ -84,7 +84,7 @@ class ReadingTaskFixtures {
   /// `blankGroups` is populated here for local/offline preview and widget
   /// tests only — no live backend can send this yet (see class doc).
   static TaskView get fillBlanksReadingWriting => _base(
-    taskType: 'FILL_BLANKS_READING_WRITING',
+    taskType: 'FILL_IN_THE_BLANKS_DROPDOWN',
     promptText:
         'Lighting uses about 25% of the world\'s electricity, but it is not always used {{0}}. Some '
         'lights are kept on even when there is nobody {{1}} them.',
@@ -113,7 +113,7 @@ class ReadingTaskFixtures {
   /// backend phases ship — used to test/preview the `StatusBanner`
   /// fallback.
   static TaskView get fillBlanksReadingWritingUnavailable => _base(
-    taskType: 'FILL_BLANKS_READING_WRITING',
+    taskType: 'FILL_IN_THE_BLANKS_DROPDOWN',
     promptText: 'Lighting uses about 25% of the world\'s electricity.',
   );
 

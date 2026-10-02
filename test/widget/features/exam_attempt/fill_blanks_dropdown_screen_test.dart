@@ -28,7 +28,7 @@ TaskView _taskWithout(List<BlankGroup>? blankGroups) {
     orderIndex: 0,
     totalTasks: 5,
     section: 'READING',
-    taskType: 'FILL_BLANKS_READING_WRITING',
+    taskType: 'FILL_IN_THE_BLANKS_DROPDOWN',
     title: 'title',
     promptText: 'It was {{0}}.',
     blankGroups: blankGroups,

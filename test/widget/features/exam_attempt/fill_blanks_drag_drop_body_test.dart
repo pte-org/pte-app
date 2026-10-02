@@ -17,7 +17,7 @@ TaskView _task() {
     orderIndex: 0,
     totalTasks: 5,
     section: 'READING',
-    taskType: 'FILL_BLANKS_READING',
+    taskType: 'FILL_IN_THE_BLANKS_DRAG_AND_DROP',
     title: 'title',
     promptText: 'A {{0}} start.',
     options: const [TaskOption(text: 'quick', orderIndex: '0'), TaskOption(text: 'slow', orderIndex: '1')],

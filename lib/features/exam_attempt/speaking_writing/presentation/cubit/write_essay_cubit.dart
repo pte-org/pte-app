@@ -10,7 +10,8 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 /// manually invoke the callback instead of waiting real time — same
 /// pattern `TimerService`'s `TimerScheduler` uses (phase-05 Design
 /// Constraints).
-typedef DebounceScheduler = Timer Function(Duration duration, void Function() callback);
+typedef DebounceScheduler =
+    Timer Function(Duration duration, void Function() callback);
 
 const Duration _defaultDebounce = Duration(milliseconds: 500);
 
@@ -23,12 +24,18 @@ class WriteEssayCubit extends TaskAnswerCubit<WriteEssayState> {
     required AnswerOutboxDao outboxDao,
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
+    String? initialPayload,
     Duration debounce = _defaultDebounce,
     DebounceScheduler? scheduler,
   }) : _outboxDao = outboxDao,
        _debounce = debounce,
        _scheduler = scheduler ?? Timer.new,
-       super(const WriteEssayState());
+       super(
+         WriteEssayState(
+           draftText: initialPayload ?? '',
+           wordCount: countWords(initialPayload ?? ''),
+         ),
+       );
 
   final AnswerOutboxDao _outboxDao;
   final String attemptPublicId;

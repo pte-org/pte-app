@@ -12,7 +12,7 @@ void main() {
   late _MockApiClient apiClient;
   late ReportRepositoryImpl repository;
 
-  const path = '/api/reporting/reports/attempts/attempt-1';
+  const path = '/api/v1/reports/attempts/attempt-1';
 
   Map<String, dynamic> skillJson(String skill, {int? score, bool sufficientData = true}) =>
       {'skill': skill, 'score': score, 'sufficientData': sufficientData};

@@ -38,11 +38,18 @@ void main() {
     await authBloc.close();
   });
 
-  Widget buildSubject({AuthBloc? bloc}) {
+  Widget buildSubject({
+    AuthBloc? bloc,
+    ValueChanged<String>? onSessionIdProvided,
+    bool requireSessionId = false,
+  }) {
     return MaterialApp(
       home: BlocProvider<AuthBloc>.value(
         value: bloc ?? authBloc,
-        child: const LoginPage(),
+        child: LoginPage(
+          onSessionIdProvided: onSessionIdProvided,
+          requireSessionId: requireSessionId,
+        ),
       ),
     );
   }
@@ -59,6 +66,7 @@ void main() {
 
       expect(find.text(AppStrings.loginEmailRequired), findsOneWidget);
       expect(find.text(AppStrings.loginPasswordRequired), findsOneWidget);
+      expect(find.text(AppStrings.loginSessionIdLabel), findsOneWidget);
       verifyNever(
         () => repository.login(
           email: any(named: 'email'),
@@ -71,6 +79,7 @@ void main() {
   testWidgets('valid credentials are trimmed and submitted through AuthBloc', (
     tester,
   ) async {
+    String? providedSessionId;
     when(
       () => repository.login(
         email: any(named: 'email'),
@@ -80,13 +89,16 @@ void main() {
       (_) async => const JwtClaims(roles: ['HOST_ADMIN'], tenantId: 'tenant-1'),
     );
     when(() => scheduler.scheduleFromTokenStore()).thenReturn(null);
-    await tester.pumpWidget(buildSubject());
+    await tester.pumpWidget(
+      buildSubject(onSessionIdProvided: (value) => providedSessionId = value),
+    );
 
     await tester.enterText(
       find.byType(TextFormField).at(0),
       '  host@example.com  ',
     );
     await tester.enterText(find.byType(TextFormField).at(1), 'secret123');
+    await tester.enterText(find.byType(TextFormField).at(2), '  session-123  ');
     await tester.tap(
       find.widgetWithText(ElevatedButton, AppStrings.loginSubmit),
     );
@@ -95,6 +107,31 @@ void main() {
     verify(
       () => repository.login(email: 'host@example.com', password: 'secret123'),
     ).called(1);
+    expect(providedSessionId, 'session-123');
+  });
+
+  testWidgets('student login requires a session ID before submitting', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject(requireSessionId: true));
+
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'student@test.local',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'secret123');
+    await tester.tap(
+      find.widgetWithText(ElevatedButton, AppStrings.loginSubmit),
+    );
+    await tester.pump();
+
+    expect(find.text(AppStrings.loginSessionIdRequired), findsOneWidget);
+    verifyNever(
+      () => repository.login(
+        email: any(named: 'email'),
+        password: any(named: 'password'),
+      ),
+    );
   });
 
   testWidgets(
@@ -113,7 +150,7 @@ void main() {
 
       expect(find.byType(LoginPage), findsOneWidget);
       expect(find.text(friendlyErrorMessage(error)), findsOneWidget);
-      expect(find.byType(TextFormField), findsNWidgets(2));
+      expect(find.byType(TextFormField), findsNWidgets(3));
     },
   );
 

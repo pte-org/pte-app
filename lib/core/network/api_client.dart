@@ -4,7 +4,7 @@ import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
-/// the **full** gateway-relative path (e.g. `/api/iam/auth/login`) — the
+/// the **full** gateway-relative path (e.g. `/api/v1/auth/login`) — the
 /// underlying Dio instance's base URL intentionally excludes `/api`, so
 /// omitting it here would 404 at the gateway. Errors are mapped to
 /// [ApiException] subtypes here so every call site branches on type, never
@@ -71,6 +71,27 @@ class ApiClient {
     }
   }
 
+  /// Saves an answer without advancing the attempt pointer. Manual
+  /// Previous/Next navigation uses this endpoint so going back from the final
+  /// item does not accidentally complete the attempt.
+  Future<Response<void>> saveAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
+  }) async {
+    try {
+      return await post<void>(
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/save',
+        data: {'pinnedItemPublicId': pinnedItemPublicId, 'payload': payload},
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        _ => e,
+      };
+    }
+  }
+
   /// The pinned item's on-demand play — `pte-api`'s `/audio` endpoint. A 403
   /// is remapped from the generic [ForbiddenException] to
   /// [ReplayLimitExceededException], and a 410 from [GoneException] to
@@ -118,6 +139,32 @@ class ApiClient {
     try {
       return await post<void>(
         '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/encrypted',
+        data: {
+          'pinnedItemPublicId': pinnedItemPublicId,
+          'wrappedKey': wrappedKey,
+          'iv': iv,
+          'ciphertext': ciphertext,
+        },
+      );
+    } on ConflictException catch (e) {
+      throw switch (e.message) {
+        'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        _ => e,
+      };
+    }
+  }
+
+  /// STRICT-integrity draft-save counterpart to [submitEncryptedAnswer].
+  Future<Response<void>> saveEncryptedAnswer({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String wrappedKey,
+    required String iv,
+    required String ciphertext,
+  }) async {
+    try {
+      return await post<void>(
+        '${AppConfig.examAttemptsPath}/$attemptPublicId/answers/encrypted/save',
         data: {
           'pinnedItemPublicId': pinnedItemPublicId,
           'wrappedKey': wrappedKey,

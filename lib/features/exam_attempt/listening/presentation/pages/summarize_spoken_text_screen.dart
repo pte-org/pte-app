@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/constants/task_type_meta.dart';
-import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/exam_textarea.dart';
 import 'package:pte_app/core/widgets/templates/free_text_template.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
@@ -29,6 +29,8 @@ class SummarizeSpokenTextScreen extends StatefulWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
+    this.isPractice = false,
   });
 
   final TaskView task;
@@ -36,6 +38,8 @@ class SummarizeSpokenTextScreen extends StatefulWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
+  final bool isPractice;
 
   @override
   State<SummarizeSpokenTextScreen> createState() =>
@@ -54,9 +58,11 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
       audioPlayerService: widget.audioPlayerService,
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
-      audioSource: widget.task.audioPromptRef ?? '',
+      audioSource: widget.task.audioUrl ?? '',
+      initialPayload: widget.initialAnswerPayload,
+      isPractice: widget.isPractice,
     );
-    _controller = TextEditingController()
+    _controller = TextEditingController(text: _cubit.state.draftText)
       ..addListener(() => _cubit.draftChanged(_controller.text));
   }
 
@@ -81,12 +87,37 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
                   widget.task.title,
               subtitle: widget.task.section,
               instruction: ListeningStrings.summarizeSpokenTextPrompt,
-              stimulus: AudioStimulusPlayer(
-                label: state.hasFinishedPlaying
-                    ? 'Audio finished'
-                    : 'Playing audio',
-                playing: !state.hasFinishedPlaying,
-                progress: state.hasFinishedPlaying ? 1 : 0,
+              stimulus: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AudioListeningStatusCard(
+                    statusLabel: !state.hasStartedPlaying
+                        ? 'Tap to listen'
+                        : state.hasFinishedPlaying
+                            ? 'Audio finished'
+                            : 'Playing audio...',
+                    progress: !state.hasStartedPlaying
+                        ? 0.0
+                        : state.hasFinishedPlaying
+                            ? 1.0
+                            : state.progress,
+                  ),
+                  if (widget.isPractice) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        if (!state.hasStartedPlaying) {
+                          context.read<SummarizeSpokenTextCubit>().startPlayback();
+                        } else {
+                          context.read<SummarizeSpokenTextCubit>().replayAudio();
+                        }
+                      },
+                      icon: const Icon(Icons.play_circle_outline),
+                      label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
+                    ),
+                  ],
+                ],
               ),
               response: Column(
                 children: [

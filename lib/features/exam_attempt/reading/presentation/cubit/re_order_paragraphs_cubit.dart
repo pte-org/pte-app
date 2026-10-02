@@ -1,4 +1,5 @@
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
+import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
@@ -13,10 +14,18 @@ class ReOrderParagraphsCubit extends TaskAnswerCubit<ReOrderParagraphsState> {
     required this.attemptPublicId,
     required this.pinnedItemPublicId,
     required List<TaskOption> initialOrder,
+    String? initialPayload,
   }) : _outboxDao = outboxDao,
        // Seeded directly from the server-delivered (shuffled) order — never
        // re-sorted by orderIndex, or the task becomes trivial.
-       super(ReOrderParagraphsState(currentOrder: initialOrder));
+       super(
+         ReOrderParagraphsState(
+           currentOrder: reorderedOptionsFromAnswerPayload(
+             defaultOrder: initialOrder,
+             payload: initialPayload,
+           ),
+         ),
+       );
 
   final AnswerOutboxDao _outboxDao;
   final String attemptPublicId;

@@ -39,9 +39,9 @@ void main() {
       'roles': ['STUDENT'],
       'tenant_id': 't1',
     });
-    when(() => apiClient.post<Map<String, dynamic>>('/api/iam/auth/login', data: any(named: 'data')))
+    when(() => apiClient.post<Map<String, dynamic>>('/api/v1/auth/login', data: any(named: 'data')))
         .thenAnswer((_) async => Response(
-              requestOptions: RequestOptions(path: '/api/iam/auth/login'),
+              requestOptions: RequestOptions(path: '/api/v1/auth/login'),
               statusCode: 200,
               data: {
                 'accessToken': accessToken,
@@ -59,10 +59,10 @@ void main() {
     final claims = await repository.login(email: 'a@b.com', password: 'secret');
 
     final captured = verify(() => apiClient.post<Map<String, dynamic>>(
-          '/api/iam/auth/login',
+          '/api/v1/auth/login',
           data: captureAny(named: 'data'),
         )).captured.single as Map<String, dynamic>;
-    expect(captured['email'], 'a@b.com');
+    expect(captured['username'], 'a@b.com');
     expect(captured['password'], 'secret');
     verify(() => tokenStore.saveTokens(accessToken: accessToken, refreshToken: 'refresh-1', expiresInSeconds: 900))
         .called(1);
@@ -72,19 +72,19 @@ void main() {
 
   test('logout reads the refresh token, posts it to the logout endpoint, then clears local tokens', () async {
     when(() => tokenStore.readRefreshToken()).thenAnswer((_) async => 'refresh-1');
-    when(() => apiClient.post<void>('/api/iam/auth/logout', data: any(named: 'data')))
-        .thenAnswer((_) async => Response(requestOptions: RequestOptions(path: '/api/iam/auth/logout')));
+    when(() => apiClient.post<void>('/api/v1/auth/logout', data: any(named: 'data')))
+        .thenAnswer((_) async => Response(requestOptions: RequestOptions(path: '/api/v1/auth/logout')));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
 
     await repository.logout();
 
-    verify(() => apiClient.post<void>('/api/iam/auth/logout', data: {'refreshToken': 'refresh-1'})).called(1);
+    verify(() => apiClient.post<void>('/api/v1/auth/logout', data: {'refreshToken': 'refresh-1'})).called(1);
     verify(() => tokenStore.clear()).called(1);
   });
 
   test('logout still clears local tokens even if the server call fails (best-effort revoke)', () async {
     when(() => tokenStore.readRefreshToken()).thenAnswer((_) async => 'refresh-1');
-    when(() => apiClient.post<void>('/api/iam/auth/logout', data: any(named: 'data')))
+    when(() => apiClient.post<void>('/api/v1/auth/logout', data: any(named: 'data')))
         .thenThrow(Exception('network down'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
 

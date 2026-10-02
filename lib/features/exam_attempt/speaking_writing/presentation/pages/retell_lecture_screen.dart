@@ -16,6 +16,7 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
+import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
@@ -101,14 +102,15 @@ class _RetellLectureScreenState extends State<RetellLectureScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _RetellLectureBody(task: widget.task),
-        // Renders nothing — advancing is fully automatic, driven by
-        // AutoAdvanceOnUploadReady's own BlocListener once the upload is
-        // ready.
-        bottomAction:
-            AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
-              pinnedItemPublicId: widget.task.pinnedItemPublicId,
-              syncEngine: widget.syncEngine,
-            ),
+        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+            ? TaskAdvanceButton(
+                syncEngine: widget.syncEngine,
+                autoAdvanceOnExpiration: false,
+              )
+            : AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
+                pinnedItemPublicId: widget.task.pinnedItemPublicId,
+                syncEngine: widget.syncEngine,
+              ),
       ),
     );
   }

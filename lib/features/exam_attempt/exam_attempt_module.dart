@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 
+import 'package:pte_app/core/audio/volume_service.dart';
 import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/core/network/media_repository.dart';
 import 'package:pte_app/core/network/media_repository_impl.dart';
@@ -31,6 +32,8 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 void setupExamAttemptModule() {
   final getIt = GetIt.instance;
 
+  getIt.registerLazySingleton<VolumeService>(() => VolumeService());
+
   getIt.registerLazySingleton<SessionEntryRepository>(() => const ManualSessionEntryRepository());
 
   getIt.registerLazySingleton<ExamAttemptRepository>(
@@ -61,7 +64,9 @@ void setupExamAttemptModule() {
   // Not a singleton: each listening screen's cubit needs its own player
   // instance (one `close()` per task, not shared across tasks) — phase-01
   // Design Constraints. registerFactory gives a fresh instance per get().
-  getIt.registerFactory<AudioPlayerService>(() => AudioPlayerServiceImpl());
+  getIt.registerFactory<AudioPlayerService>(
+    () => AudioPlayerServiceImpl(volumeService: getIt<VolumeService>()),
+  );
 
   getIt.registerLazySingleton<MediaRepository>(
     () => MediaRepositoryImpl(apiClient: getIt<ApiClient>()),

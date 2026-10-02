@@ -1,40 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import 'core/audio/volume_service.dart';
 import 'core/constants/app_strings.dart';
+import 'core/constants/app_colors.dart';
+import 'core/constants/app_dimensions.dart';
 import 'core/constants/app_typography.dart';
+import 'core/security/lockdown_service.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
 import 'core/sync/media_upload_coordinator.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/widgets/loading_view.dart';
+import 'core/widgets/primary_button.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
+import 'features/device_check/constants/device_check_strings.dart';
 import 'features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 import 'features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 import 'features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'features/exam_attempt/constants/exam_attempt_error_message.dart';
+import 'features/exam_attempt/constants/exam_attempt_strings.dart';
 import 'features/exam_attempt/dev/api_mock_exam_preview_screen.dart';
 import 'features/exam_attempt/listening/dev/listening_task_preview_screen.dart';
 import 'features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'features/exam_attempt/dev/exam_ui_preview_screen.dart';
 import 'features/exam_attempt/reading/dev/reading_task_preview_screen.dart';
 import 'features/exam_attempt/reading/presentation/pages/section_completed_screen.dart';
-import 'features/exam_attempt/presentation/pages/session_entry_page.dart';
 import 'features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
+import 'features/exam_attempt/presentation/widgets/lockdown_activation_failure_dialog.dart';
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
+import 'features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'features/host_console/domain/host_access_policy.dart';
 import 'features/host_console/presentation/pages/host_console_page.dart';
 import 'features/live_proctor/domain/live_proctor_access_policy.dart';
 import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
-import 'features/report/domain/repositories/report_repository.dart';
-import 'features/report/presentation/pages/report_screen.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -136,17 +146,36 @@ class PteApp extends StatelessWidget {
   }
 
   static Widget _buildTestMicAndSoundScreen() {
-    return TestMicAndSoundScreen(
-      recorder: GetIt.instance<AudioRecorderService>(),
-      // Not GetIt-registered — single-screen, dev-only feature with no
-      // second call site (see TestMicAndSoundScreen's own doc comment).
-      player: DeviceCheckAudioPlayerImpl(),
+    return _DeviceCheckFullscreenGate(
+      service: GetIt.instance<LockdownService>(),
+      releaseOnDispose: true,
+      child: TestMicAndSoundScreen(
+        recorder: GetIt.instance<AudioRecorderService>(),
+        // Not GetIt-registered — single-screen, dev-only feature with no
+        // second call site (see TestMicAndSoundScreen's own doc comment).
+        player: DeviceCheckAudioPlayerImpl(
+          volumeService: GetIt.instance<VolumeService>(),
+        ),
+        volumeService: GetIt.instance<VolumeService>(),
+      ),
     );
   }
 }
 
-class AppAuthGate extends StatelessWidget {
+class AppAuthGate extends StatefulWidget {
   const AppAuthGate({super.key});
+
+  @override
+  State<AppAuthGate> createState() => _AppAuthGateState();
+}
+
+class _AppAuthGateState extends State<AppAuthGate> {
+  String? _sessionIdForStudent;
+
+  void _rememberSessionId(String value) {
+    final normalized = value.trim();
+    _sessionIdForStudent = normalized.isEmpty ? null : normalized;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +184,10 @@ class AppAuthGate extends StatelessWidget {
           state is AuthIdle ||
           state is AuthUnauthenticated ||
           state is AuthError,
-      listener: (context, _) {
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          _sessionIdForStudent = null;
+        }
         Navigator.of(context).popUntil((route) => route.isFirst);
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -163,15 +195,29 @@ class AppAuthGate extends StatelessWidget {
           return switch (state) {
             AuthIdle() ||
             AuthUnauthenticated() ||
-            AuthError() => const LoginPage(),
-            AuthAuthenticating() => const Scaffold(body: LoadingView()),
+            AuthError() => LoginPage(
+              requireSessionId: true,
+              onSessionIdProvided: _rememberSessionId,
+            ),
+            // Keep the same required-session login form mounted while the
+            // authentication request is in progress.
+            AuthAuthenticating() => LoginPage(
+              requireSessionId: true,
+              onSessionIdProvided: _rememberSessionId,
+            ),
             AuthAuthenticated(:final claims)
                 when HostAccessPolicy.canEnterHostConsole(claims) =>
               const HostConsolePage(),
             AuthAuthenticated(:final claims)
                 when LiveProctorAccessPolicy.canControl(claims) =>
               const ProctorWorkspacePage(),
-            AuthAuthenticated() => const StudentExamGate(),
+            AuthAuthenticated() when _sessionIdForStudent == null => LoginPage(
+              requireSessionId: true,
+              onSessionIdProvided: _rememberSessionId,
+            ),
+            AuthAuthenticated() => StudentExamGate(
+              initialSessionId: _sessionIdForStudent!,
+            ),
           };
         },
       ),
@@ -179,16 +225,17 @@ class AppAuthGate extends StatelessWidget {
   }
 }
 
-/// The real student flow once authenticated: idle/starting/no attempt shows
-/// [SessionEntryPage]; [AttemptInProgress] shows the live task via
+/// The student exam flow starts the session ID captured from login.
+/// [AttemptInProgress] shows the live task via
 /// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
 /// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
 /// then hands off to [ReportScreen], with a back button (wired through
 /// `ReportScreen.onBack`, not a floating overlay — see that class's own
-/// doc) to reset [ExamAttemptBloc] and return to [SessionEntryPage] for
-/// another session.
+/// doc) to reset [ExamAttemptBloc] and return to login for another session.
 class StudentExamGate extends StatefulWidget {
-  const StudentExamGate({super.key});
+  const StudentExamGate({super.key, required this.initialSessionId});
+
+  final String initialSessionId;
 
   @override
   State<StudentExamGate> createState() => StudentExamGateState();
@@ -196,22 +243,49 @@ class StudentExamGate extends StatefulWidget {
 
 class StudentExamGateState extends State<StudentExamGate> {
   late ExamAttemptBloc _bloc = GetIt.instance<ExamAttemptBloc>();
+  bool _attemptStarted = false;
+  bool _deviceCheckConfirmed = false;
 
-  /// Gates `ReportScreen` behind `SectionCompletedScreen` (Screen 7) once
-  /// per `AttemptCompleted` — reset alongside `_bloc` on
-  /// `_resetToSessionEntry` so the next attempt's completion shows the
-  /// interstitial again instead of skipping straight to its report.
-  bool _reportRevealed = false;
+  @override
+  void initState() {
+    super.initState();
+    final sessionId = widget.initialSessionId.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _bloc.add(SessionResolutionRequested(rawInput: sessionId));
+    });
+  }
 
-  void _resetToSessionEntry() {
+  void _resetToLogin() {
+    unawaited(_releaseDeviceCheckFullscreen());
     final getIt = GetIt.instance;
     getIt.resetLazySingleton<ExamAttemptBloc>(
       disposingFunction: (bloc) => bloc.close(),
     );
-    setState(() {
-      _bloc = getIt<ExamAttemptBloc>();
-      _reportRevealed = false;
-    });
+    _bloc = getIt<ExamAttemptBloc>();
+    _attemptStarted = false;
+    _deviceCheckConfirmed = false;
+    context.read<AuthBloc>().add(const LogoutRequested());
+  }
+
+  Future<void> _releaseDeviceCheckFullscreen() async {
+    if (!GetIt.instance.isRegistered<LockdownService>()) return;
+    await GetIt.instance<LockdownService>().exitDeviceCheckFullscreen();
+  }
+
+  void _retrySession() {
+    _bloc.add(
+      SessionResolutionRequested(
+        rawInput: widget.initialSessionId.trim(),
+        deviceCheckConfirmed: _deviceCheckConfirmed,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_releaseDeviceCheckFullscreen());
+    super.dispose();
   }
 
   @override
@@ -219,8 +293,42 @@ class StudentExamGateState extends State<StudentExamGate> {
     final getIt = GetIt.instance;
     return BlocProvider.value(
       value: _bloc,
-      child: BlocBuilder<ExamAttemptBloc, ExamAttemptState>(
+      child: BlocConsumer<ExamAttemptBloc, ExamAttemptState>(
+        listener: (context, state) {
+          if (state is AttemptInProgress || state is AttemptCompleted) {
+            _attemptStarted = true;
+          }
+          if (state is AttemptInProgress) {
+            _deviceCheckConfirmed = true;
+          }
+          final error = state is AttemptError ? state.error : null;
+          if (error is LockdownActivationException) {
+            LockdownActivationFailureDialog.show(
+              context,
+              failedChecks: error.failedChecks,
+              onRetry: _retrySession,
+            );
+          }
+        },
         builder: (context, state) {
+          if (state is DeviceCheckRequired) {
+            return _DeviceCheckFullscreenGate(
+              service: getIt<LockdownService>(),
+              child: TestMicAndSoundScreen(
+                recorder: getIt<AudioRecorderService>(),
+                player: DeviceCheckAudioPlayerImpl(
+                  volumeService: getIt<VolumeService>(),
+                ),
+                volumeService: getIt<VolumeService>(),
+                onComplete: () => context.read<ExamAttemptBloc>().add(
+                  SessionResolutionRequested(
+                    rawInput: state.sessionPublicId,
+                    deviceCheckConfirmed: true,
+                  ),
+                ),
+              ),
+            );
+          }
           if (state is AttemptInProgress) {
             return TaskTypeDispatcher(
               task: state.task,
@@ -235,20 +343,262 @@ class StudentExamGateState extends State<StudentExamGate> {
             );
           }
           if (state is AttemptCompleted) {
-            if (!_reportRevealed) {
-              return SectionCompletedScreen(
-                timeExpired: state.timeExpired,
-                onContinue: () => setState(() => _reportRevealed = true),
-              );
-            }
-            return ReportScreen(
-              attemptPublicId: state.attemptPublicId,
-              repository: getIt<ReportRepository>(),
-              onBack: _resetToSessionEntry,
+            return SectionCompletedScreen(
+              timeExpired: state.timeExpired,
+              attemptNumber: state.attemptNumber,
+              remainingRetries: state.remainingRetries,
+              canRetry: state.canRetry,
+              onContinue: _resetToLogin,
+              onRetry: _retrySession,
             );
           }
-          return const SessionEntryPage();
+          if (state is AttemptError) {
+            return _AttemptStartErrorView(
+              title: _attemptStarted
+                  ? ExamAttemptStrings.attemptContinueFailureTitle
+                  : ExamAttemptStrings.attemptStartFailureTitle,
+              message: examAttemptFriendlyErrorMessage(state.error),
+              onRetry: _retrySession,
+              onChangeSession: _attemptStarted ? null : _resetToLogin,
+            );
+          }
+          // AppAuthGate only constructs this widget after a student supplies
+          // a session ID; there is no second session-entry screen.
+          return const Scaffold(body: LoadingView());
         },
+      ),
+    );
+  }
+}
+
+/// Ensures the pre-attempt device check is shown only after the native window
+/// has entered fullscreen. The service deliberately keeps this state separate
+/// from the real attempt lockdown; the parent gate releases it on logout or
+/// when the app is disposed.
+class _DeviceCheckFullscreenGate extends StatefulWidget {
+  const _DeviceCheckFullscreenGate({
+    required this.service,
+    required this.child,
+    this.releaseOnDispose = false,
+  });
+
+  final LockdownService service;
+  final Widget child;
+  final bool releaseOnDispose;
+
+  @override
+  State<_DeviceCheckFullscreenGate> createState() =>
+      _DeviceCheckFullscreenGateState();
+}
+
+class _DeviceCheckFullscreenGateState
+    extends State<_DeviceCheckFullscreenGate> {
+  bool _ready = false;
+  LockdownActivationException? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_prepare());
+  }
+
+  Future<void> _prepare() async {
+    try {
+      await widget.service.enterDeviceCheckFullscreen();
+      if (!mounted) return;
+      setState(() => _ready = true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error is LockdownActivationException
+            ? error
+            : LockdownActivationException(
+                'Device-check fullscreen activation failed',
+                failedChecks: [error.toString()],
+                cause: error,
+              );
+      });
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _ready = false;
+      _error = null;
+    });
+    unawaited(_prepare());
+  }
+
+  @override
+  void dispose() {
+    if (widget.releaseOnDispose) {
+      unawaited(widget.service.exitDeviceCheckFullscreen());
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _error;
+    if (error != null) {
+      return Scaffold(
+        backgroundColor: AppColors.surfaceCanvas,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimensions.spacingXl),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimensions.spacingXl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.error,
+                        size: AppDimensions.statusBannerIconSize,
+                      ),
+                      const SizedBox(height: AppDimensions.spacingMd),
+                      Text(
+                        DeviceCheckStrings.fullscreenUnavailableTitle,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.headlineLg.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.spacingSm),
+                      const Text(
+                        DeviceCheckStrings.fullscreenUnavailableMessage,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyRegular,
+                      ),
+                      if (error.failedChecks.isNotEmpty) ...[
+                        const SizedBox(height: AppDimensions.spacingMd),
+                        for (final check in error.failedChecks)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppDimensions.spacingXs,
+                            ),
+                            child: Text(
+                              check,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
+                      const SizedBox(height: AppDimensions.spacingLg),
+                      PrimaryButton(
+                        label: DeviceCheckStrings.fullscreenRetryLabel,
+                        onPressed: _retry,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_ready) {
+      return Scaffold(
+        backgroundColor: AppColors.surfaceCanvas,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.brandPrimary),
+              const SizedBox(height: AppDimensions.spacingMd),
+              Text(
+                DeviceCheckStrings.fullscreenPreparingMessage,
+                style: AppTypography.bodyRegular.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widget.child;
+  }
+}
+
+class _AttemptStartErrorView extends StatelessWidget {
+  const _AttemptStartErrorView({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+    required this.onChangeSession,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback? onChangeSession;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surfaceCanvas,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDimensions.spacingXl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimensions.spacingXl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.error,
+                      size: AppDimensions.statusBannerIconSize,
+                    ),
+                    const SizedBox(height: AppDimensions.spacingMd),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.spacingSm),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: AppDimensions.spacingLg),
+                    PrimaryButton(
+                      label: ExamAttemptStrings.attemptStartRetry,
+                      onPressed: onRetry,
+                    ),
+                    if (onChangeSession != null) ...[
+                      const SizedBox(height: AppDimensions.spacingSm),
+                      OutlinedButton(
+                        onPressed: onChangeSession,
+                        child: const Text(
+                          ExamAttemptStrings.attemptStartChangeSession,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

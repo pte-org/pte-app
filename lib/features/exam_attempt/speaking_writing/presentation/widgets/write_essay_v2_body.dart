@@ -7,7 +7,6 @@ import 'package:pte_app/core/constants/app_typography.dart';
 import 'package:pte_app/core/widgets/components/exam_textarea.dart';
 import 'package:pte_app/core/widgets/templates/free_text_template.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/text_editor_toolbar.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_fixtures.dart';
 
 /// Pure UI body for the Write Essay v2 task — header + prompt + editor +
@@ -17,9 +16,15 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/dev/writing_task_
 /// The production screen [WriteEssayV2Screen] wraps this in
 /// `ExamScaffold`; the chrome dev preview mounts this directly.
 class WriteEssayV2Body extends StatefulWidget {
-  const WriteEssayV2Body({super.key, required this.task, this.persistDraft});
+  const WriteEssayV2Body({
+    super.key,
+    required this.task,
+    this.initialAnswer,
+    this.persistDraft,
+  });
 
   final TaskView task;
+  final String? initialAnswer;
   final ValueChanged<String>? persistDraft;
 
   @override
@@ -34,7 +39,9 @@ class _WriteEssayV2BodyState extends State<WriteEssayV2Body> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController()..addListener(_onDraftChanged);
+    _controller = TextEditingController(text: widget.initialAnswer ?? '')
+      ..addListener(_onDraftChanged);
+    _wordCount = _countWords(_controller.text);
   }
 
   void _onDraftChanged() {
@@ -103,7 +110,6 @@ class _EditorBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          TextEditorToolbar(controller: controller),
           SizedBox(
             height: 320,
             child: Padding(

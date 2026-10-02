@@ -114,7 +114,7 @@ class _ExamUiPreviewStimulusState extends State<ExamUiPreviewStimulus> {
         ),
       );
     }
-    if (widget.model.taskType == 'FILL_BLANKS_LISTENING') {
+    if (widget.model.taskType == TaskTypeCodes.fillInTheBlanksTypeIn) {
       final controller = _blankControllers.putIfAbsent(
         gapIndex,
         TextEditingController.new,

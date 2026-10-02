@@ -4,6 +4,23 @@ class DeviceCheckStrings {
   const DeviceCheckStrings._();
 
   static const String screenTitle = 'Test Mic and Sound';
+  static const String screenSectionLabel = 'DEVICE CHECK';
+  static const String screenSubtitle =
+      'Complete both checks before starting the exam.';
+  static const String fullscreenPreparingMessage =
+      'Preparing the secure device check...';
+  static const String fullscreenUnavailableTitle =
+      'Unable to prepare device check';
+  static const String fullscreenUnavailableMessage =
+      'The exam window could not enter fullscreen. Fix the window issue and try again.';
+  static const String fullscreenRetryLabel = 'Try again';
+  static const String progressLabel = 'Device readiness';
+  static const String microphoneReadyLabel = 'Microphone ready';
+  static const String soundReadyLabel = 'Sound ready';
+  static const String microphoneUnavailableMessage =
+      'No microphone was detected. Connect a microphone and try again.';
+  static const String microphoneCheckFailedMessage =
+      'We could not access your microphone. Check the permission and try again.';
 
   // Microphone section.
   static const String micSectionTitle = 'Test your microphone';

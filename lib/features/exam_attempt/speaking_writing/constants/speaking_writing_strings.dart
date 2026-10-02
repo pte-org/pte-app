@@ -3,14 +3,16 @@
 class SpeakingWritingStrings {
   const SpeakingWritingStrings._();
 
-// Shared chrome labels for read-aloud / write-essay v1 (from HEAD).
+  // Shared chrome labels for read-aloud / write-essay v1 (from HEAD).
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String readAloudStartRecordingLabel = 'Start recording';
   static const String readAloudStopRecordingLabel = 'Stop recording';
   static const String readAloudRecordingIndicator = 'Recording…';
-  static const String readAloudNotRecordedYetLabel = 'Tap "Start recording" to begin.';
+  static const String readAloudNotRecordedYetLabel =
+      'Tap "Start recording" to begin.';
   static const String readAloudStillUploadingLabel = 'Still uploading…';
-  static const String readAloudUploadReadyLabel = 'Uploaded — ready to continue.';
+  static const String readAloudUploadReadyLabel =
+      'Uploaded — ready to continue.';
 
   // Dev preview title (from origin/dev).
   static const String devSpeakingWritingPreviewTitle =
@@ -35,6 +37,8 @@ class SpeakingWritingStrings {
   static const String recordingStillUploadingLabel = 'Still uploading…';
   static const String recordingUploadReadyLabel =
       'Uploaded — ready to continue.';
+  static const String recordingMicrophoneUnavailableLabel =
+      'Microphone unavailable. Connect one before continuing.';
 
   // Describe-image instruction + image fallback labels (from origin/dev).
   static const String describeImageInstructionPrefix =
@@ -94,4 +98,14 @@ class SpeakingWritingStrings {
       ' seconds, you must reply in your own words, as naturally and clearly as possible. You have ';
   static const String personalIntroductionInstructionSuffix =
       ' seconds to record your response.';
+
+  // Practice mode speaking UI — manual listen/record controls replace
+  // the timer-driven auto-play and auto-record of official mode.
+  static const String practiceListenTapLabel = 'Tap to listen';
+  static const String practiceListenLoadingLabel = 'Loading audio…';
+  static const String practiceListenPlayingLabel = 'Playing…';
+  static const String practiceListenAgainLabel = 'Listen again';
+  static const String practiceRecordIdleLabel = 'Tap to start recording';
+  static const String practiceRecordedLabel = 'Recording saved';
+  static const String practiceRecordAgainLabel = 'Record again';
 }

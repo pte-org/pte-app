@@ -14,8 +14,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<JwtClaims> login({required String email, required String password}) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
-      '/api/iam/auth/login',
-      data: {'email': email, 'password': password},
+      '/api/v1/auth/login',
+      data: {'username': email, 'password': password},
     );
     final data = response.data!;
     final accessToken = data['accessToken'] as String;
@@ -32,7 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final refreshToken = await _tokenStore.readRefreshToken();
     try {
       if (refreshToken != null) {
-        await _apiClient.post<void>('/api/iam/auth/logout', data: {'refreshToken': refreshToken});
+        await _apiClient.post<void>('/api/v1/auth/logout', data: {'refreshToken': refreshToken});
       }
     } catch (_) {
       // Best-effort server-side revoke — local state must still clear

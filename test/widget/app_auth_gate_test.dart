@@ -19,6 +19,8 @@ import 'package:pte_app/features/auth/presentation/pages/login_page.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
 import 'package:pte_app/features/host_console/presentation/pages/host_console_page.dart';
 import 'package:pte_app/features/live_proctor/presentation/pages/proctor_workspace_page.dart';
 import 'package:pte_app/features/live_proctor/domain/live_proctor_types.dart';
@@ -43,6 +45,9 @@ class _FakeLiveProctorRepository implements LiveProctorRepository {
 void main() {
   setUpAll(() {
     registerFallbackValue(const LogoutRequested());
+    registerFallbackValue(
+      const SessionResolutionRequested(rawInput: 'session-id'),
+    );
     GetIt.instance.registerFactory<AssignedSessionsBloc>(
       () => AssignedSessionsBloc(repository: _FakeLiveProctorRepository()),
     );
@@ -52,7 +57,11 @@ void main() {
     // a bare stubbed mock (idle state, no events expected) is enough.
     GetIt.instance.registerFactory<ExamAttemptBloc>(() {
       final bloc = _MockExamAttemptBloc();
-      whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: const AttemptIdle());
+      whenListen(
+        bloc,
+        const Stream<ExamAttemptState>.empty(),
+        initialState: const AttemptIdle(),
+      );
       return bloc;
     });
   });
@@ -87,7 +96,9 @@ void main() {
     });
   }
 
-  testWidgets('AuthAuthenticating renders LoadingView', (tester) async {
+  testWidgets('AuthAuthenticating keeps the login form and shows progress', (
+    tester,
+  ) async {
     final bloc = _MockAuthBloc();
     addTearDown(bloc.close);
 
@@ -95,7 +106,46 @@ void main() {
       buildSubject(const AuthAuthenticating(), bloc: bloc),
     );
 
-    expect(find.byType(LoadingView), findsOneWidget);
+    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('student session follow-up preserves login credentials', (
+    tester,
+  ) async {
+    final bloc = _MockAuthBloc();
+    final states = StreamController<AuthState>();
+    whenListen(bloc, states.stream, initialState: const AuthIdle());
+    addTearDown(states.close);
+    addTearDown(bloc.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<AuthBloc>.value(
+          value: bloc,
+          child: const AppAuthGate(),
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'student@test.local',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'secret123');
+
+    states.add(const AuthAuthenticating());
+    await tester.pump();
+    states.add(
+      const AuthAuthenticated(
+        JwtClaims(roles: ['STUDENT'], tenantId: 'tenant-1'),
+      ),
+    );
+    await tester.pump();
+
+    final fields = tester.widgetList<TextFormField>(find.byType(TextFormField));
+    expect(fields.elementAt(0).controller?.text, 'student@test.local');
+    expect(fields.elementAt(1).controller?.text, 'secret123');
+    expect(find.text(AppStrings.loginSessionIdRequiredHint), findsOneWidget);
   });
 
   for (final role in <String>['HOST_ADMIN', 'HOST_AUTHOR']) {
@@ -114,7 +164,7 @@ void main() {
     });
   }
 
-  testWidgets('non-Host claims enter the real student exam gate', (
+  testWidgets('student without a session ID returns to login for one', (
     tester,
   ) async {
     final bloc = _MockAuthBloc();
@@ -130,7 +180,96 @@ void main() {
     );
 
     expect(find.byType(HostConsolePage), findsNothing);
-    expect(find.byType(StudentExamGate), findsOneWidget);
+    expect(find.byType(StudentExamGate), findsNothing);
+    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.text(AppStrings.loginSessionIdRequiredHint), findsOneWidget);
+  });
+
+  testWidgets('student gate starts the session ID supplied at login once', (
+    tester,
+  ) async {
+    final bloc = _MockExamAttemptBloc();
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: const AttemptIdle(),
+    );
+    GetIt.instance.unregister<ExamAttemptBloc>();
+    GetIt.instance.registerFactory<ExamAttemptBloc>(() => bloc);
+    addTearDown(() {
+      GetIt.instance.unregister<ExamAttemptBloc>();
+      GetIt.instance.registerFactory<ExamAttemptBloc>(() {
+        final fallbackBloc = _MockExamAttemptBloc();
+        whenListen(
+          fallbackBloc,
+          const Stream<ExamAttemptState>.empty(),
+          initialState: const AttemptIdle(),
+        );
+        return fallbackBloc;
+      });
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: StudentExamGate(initialSessionId: '  session-123  '),
+      ),
+    );
+    await tester.pump();
+
+    verify(
+      () => bloc.add(
+        any(
+          that: isA<SessionResolutionRequested>().having(
+            (event) => event.rawInput,
+            'rawInput',
+            'session-123',
+          ),
+        ),
+      ),
+    ).called(1);
+  });
+
+  testWidgets('student gate shows recovery actions when session start fails', (
+    tester,
+  ) async {
+    final bloc = _MockExamAttemptBloc();
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: const AttemptError(
+        SessionResolutionException('Session ID cannot be empty.'),
+      ),
+    );
+    GetIt.instance.unregister<ExamAttemptBloc>();
+    GetIt.instance.registerFactory<ExamAttemptBloc>(() => bloc);
+    addTearDown(() {
+      GetIt.instance.unregister<ExamAttemptBloc>();
+      GetIt.instance.registerFactory<ExamAttemptBloc>(() {
+        final fallbackBloc = _MockExamAttemptBloc();
+        whenListen(
+          fallbackBloc,
+          const Stream<ExamAttemptState>.empty(),
+          initialState: const AttemptIdle(),
+        );
+        return fallbackBloc;
+      });
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(home: StudentExamGate(initialSessionId: 'session-123')),
+    );
+
+    expect(
+      find.text(ExamAttemptStrings.sessionResolutionFailureMessage),
+      findsOneWidget,
+    );
+    expect(find.text(ExamAttemptStrings.attemptStartRetry), findsOneWidget);
+    expect(
+      find.text(ExamAttemptStrings.attemptStartChangeSession),
+      findsOneWidget,
+    );
+    expect(find.byType(LoadingView), findsNothing);
+    expect(find.text('Enter session ID'), findsNothing);
   });
 
   testWidgets('PROCTOR enters the assigned-session workspace', (tester) async {

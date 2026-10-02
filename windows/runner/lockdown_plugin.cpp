@@ -47,8 +47,8 @@ std::string Narrow(const wchar_t* value) {
 }  // namespace
 
 void LockdownPlugin::RegisterWithRegistrar(
-    flutter::PluginRegistrarWindows* registrar) {
-  auto plugin = std::make_unique<LockdownPlugin>(registrar);
+    flutter::PluginRegistrarWindows* registrar, HWND window_handle) {
+  auto plugin = std::make_unique<LockdownPlugin>(registrar, window_handle);
   auto* plugin_pointer = plugin.get();
 
   auto window_channel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -60,6 +60,10 @@ void LockdownPlugin::RegisterWithRegistrar(
           plugin_pointer->EnforceFullscreen(call, std::move(result));
         } else if (call.method_name() == "exitFullscreen") {
           plugin_pointer->ExitFullscreen(call, std::move(result));
+        } else if (call.method_name() == "setExitGuardActive") {
+          plugin_pointer->SetExitGuardActive(call, std::move(result));
+        } else if (call.method_name() == "setExitAllowed") {
+          plugin_pointer->SetExitAllowed(call, std::move(result));
         } else {
           result->NotImplemented();
         }
@@ -141,9 +145,13 @@ void LockdownPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-LockdownPlugin::LockdownPlugin(flutter::PluginRegistrarWindows* registrar)
+LockdownPlugin::LockdownPlugin(flutter::PluginRegistrarWindows* registrar,
+                               HWND window_handle)
     : registrar_(registrar),
-      hwnd_(registrar->GetView()->GetNativeWindow()),
+      // The registrar view is Flutter's child HWND. Fullscreen must be
+      // applied to the runner's top-level window, otherwise the child may
+      // report success while the native title bar remains visible.
+      hwnd_(window_handle),
       keyboard_hook_(nullptr),
       original_style_(0),
       original_ex_style_(0),
@@ -159,6 +167,8 @@ LockdownPlugin::LockdownPlugin(flutter::PluginRegistrarWindows* registrar)
   // overload set we actually call throughout the rest of the plugin.
   clipboard_blocked_.store(false);
   shortcuts_blocked_.store(false);
+  exit_guard_active_.store(false);
+  exit_allowed_.store(false);
   instance_ = this;
 }
 
@@ -174,6 +184,8 @@ LockdownPlugin::~LockdownPlugin() {
     keyboard_hook_ = nullptr;
   }
   shortcuts_blocked_.store(false);
+  exit_guard_active_.store(false);
+  exit_allowed_.store(false);
   UnregisterClipboardListener();
   instance_ = nullptr;
 }
@@ -238,6 +250,47 @@ bool LockdownPlugin::HandleWindowMessage(UINT message, WPARAM wparam, LPARAM lpa
     // like the IME clipboard history.
     return false;
   }
+  // App-level exit guard. This handler only makes a synchronous native
+  // decision and emits a lightweight event; it never waits for Dart or the
+  // network. Focus can be lost before Windows delivers this message, so the
+  // best-effort reactivation is intentionally small and non-blocking.
+  if (self->exit_guard_active_.load() && !self->exit_allowed_.load()) {
+    if (message == WM_CLOSE) {
+      self->SendViolationEvent("window", "EXIT_ATTEMPT");
+      return true;
+    }
+    if (message == WM_KILLFOCUS) {
+      self->SendViolationEvent("window", "FOCUS_LOSS");
+      if (self->hwnd_) {
+        SetForegroundWindow(self->hwnd_);
+        SetFocus(self->hwnd_);
+      }
+      // WM_KILLFOCUS itself cannot be cancelled, but the app is immediately
+      // brought back where Windows permits it.
+      return true;
+    }
+    if (message == WM_SIZE && wparam == SIZE_MINIMIZED) {
+      self->SendViolationEvent("window", "MINIMIZE_ATTEMPT");
+      ShowWindow(self->hwnd_, SW_RESTORE);
+      SetForegroundWindow(self->hwnd_);
+      return true;
+    }
+    if (message == WM_SYSCOMMAND) {
+      int command = static_cast<int>(wparam) & 0xFFF0;
+      if (command == SC_CLOSE || command == SC_MINIMIZE ||
+          command == SC_RESTORE || command == SC_MAXIMIZE ||
+          command == SC_KEYMENU || command == SC_TASKLIST) {
+        self->SendViolationEvent("window", "EXIT_ATTEMPT");
+        if (command == SC_MINIMIZE || command == SC_RESTORE ||
+            command == SC_MAXIMIZE) {
+          ShowWindow(self->hwnd_, SW_RESTORE);
+          SetForegroundWindow(self->hwnd_);
+        }
+        return true;
+      }
+    }
+  }
+
   // Window violation detection: fullscreen-escape vectors include both
   // focus loss and the WM_SYSCOMMAND family (Alt+Enter, the restore/
   // maximize/minimize buttons on the window manager, and the
@@ -245,7 +298,8 @@ bool LockdownPlugin::HandleWindowMessage(UINT message, WPARAM wparam, LPARAM lpa
   // SC_MOVE is legitimate window dragging, SC_SIZE is legitimate
   // resizing from the system menu, etc. The plugin still reports only;
   // remediation policy lives in the Dart service layer.
-  if (self->fullscreen_enforced_) {
+  if (self->fullscreen_enforced_ &&
+      (!self->exit_guard_active_.load() || !self->exit_allowed_.load())) {
     if (message == WM_KILLFOCUS) {
       self->SendViolationEvent("window", "FULLSCREEN_EXIT");
       return false;
@@ -347,6 +401,28 @@ void LockdownPlugin::ExitFullscreen(const MethodCall&, std::unique_ptr<MethodRes
   }
   fullscreen_enforced_ = false;
   original_window_state_saved_ = false;
+  result->Success();
+}
+
+void LockdownPlugin::SetExitGuardActive(
+    const MethodCall& call, std::unique_ptr<MethodResult> result) {
+  const auto* active = std::get_if<bool>(call.arguments());
+  if (!active) {
+    result->Error("BAD_ARGS", "Exit guard state must be a boolean");
+    return;
+  }
+  exit_guard_active_.store(*active);
+  result->Success();
+}
+
+void LockdownPlugin::SetExitAllowed(
+    const MethodCall& call, std::unique_ptr<MethodResult> result) {
+  const auto* allowed = std::get_if<bool>(call.arguments());
+  if (!allowed) {
+    result->Error("BAD_ARGS", "Exit permission must be a boolean");
+    return;
+  }
+  exit_allowed_.store(*allowed);
   result->Success();
 }
 

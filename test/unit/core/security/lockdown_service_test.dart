@@ -15,8 +15,7 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/security/models/violation_event.dart';
 import 'package:pte_app/core/security/violation_reporter.dart';
 
-class _MockWindowManagerChannel extends Mock
-    implements WindowManagerChannel {}
+class _MockWindowManagerChannel extends Mock implements WindowManagerChannel {}
 
 class _MockProcessManagerChannel extends Mock
     implements ProcessManagerChannel {}
@@ -92,7 +91,8 @@ void main() {
 
   Future<ForbiddenAppsConfig> Function({
     Future<String> Function(String)? assetLoader,
-  }) stubLoader(ForbiddenAppsConfig config) {
+  })
+  stubLoader(ForbiddenAppsConfig config) {
     return ({Future<String> Function(String)? assetLoader}) async => config;
   }
 
@@ -109,24 +109,27 @@ void main() {
     shortcutEvents = StreamController<String>.broadcast();
     clipboardEvents = StreamController<String>.broadcast();
 
-    when(() => windowManager.violations)
-        .thenAnswer((_) => windowEvents.stream);
-    when(() => processManager.violations)
-        .thenAnswer((_) => processEvents.stream);
-    when(() => shortcuts.violations)
-        .thenAnswer((_) => shortcutEvents.stream);
-    when(() => clipboard.violations)
-        .thenAnswer((_) => clipboardEvents.stream);
+    when(() => windowManager.violations).thenAnswer((_) => windowEvents.stream);
+    when(
+      () => processManager.violations,
+    ).thenAnswer((_) => processEvents.stream);
+    when(() => shortcuts.violations).thenAnswer((_) => shortcutEvents.stream);
+    when(() => clipboard.violations).thenAnswer((_) => clipboardEvents.stream);
 
     when(() => windowManager.enforceFullscreen()).thenAnswer((_) async {});
     when(() => windowManager.exitFullscreen()).thenAnswer((_) async {});
+    when(
+      () => windowManager.setExitGuardActive(any()),
+    ).thenAnswer((_) async {});
+    when(() => windowManager.setExitAllowed(any())).thenAnswer((_) async {});
     when(() => clipboard.blockExternalPaste()).thenAnswer((_) async {});
     when(() => clipboard.clearClipboard()).thenAnswer((_) async {});
     when(() => clipboard.unblock()).thenAnswer((_) async {});
     when(() => shortcuts.blockSystemShortcuts()).thenAnswer((_) async {});
     when(() => shortcuts.unblock()).thenAnswer((_) async {});
-    when(() => processManager.getRunningProcesses())
-        .thenAnswer((_) async => const <String>[]);
+    when(
+      () => processManager.getRunningProcesses(),
+    ).thenAnswer((_) async => const <String>[]);
     when(() => reporter.reportViolation(any())).thenAnswer((_) async {});
   });
 
@@ -140,7 +143,8 @@ void main() {
   LockdownService build({
     Future<ForbiddenAppsConfig> Function({
       Future<String> Function(String)? assetLoader,
-    })? loader,
+    })?
+    loader,
   }) {
     return LockdownService(
       windowManager: windowManager,
@@ -153,94 +157,177 @@ void main() {
     );
   }
 
-  group('activateLockdown', () {
-    test('LockdownMode.none is a documented no-op (no platform calls)', () async {
-      service = build();
-      await service.activateLockdown(
-        mode: LockdownMode.none,
-        attemptPublicId: _attemptId,
-      );
+  group('device-check fullscreen', () {
+    test(
+      'enters fullscreen without activating lockdown or reporting audit',
+      () async {
+        service = build();
 
-      expect(service.currentMode, LockdownMode.none);
-      expect(service.isActive, isFalse);
-      verifyNever(() => windowManager.enforceFullscreen());
-      verifyNever(() => clipboard.blockExternalPaste());
-      verifyNever(() => shortcuts.blockSystemShortcuts());
-    });
+        await service.enterDeviceCheckFullscreen();
 
-    test('standard mode activates the four platform checks but does NOT enumerate processes',
-        () async {
+        expect(service.isDeviceCheckFullscreenActive, isTrue);
+        expect(service.isActive, isFalse);
+        expect(service.currentMode, LockdownMode.none);
+        verify(() => windowManager.enforceFullscreen()).called(1);
+        verifyNever(() => clipboard.blockExternalPaste());
+        verifyNever(() => shortcuts.blockSystemShortcuts());
+        verifyNever(() => reporter.reportViolation(any()));
+      },
+    );
+
+    test(
+      'is idempotent and releases only the pre-attempt fullscreen state',
+      () async {
+        service = build();
+
+        await service.enterDeviceCheckFullscreen();
+        await service.enterDeviceCheckFullscreen();
+        await service.exitDeviceCheckFullscreen();
+        await service.exitDeviceCheckFullscreen();
+
+        verify(() => windowManager.enforceFullscreen()).called(1);
+        verify(() => windowManager.exitFullscreen()).called(1);
+        expect(service.isDeviceCheckFullscreenActive, isFalse);
+      },
+    );
+
+    test('real lockdown takes ownership after the device check', () async {
       service = build();
+
+      await service.enterDeviceCheckFullscreen();
       await service.activateLockdown(
         mode: LockdownMode.standard,
         attemptPublicId: _attemptId,
       );
 
-      verify(() => windowManager.enforceFullscreen()).called(1);
-      verify(() => clipboard.clearClipboard()).called(1);
-      verify(() => clipboard.blockExternalPaste()).called(1);
-      verify(() => shortcuts.blockSystemShortcuts()).called(1);
-      verifyNever(() => processManager.getRunningProcesses());
-      expect(service.currentMode, LockdownMode.standard);
+      expect(service.isDeviceCheckFullscreenActive, isFalse);
       expect(service.isActive, isTrue);
+      verify(() => windowManager.enforceFullscreen()).called(2);
     });
 
-    test('strict mode skips process enumeration when no forbidden apps are configured',
-        () async {
-      when(() => processManager.getRunningProcesses())
-          .thenAnswer((_) async => const ['system.exe', 'pte_app.exe']);
+    test(
+      'wraps fullscreen failures without leaving the service active',
+      () async {
+        when(() => windowManager.enforceFullscreen()).thenThrow(
+          const FullscreenEnforcementException('window handle unavailable'),
+        );
+        service = build();
 
-      service = build();
-      await service.initialize();
-      await service.activateLockdown(
-        mode: LockdownMode.strict,
-        attemptPublicId: _attemptId,
-      );
+        await expectLater(
+          service.enterDeviceCheckFullscreen(),
+          throwsA(isA<LockdownActivationException>()),
+        );
 
-      verifyNever(() => processManager.getRunningProcesses());
-      verifyNever(() => processManager.terminateProcess(any()));
-      verifyNever(() => reporter.reportViolation(any()));
-    });
+        expect(service.isDeviceCheckFullscreenActive, isFalse);
+        expect(service.isActive, isFalse);
+        verify(() => windowManager.exitFullscreen()).called(1);
+      },
+    );
+  });
 
-    test('strict mode terminates forbidden apps and reports each as a violation', () async {
-      when(() => processManager.getRunningProcesses())
-          .thenAnswer((_) async => const ['chrome.exe', 'system.exe']);
-      when(() => processManager.terminateProcess('chrome.exe'))
-          .thenAnswer((_) async => true);
+  group('activateLockdown', () {
+    test(
+      'LockdownMode.none is a documented no-op (no platform calls)',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.none,
+          attemptPublicId: _attemptId,
+        );
 
-      service = build(
-        loader: stubLoader(
-          const ForbiddenAppsConfig(
-            windows: [
-              ForbiddenApp(
-                name: 'Chrome',
-                processName: 'chrome.exe',
-                category: 'browser',
-              ),
-            ],
-            macos: [],
+        expect(service.currentMode, LockdownMode.none);
+        expect(service.isActive, isFalse);
+        verifyNever(() => windowManager.enforceFullscreen());
+        verifyNever(() => clipboard.blockExternalPaste());
+        verifyNever(() => shortcuts.blockSystemShortcuts());
+      },
+    );
+
+    test(
+      'standard mode activates the four platform checks but does NOT enumerate processes',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.standard,
+          attemptPublicId: _attemptId,
+        );
+
+        verify(() => windowManager.enforceFullscreen()).called(1);
+        verify(() => clipboard.clearClipboard()).called(1);
+        verify(() => clipboard.blockExternalPaste()).called(1);
+        verify(() => shortcuts.blockSystemShortcuts()).called(1);
+        verifyNever(() => processManager.getRunningProcesses());
+        expect(service.currentMode, LockdownMode.standard);
+        expect(service.isActive, isTrue);
+      },
+    );
+
+    test(
+      'strict mode skips process enumeration when no forbidden apps are configured',
+      () async {
+        when(
+          () => processManager.getRunningProcesses(),
+        ).thenAnswer((_) async => const ['system.exe', 'pte_app.exe']);
+
+        service = build();
+        await service.initialize();
+        await service.activateLockdown(
+          mode: LockdownMode.strict,
+          attemptPublicId: _attemptId,
+        );
+
+        verifyNever(() => processManager.getRunningProcesses());
+        verifyNever(() => processManager.terminateProcess(any()));
+        verifyNever(() => reporter.reportViolation(any()));
+      },
+    );
+
+    test(
+      'strict mode terminates forbidden apps and reports each as a violation',
+      () async {
+        when(
+          () => processManager.getRunningProcesses(),
+        ).thenAnswer((_) async => const ['chrome.exe', 'system.exe']);
+        when(
+          () => processManager.terminateProcess('chrome.exe'),
+        ).thenAnswer((_) async => true);
+
+        service = build(
+          loader: stubLoader(
+            const ForbiddenAppsConfig(
+              windows: [
+                ForbiddenApp(
+                  name: 'Chrome',
+                  processName: 'chrome.exe',
+                  category: 'browser',
+                ),
+              ],
+              macos: [],
+            ),
           ),
-        ),
-      );
-      await service.initialize();
-      await service.activateLockdown(
-        mode: LockdownMode.strict,
-        attemptPublicId: _attemptId,
-      );
+        );
+        await service.initialize();
+        await service.activateLockdown(
+          mode: LockdownMode.strict,
+          attemptPublicId: _attemptId,
+        );
 
-      verify(() => processManager.terminateProcess('chrome.exe')).called(1);
-      final captured = verify(() => reporter.reportViolation(captureAny()))
-          .captured;
-      expect(captured, hasLength(1));
-      final event = captured.single as ViolationEvent;
-      expect(event.type, ViolationType.forbiddenAppDetected);
-      expect(event.severity, ViolationSeverity.critical);
-      expect(event.metadata, contains('chrome.exe'));
-    });
+        verify(() => processManager.terminateProcess('chrome.exe')).called(1);
+        final captured = verify(
+          () => reporter.reportViolation(captureAny()),
+        ).captured;
+        expect(captured, hasLength(1));
+        final event = captured.single as ViolationEvent;
+        expect(event.type, ViolationType.forbiddenAppDetected);
+        expect(event.severity, ViolationSeverity.critical);
+        expect(event.metadata, contains('chrome.exe'));
+      },
+    );
 
     test('rolls back and rethrows when any step fails', () async {
-      when(() => shortcuts.blockSystemShortcuts())
-          .thenThrow(const ShortcutInterceptionException('hook failed'));
+      when(
+        () => shortcuts.blockSystemShortcuts(),
+      ).thenThrow(const ShortcutInterceptionException('hook failed'));
 
       service = build();
 
@@ -249,8 +336,13 @@ void main() {
           mode: LockdownMode.strict,
           attemptPublicId: _attemptId,
         ),
-        throwsA(isA<LockdownActivationException>()
-            .having((e) => e.failedChecks, 'failedChecks', hasLength(1))),
+        throwsA(
+          isA<LockdownActivationException>().having(
+            (e) => e.failedChecks,
+            'failedChecks',
+            hasLength(1),
+          ),
+        ),
       );
 
       // Teardown path must have run to restore hooks.
@@ -260,20 +352,118 @@ void main() {
       expect(service.currentMode, LockdownMode.none);
     });
 
-    test('a second concurrent activate attempt is rejected (no re-arm burst)', () async {
-      service = build();
-      await service.activateLockdown(
-        mode: LockdownMode.standard,
-        attemptPublicId: _attemptId,
-      );
-      await service.activateLockdown(
-        mode: LockdownMode.standard,
-        attemptPublicId: _attemptId,
-      );
+    test(
+      'a second concurrent activate attempt is rejected (no re-arm burst)',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.standard,
+          attemptPublicId: _attemptId,
+        );
+        await service.activateLockdown(
+          mode: LockdownMode.standard,
+          attemptPublicId: _attemptId,
+        );
 
-      // Only the first call should produce any platform traffic.
-      verify(() => windowManager.enforceFullscreen()).called(1);
-    });
+        // Only the first call should produce any platform traffic.
+        verify(() => windowManager.enforceFullscreen()).called(1);
+      },
+    );
+  });
+
+  group('app-level exit guard', () {
+    test(
+      'blocks and audits an attempt even when anti-cheat mode is NONE',
+      () async {
+        service = build();
+
+        await service.activateAttemptExitGuard(attemptPublicId: _attemptId);
+
+        expect(service.isAttemptExitGuardActive, isTrue);
+        expect(service.isExitAllowed, isFalse);
+        expect(service.currentMode, LockdownMode.none);
+        verify(() => windowManager.setExitAllowed(false)).called(1);
+        verify(() => windowManager.setExitGuardActive(true)).called(1);
+
+        windowEvents.add('EXIT_ATTEMPT');
+        await Future<void>.delayed(Duration.zero);
+        final event = verify(
+          () => reporter.reportViolation(captureAny()),
+        ).captured.cast<ViolationEvent>().single;
+        expect(event.attemptPublicId, _attemptId);
+        expect(event.type, ViolationType.fullscreenExit);
+
+        await service.allowExitAfterSubmission();
+        expect(service.isExitAllowed, isTrue);
+        await service.deactivateAttemptExitGuard();
+        expect(service.isAttemptExitGuardActive, isFalse);
+        verify(() => windowManager.setExitAllowed(true)).called(1);
+        verify(() => windowManager.setExitGuardActive(false)).called(1);
+      },
+    );
+
+    test(
+      'anti-cheat teardown keeps the app-level guard active until explicit release',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.standard,
+          attemptPublicId: _attemptId,
+        );
+        await service.activateAttemptExitGuard(attemptPublicId: _attemptId);
+
+        await service.deactivateLockdown();
+
+        expect(service.currentMode, LockdownMode.none);
+        expect(service.isAttemptExitGuardActive, isTrue);
+        verify(() => windowManager.setExitGuardActive(true)).called(1);
+        verifyNever(() => windowManager.setExitGuardActive(false));
+      },
+    );
+
+    test(
+      'normal guard teardown refuses to unlock before submission acknowledgement',
+      () async {
+        service = build();
+        await service.activateAttemptExitGuard(attemptPublicId: _attemptId);
+
+        await service.deactivateAttemptExitGuard();
+
+        expect(service.isAttemptExitGuardActive, isTrue);
+        expect(service.isExitAllowed, isFalse);
+        verifyNever(() => windowManager.setExitGuardActive(false));
+        verifyNever(() => windowManager.setExitAllowed(true));
+      },
+    );
+
+    test(
+      'bootstrap abort can release a guard before the task shell is shown',
+      () async {
+        service = build();
+        await service.activateAttemptExitGuard(attemptPublicId: _attemptId);
+
+        await service.abortAttemptExitGuard();
+
+        expect(service.isAttemptExitGuardActive, isFalse);
+        expect(service.isExitAllowed, isTrue);
+        verify(() => windowManager.setExitAllowed(true)).called(1);
+        verify(() => windowManager.setExitGuardActive(false)).called(1);
+      },
+    );
+
+    test(
+      'debounces repeated window violations inside one warning burst',
+      () async {
+        service = build();
+        await service.activateAttemptExitGuard(attemptPublicId: _attemptId);
+
+        windowEvents.add('FOCUS_LOSS');
+        windowEvents.add('FOCUS_LOSS');
+        await Future<void>.delayed(Duration.zero);
+
+        verify(() => reporter.reportViolation(any())).called(1);
+      },
+    );
   });
 
   group('deactivateLockdown', () {
@@ -284,9 +474,9 @@ void main() {
         attemptPublicId: _attemptId,
       );
 
-      when(() => shortcuts.unblock()).thenThrow(
-        const ShortcutInterceptionException('unhook failed'),
-      );
+      when(
+        () => shortcuts.unblock(),
+      ).thenThrow(const ShortcutInterceptionException('unhook failed'));
 
       await service.deactivateLockdown();
 
@@ -304,63 +494,72 @@ void main() {
   });
 
   group('violation reporting', () {
-    test('relays every recognized event type into the reporter at warning severity', () async {
-      service = build();
-      await service.activateLockdown(
-        mode: LockdownMode.standard,
-        attemptPublicId: _attemptId,
-      );
+    test(
+      'relays every recognized event type into the reporter at warning severity',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.standard,
+          attemptPublicId: _attemptId,
+        );
 
-      windowEvents.add('FULLSCREEN_EXIT');
-      processEvents.add('NEW_FORBIDDEN_APP:discord.exe');
-      shortcutEvents.add('ALT_TAB');
-      clipboardEvents.add('CLIPBOARD_PASTE');
+        windowEvents.add('FULLSCREEN_EXIT');
+        processEvents.add('NEW_FORBIDDEN_APP:discord.exe');
+        shortcutEvents.add('ALT_TAB');
+        clipboardEvents.add('CLIPBOARD_PASTE');
 
-      await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
-      final captured = verify(() => reporter.reportViolation(captureAny()))
-          .captured
-          .cast<ViolationEvent>();
-      expect(
-        captured.map((e) => e.type),
-        containsAllInOrder([
-          ViolationType.fullscreenExit,
-          ViolationType.forbiddenAppDetected,
-          ViolationType.shortcutBlocked,
-          ViolationType.clipboardPaste,
-        ]),
-      );
-      expect(
-        captured.every((e) => e.severity == ViolationSeverity.warning),
-        isTrue,
-      );
-    });
+        final captured = verify(
+          () => reporter.reportViolation(captureAny()),
+        ).captured.cast<ViolationEvent>();
+        expect(
+          captured.map((e) => e.type),
+          containsAllInOrder([
+            ViolationType.fullscreenExit,
+            ViolationType.forbiddenAppDetected,
+            ViolationType.shortcutBlocked,
+            ViolationType.clipboardPaste,
+          ]),
+        );
+        expect(
+          captured.every((e) => e.severity == ViolationSeverity.warning),
+          isTrue,
+        );
+      },
+    );
 
-    test('escalates to critical severity when lockdownMode is strict', () async {
-      service = build();
-      await service.activateLockdown(
-        mode: LockdownMode.strict,
-        attemptPublicId: _attemptId,
-      );
-      windowEvents.add('FULLSCREEN_EXIT');
-      await Future<void>.delayed(Duration.zero);
+    test(
+      'escalates to critical severity when lockdownMode is strict',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.strict,
+          attemptPublicId: _attemptId,
+        );
+        windowEvents.add('FULLSCREEN_EXIT');
+        await Future<void>.delayed(Duration.zero);
 
-      final captured = verify(() => reporter.reportViolation(captureAny()))
-          .captured
-          .cast<ViolationEvent>();
-      expect(captured.single.severity, ViolationSeverity.critical);
-    });
+        final captured = verify(
+          () => reporter.reportViolation(captureAny()),
+        ).captured.cast<ViolationEvent>();
+        expect(captured.single.severity, ViolationSeverity.critical);
+      },
+    );
 
-    test('drops violations when no attempt is active (avoids phantom rows)', () async {
-      service = build();
-      await service.activateLockdown(
-        mode: LockdownMode.none,
-        attemptPublicId: _attemptId,
-      );
-      windowEvents.add('FULLSCREEN_EXIT');
-      await Future<void>.delayed(Duration.zero);
+    test(
+      'drops violations when no attempt is active (avoids phantom rows)',
+      () async {
+        service = build();
+        await service.activateLockdown(
+          mode: LockdownMode.none,
+          attemptPublicId: _attemptId,
+        );
+        windowEvents.add('FULLSCREEN_EXIT');
+        await Future<void>.delayed(Duration.zero);
 
-      verifyNever(() => reporter.reportViolation(any()));
-    });
+        verifyNever(() => reporter.reportViolation(any()));
+      },
+    );
   });
 }

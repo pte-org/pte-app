@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/core/widgets/components/audio_stimulus_player.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/choice_list.dart';
 import 'package:pte_app/core/widgets/components/choice_row.dart';
 import 'package:pte_app/core/widgets/templates/single_select_template.dart';
@@ -26,6 +26,8 @@ class McListeningSingleScreen extends StatelessWidget {
     required this.outboxDao,
     required this.syncEngine,
     required this.audioPlayerService,
+    this.initialAnswerPayload,
+    this.isPractice = false,
   });
 
   final TaskView task;
@@ -33,6 +35,8 @@ class McListeningSingleScreen extends StatelessWidget {
   final AnswerOutboxDao outboxDao;
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
+  final String? initialAnswerPayload;
+  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +46,9 @@ class McListeningSingleScreen extends StatelessWidget {
         audioPlayerService: audioPlayerService,
         attemptPublicId: attemptPublicId,
         pinnedItemPublicId: task.pinnedItemPublicId,
-        audioSource: task.audioPromptRef ?? '',
+        audioSource: task.audioUrl ?? '',
+        initialPayload: initialAnswerPayload,
+        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -59,12 +65,37 @@ class McListeningSingleScreen extends StatelessWidget {
                 title: task.title,
                 subtitle: task.section,
                 instruction: 'Select the correct response.',
-                stimulus: AudioStimulusPlayer(
-                  label: state.hasFinishedPlaying
-                      ? 'Audio finished'
-                      : 'Playing audio',
-                  playing: !state.hasFinishedPlaying,
-                  progress: state.hasFinishedPlaying ? 1 : 0,
+                stimulus: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AudioListeningStatusCard(
+                      statusLabel: !state.hasStartedPlaying
+                          ? 'Tap to listen'
+                          : state.hasFinishedPlaying
+                              ? 'Audio finished'
+                              : 'Playing audio...',
+                      progress: !state.hasStartedPlaying
+                          ? 0.0
+                          : state.hasFinishedPlaying
+                              ? 1.0
+                              : state.progress,
+                    ),
+                    if (isPractice) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          if (!state.hasStartedPlaying) {
+                            context.read<McListeningSingleCubit>().startPlayback();
+                          } else {
+                            context.read<McListeningSingleCubit>().replayAudio();
+                          }
+                        },
+                        icon: const Icon(Icons.play_circle_outline),
+                        label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
+                      ),
+                    ],
+                  ],
                 ),
                 response: SingleChildScrollView(
                   child: ChoiceList(

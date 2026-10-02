@@ -1,22 +1,27 @@
 import 'package:drift/drift.dart';
 
 /// Offline queue of lockdown violations awaiting acknowledgement from the
-/// proctor backend. One row per detected event, flagged `sent=true` only
-/// after `POST /api/proctor/violations` returns success. The schema
-/// deliberately mirrors what proctor's `violation_events` table already
-/// accepts (Phase 1's enum additions are the only change the server
-/// needs), so the upstream POST body is a direct projection from this
-/// row's columns — keeping the client payload identical to past phases
-/// meant the backend never had to grow a new endpoint to satisfy
-/// lockdown.
+/// authenticated student-attempt endpoint. One row per detected event,
+/// flagged `sent=true` only after the server accepts the idempotent receipt.
+/// Local severity is retained for diagnostics; it is not a client authority
+/// field in the outbound payload. The schema
+/// deliberately mirrors the persisted audit row rather than the outbound
+/// request body.
+/// The transport adapter owns the request projection.
 @DataClassName('LocalViolation')
 class LocalViolationsTable extends Table {
   IntColumn get id => integer().autoIncrement()();
 
+  /// Stable client-generated idempotency key. The empty SQL default exists so
+  /// SQLite can add this non-null column to an existing table; the migration
+  /// immediately backfills every old row and the DAO supplies the real value
+  /// for new rows. A unique index is created by AppDatabase after creation or
+  /// backfill because SQLite cannot add a UNIQUE column constraint with ALTER.
+  TextColumn get clientEventId => text().withDefault(const Constant(''))();
+
   /// `attempt_public_id` — same opaque id as everywhere else (e.g.
-  /// `AnswerOutboxTable.attemptPublicId`); the proctor endpoint already
-  /// understands this id and uses it to attribute violations to the
-  /// session tab on the proctor dashboard.
+  /// `AnswerOutboxTable.attemptPublicId`). It is carried in the request URL,
+  /// not duplicated in the request body.
   TextColumn get attemptPublicId => text()();
 
   /// Wire string for `ViolationType` (e.g. `LOCKDOWN_FULLSCREEN_EXIT`).
@@ -24,7 +29,7 @@ class LocalViolationsTable extends Table {
   /// violation type to the backend doesn't force a database migration.
   TextColumn get violationType => text()();
 
-  /// `WARNING` / `CRITICAL` — same casing the proctor endpoint accepts.
+  /// `WARNING` / `CRITICAL` for local diagnostics only.
   TextColumn get severity => text()();
 
   DateTimeColumn get timestamp => dateTime()();
@@ -37,4 +42,10 @@ class LocalViolationsTable extends Table {
   /// Sync flag. `false` until the violation has been acknowledged by
   /// the backend.
   BoolColumn get sent => boolean().withDefault(const Constant(false))();
+
+  /// A policy or type rejection is terminal for this row. Keep the row and
+  /// reason for diagnostics, but do not retry it forever.
+  BoolColumn get terminal => boolean().withDefault(const Constant(false))();
+
+  TextColumn get terminalReason => text().nullable()();
 }

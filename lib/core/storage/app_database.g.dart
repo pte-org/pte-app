@@ -562,6 +562,150 @@ class $PendingMediaUploadTableTable extends PendingMediaUploadTable
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cloudinaryApiKeyMeta = const VerificationMeta(
+    'cloudinaryApiKey',
+  );
+  @override
+  late final GeneratedColumn<String> cloudinaryApiKey = GeneratedColumn<String>(
+    'cloudinary_api_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cloudinaryTimestampMeta =
+      const VerificationMeta('cloudinaryTimestamp');
+  @override
+  late final GeneratedColumn<String> cloudinaryTimestamp =
+      GeneratedColumn<String>(
+        'cloudinary_timestamp',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryUploadSignatureMeta =
+      const VerificationMeta('cloudinaryUploadSignature');
+  @override
+  late final GeneratedColumn<String> cloudinaryUploadSignature =
+      GeneratedColumn<String>(
+        'cloudinary_upload_signature',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryFolderMeta = const VerificationMeta(
+    'cloudinaryFolder',
+  );
+  @override
+  late final GeneratedColumn<String> cloudinaryFolder = GeneratedColumn<String>(
+    'cloudinary_folder',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cloudinaryResourceTypeMeta =
+      const VerificationMeta('cloudinaryResourceType');
+  @override
+  late final GeneratedColumn<String> cloudinaryResourceType =
+      GeneratedColumn<String>(
+        'cloudinary_resource_type',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryPublicIdMeta =
+      const VerificationMeta('cloudinaryPublicId');
+  @override
+  late final GeneratedColumn<String> cloudinaryPublicId =
+      GeneratedColumn<String>(
+        'cloudinary_public_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryAssetIdMeta = const VerificationMeta(
+    'cloudinaryAssetId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudinaryAssetId =
+      GeneratedColumn<String>(
+        'cloudinary_asset_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinarySecureUrlMeta =
+      const VerificationMeta('cloudinarySecureUrl');
+  @override
+  late final GeneratedColumn<String> cloudinarySecureUrl =
+      GeneratedColumn<String>(
+        'cloudinary_secure_url',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryFormatMeta = const VerificationMeta(
+    'cloudinaryFormat',
+  );
+  @override
+  late final GeneratedColumn<String> cloudinaryFormat = GeneratedColumn<String>(
+    'cloudinary_format',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cloudinaryBytesMeta = const VerificationMeta(
+    'cloudinaryBytes',
+  );
+  @override
+  late final GeneratedColumn<int> cloudinaryBytes = GeneratedColumn<int>(
+    'cloudinary_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cloudinaryDurationSecondsMeta =
+      const VerificationMeta('cloudinaryDurationSeconds');
+  @override
+  late final GeneratedColumn<int> cloudinaryDurationSeconds =
+      GeneratedColumn<int>(
+        'cloudinary_duration_seconds',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cloudinaryVersionMeta = const VerificationMeta(
+    'cloudinaryVersion',
+  );
+  @override
+  late final GeneratedColumn<int> cloudinaryVersion = GeneratedColumn<int>(
+    'cloudinary_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cloudinarySignatureMeta =
+      const VerificationMeta('cloudinarySignature');
+  @override
+  late final GeneratedColumn<String> cloudinarySignature =
+      GeneratedColumn<String>(
+        'cloudinary_signature',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -590,6 +734,19 @@ class $PendingMediaUploadTableTable extends PendingMediaUploadTable
     mediaPublicId,
     uploadUrl,
     uploadUrlExpiresAt,
+    cloudinaryApiKey,
+    cloudinaryTimestamp,
+    cloudinaryUploadSignature,
+    cloudinaryFolder,
+    cloudinaryResourceType,
+    cloudinaryPublicId,
+    cloudinaryAssetId,
+    cloudinarySecureUrl,
+    cloudinaryFormat,
+    cloudinaryBytes,
+    cloudinaryDurationSeconds,
+    cloudinaryVersion,
+    cloudinarySignature,
     status,
     lastError,
   ];
@@ -662,6 +819,123 @@ class $PendingMediaUploadTableTable extends PendingMediaUploadTable
         ),
       );
     }
+    if (data.containsKey('cloudinary_api_key')) {
+      context.handle(
+        _cloudinaryApiKeyMeta,
+        cloudinaryApiKey.isAcceptableOrUnknown(
+          data['cloudinary_api_key']!,
+          _cloudinaryApiKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_timestamp')) {
+      context.handle(
+        _cloudinaryTimestampMeta,
+        cloudinaryTimestamp.isAcceptableOrUnknown(
+          data['cloudinary_timestamp']!,
+          _cloudinaryTimestampMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_upload_signature')) {
+      context.handle(
+        _cloudinaryUploadSignatureMeta,
+        cloudinaryUploadSignature.isAcceptableOrUnknown(
+          data['cloudinary_upload_signature']!,
+          _cloudinaryUploadSignatureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_folder')) {
+      context.handle(
+        _cloudinaryFolderMeta,
+        cloudinaryFolder.isAcceptableOrUnknown(
+          data['cloudinary_folder']!,
+          _cloudinaryFolderMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_resource_type')) {
+      context.handle(
+        _cloudinaryResourceTypeMeta,
+        cloudinaryResourceType.isAcceptableOrUnknown(
+          data['cloudinary_resource_type']!,
+          _cloudinaryResourceTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_public_id')) {
+      context.handle(
+        _cloudinaryPublicIdMeta,
+        cloudinaryPublicId.isAcceptableOrUnknown(
+          data['cloudinary_public_id']!,
+          _cloudinaryPublicIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_asset_id')) {
+      context.handle(
+        _cloudinaryAssetIdMeta,
+        cloudinaryAssetId.isAcceptableOrUnknown(
+          data['cloudinary_asset_id']!,
+          _cloudinaryAssetIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_secure_url')) {
+      context.handle(
+        _cloudinarySecureUrlMeta,
+        cloudinarySecureUrl.isAcceptableOrUnknown(
+          data['cloudinary_secure_url']!,
+          _cloudinarySecureUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_format')) {
+      context.handle(
+        _cloudinaryFormatMeta,
+        cloudinaryFormat.isAcceptableOrUnknown(
+          data['cloudinary_format']!,
+          _cloudinaryFormatMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_bytes')) {
+      context.handle(
+        _cloudinaryBytesMeta,
+        cloudinaryBytes.isAcceptableOrUnknown(
+          data['cloudinary_bytes']!,
+          _cloudinaryBytesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_duration_seconds')) {
+      context.handle(
+        _cloudinaryDurationSecondsMeta,
+        cloudinaryDurationSeconds.isAcceptableOrUnknown(
+          data['cloudinary_duration_seconds']!,
+          _cloudinaryDurationSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_version')) {
+      context.handle(
+        _cloudinaryVersionMeta,
+        cloudinaryVersion.isAcceptableOrUnknown(
+          data['cloudinary_version']!,
+          _cloudinaryVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cloudinary_signature')) {
+      context.handle(
+        _cloudinarySignatureMeta,
+        cloudinarySignature.isAcceptableOrUnknown(
+          data['cloudinary_signature']!,
+          _cloudinarySignatureMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -709,6 +983,58 @@ class $PendingMediaUploadTableTable extends PendingMediaUploadTable
         DriftSqlType.int,
         data['${effectivePrefix}upload_url_expires_at'],
       ),
+      cloudinaryApiKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_api_key'],
+      ),
+      cloudinaryTimestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_timestamp'],
+      ),
+      cloudinaryUploadSignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_upload_signature'],
+      ),
+      cloudinaryFolder: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_folder'],
+      ),
+      cloudinaryResourceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_resource_type'],
+      ),
+      cloudinaryPublicId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_public_id'],
+      ),
+      cloudinaryAssetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_asset_id'],
+      ),
+      cloudinarySecureUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_secure_url'],
+      ),
+      cloudinaryFormat: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_format'],
+      ),
+      cloudinaryBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cloudinary_bytes'],
+      ),
+      cloudinaryDurationSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cloudinary_duration_seconds'],
+      ),
+      cloudinaryVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cloudinary_version'],
+      ),
+      cloudinarySignature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloudinary_signature'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -743,6 +1069,25 @@ class PendingMediaUpload extends DataClass
 
   /// Epoch ms, nullable, re-set on every (re-)presign.
   final int? uploadUrlExpiresAt;
+
+  /// Signed Cloudinary upload fields. These survive a process restart between
+  /// presign and the direct upload.
+  final String? cloudinaryApiKey;
+  final String? cloudinaryTimestamp;
+  final String? cloudinaryUploadSignature;
+  final String? cloudinaryFolder;
+  final String? cloudinaryResourceType;
+  final String? cloudinaryPublicId;
+
+  /// Provider response persisted before the API completion call. This makes
+  /// the completing phase restart-safe without re-uploading the recording.
+  final String? cloudinaryAssetId;
+  final String? cloudinarySecureUrl;
+  final String? cloudinaryFormat;
+  final int? cloudinaryBytes;
+  final int? cloudinaryDurationSeconds;
+  final int? cloudinaryVersion;
+  final String? cloudinarySignature;
   final String status;
   final String? lastError;
   const PendingMediaUpload({
@@ -752,6 +1097,19 @@ class PendingMediaUpload extends DataClass
     this.mediaPublicId,
     this.uploadUrl,
     this.uploadUrlExpiresAt,
+    this.cloudinaryApiKey,
+    this.cloudinaryTimestamp,
+    this.cloudinaryUploadSignature,
+    this.cloudinaryFolder,
+    this.cloudinaryResourceType,
+    this.cloudinaryPublicId,
+    this.cloudinaryAssetId,
+    this.cloudinarySecureUrl,
+    this.cloudinaryFormat,
+    this.cloudinaryBytes,
+    this.cloudinaryDurationSeconds,
+    this.cloudinaryVersion,
+    this.cloudinarySignature,
     required this.status,
     this.lastError,
   });
@@ -769,6 +1127,51 @@ class PendingMediaUpload extends DataClass
     }
     if (!nullToAbsent || uploadUrlExpiresAt != null) {
       map['upload_url_expires_at'] = Variable<int>(uploadUrlExpiresAt);
+    }
+    if (!nullToAbsent || cloudinaryApiKey != null) {
+      map['cloudinary_api_key'] = Variable<String>(cloudinaryApiKey);
+    }
+    if (!nullToAbsent || cloudinaryTimestamp != null) {
+      map['cloudinary_timestamp'] = Variable<String>(cloudinaryTimestamp);
+    }
+    if (!nullToAbsent || cloudinaryUploadSignature != null) {
+      map['cloudinary_upload_signature'] = Variable<String>(
+        cloudinaryUploadSignature,
+      );
+    }
+    if (!nullToAbsent || cloudinaryFolder != null) {
+      map['cloudinary_folder'] = Variable<String>(cloudinaryFolder);
+    }
+    if (!nullToAbsent || cloudinaryResourceType != null) {
+      map['cloudinary_resource_type'] = Variable<String>(
+        cloudinaryResourceType,
+      );
+    }
+    if (!nullToAbsent || cloudinaryPublicId != null) {
+      map['cloudinary_public_id'] = Variable<String>(cloudinaryPublicId);
+    }
+    if (!nullToAbsent || cloudinaryAssetId != null) {
+      map['cloudinary_asset_id'] = Variable<String>(cloudinaryAssetId);
+    }
+    if (!nullToAbsent || cloudinarySecureUrl != null) {
+      map['cloudinary_secure_url'] = Variable<String>(cloudinarySecureUrl);
+    }
+    if (!nullToAbsent || cloudinaryFormat != null) {
+      map['cloudinary_format'] = Variable<String>(cloudinaryFormat);
+    }
+    if (!nullToAbsent || cloudinaryBytes != null) {
+      map['cloudinary_bytes'] = Variable<int>(cloudinaryBytes);
+    }
+    if (!nullToAbsent || cloudinaryDurationSeconds != null) {
+      map['cloudinary_duration_seconds'] = Variable<int>(
+        cloudinaryDurationSeconds,
+      );
+    }
+    if (!nullToAbsent || cloudinaryVersion != null) {
+      map['cloudinary_version'] = Variable<int>(cloudinaryVersion);
+    }
+    if (!nullToAbsent || cloudinarySignature != null) {
+      map['cloudinary_signature'] = Variable<String>(cloudinarySignature);
     }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || lastError != null) {
@@ -791,6 +1194,47 @@ class PendingMediaUpload extends DataClass
       uploadUrlExpiresAt: uploadUrlExpiresAt == null && nullToAbsent
           ? const Value.absent()
           : Value(uploadUrlExpiresAt),
+      cloudinaryApiKey: cloudinaryApiKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryApiKey),
+      cloudinaryTimestamp: cloudinaryTimestamp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryTimestamp),
+      cloudinaryUploadSignature:
+          cloudinaryUploadSignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryUploadSignature),
+      cloudinaryFolder: cloudinaryFolder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryFolder),
+      cloudinaryResourceType: cloudinaryResourceType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryResourceType),
+      cloudinaryPublicId: cloudinaryPublicId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryPublicId),
+      cloudinaryAssetId: cloudinaryAssetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryAssetId),
+      cloudinarySecureUrl: cloudinarySecureUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinarySecureUrl),
+      cloudinaryFormat: cloudinaryFormat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryFormat),
+      cloudinaryBytes: cloudinaryBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryBytes),
+      cloudinaryDurationSeconds:
+          cloudinaryDurationSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryDurationSeconds),
+      cloudinaryVersion: cloudinaryVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinaryVersion),
+      cloudinarySignature: cloudinarySignature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudinarySignature),
       status: Value(status),
       lastError: lastError == null && nullToAbsent
           ? const Value.absent()
@@ -812,6 +1256,35 @@ class PendingMediaUpload extends DataClass
       mediaPublicId: serializer.fromJson<String?>(json['mediaPublicId']),
       uploadUrl: serializer.fromJson<String?>(json['uploadUrl']),
       uploadUrlExpiresAt: serializer.fromJson<int?>(json['uploadUrlExpiresAt']),
+      cloudinaryApiKey: serializer.fromJson<String?>(json['cloudinaryApiKey']),
+      cloudinaryTimestamp: serializer.fromJson<String?>(
+        json['cloudinaryTimestamp'],
+      ),
+      cloudinaryUploadSignature: serializer.fromJson<String?>(
+        json['cloudinaryUploadSignature'],
+      ),
+      cloudinaryFolder: serializer.fromJson<String?>(json['cloudinaryFolder']),
+      cloudinaryResourceType: serializer.fromJson<String?>(
+        json['cloudinaryResourceType'],
+      ),
+      cloudinaryPublicId: serializer.fromJson<String?>(
+        json['cloudinaryPublicId'],
+      ),
+      cloudinaryAssetId: serializer.fromJson<String?>(
+        json['cloudinaryAssetId'],
+      ),
+      cloudinarySecureUrl: serializer.fromJson<String?>(
+        json['cloudinarySecureUrl'],
+      ),
+      cloudinaryFormat: serializer.fromJson<String?>(json['cloudinaryFormat']),
+      cloudinaryBytes: serializer.fromJson<int?>(json['cloudinaryBytes']),
+      cloudinaryDurationSeconds: serializer.fromJson<int?>(
+        json['cloudinaryDurationSeconds'],
+      ),
+      cloudinaryVersion: serializer.fromJson<int?>(json['cloudinaryVersion']),
+      cloudinarySignature: serializer.fromJson<String?>(
+        json['cloudinarySignature'],
+      ),
       status: serializer.fromJson<String>(json['status']),
       lastError: serializer.fromJson<String?>(json['lastError']),
     );
@@ -826,6 +1299,25 @@ class PendingMediaUpload extends DataClass
       'mediaPublicId': serializer.toJson<String?>(mediaPublicId),
       'uploadUrl': serializer.toJson<String?>(uploadUrl),
       'uploadUrlExpiresAt': serializer.toJson<int?>(uploadUrlExpiresAt),
+      'cloudinaryApiKey': serializer.toJson<String?>(cloudinaryApiKey),
+      'cloudinaryTimestamp': serializer.toJson<String?>(cloudinaryTimestamp),
+      'cloudinaryUploadSignature': serializer.toJson<String?>(
+        cloudinaryUploadSignature,
+      ),
+      'cloudinaryFolder': serializer.toJson<String?>(cloudinaryFolder),
+      'cloudinaryResourceType': serializer.toJson<String?>(
+        cloudinaryResourceType,
+      ),
+      'cloudinaryPublicId': serializer.toJson<String?>(cloudinaryPublicId),
+      'cloudinaryAssetId': serializer.toJson<String?>(cloudinaryAssetId),
+      'cloudinarySecureUrl': serializer.toJson<String?>(cloudinarySecureUrl),
+      'cloudinaryFormat': serializer.toJson<String?>(cloudinaryFormat),
+      'cloudinaryBytes': serializer.toJson<int?>(cloudinaryBytes),
+      'cloudinaryDurationSeconds': serializer.toJson<int?>(
+        cloudinaryDurationSeconds,
+      ),
+      'cloudinaryVersion': serializer.toJson<int?>(cloudinaryVersion),
+      'cloudinarySignature': serializer.toJson<String?>(cloudinarySignature),
       'status': serializer.toJson<String>(status),
       'lastError': serializer.toJson<String?>(lastError),
     };
@@ -838,6 +1330,19 @@ class PendingMediaUpload extends DataClass
     Value<String?> mediaPublicId = const Value.absent(),
     Value<String?> uploadUrl = const Value.absent(),
     Value<int?> uploadUrlExpiresAt = const Value.absent(),
+    Value<String?> cloudinaryApiKey = const Value.absent(),
+    Value<String?> cloudinaryTimestamp = const Value.absent(),
+    Value<String?> cloudinaryUploadSignature = const Value.absent(),
+    Value<String?> cloudinaryFolder = const Value.absent(),
+    Value<String?> cloudinaryResourceType = const Value.absent(),
+    Value<String?> cloudinaryPublicId = const Value.absent(),
+    Value<String?> cloudinaryAssetId = const Value.absent(),
+    Value<String?> cloudinarySecureUrl = const Value.absent(),
+    Value<String?> cloudinaryFormat = const Value.absent(),
+    Value<int?> cloudinaryBytes = const Value.absent(),
+    Value<int?> cloudinaryDurationSeconds = const Value.absent(),
+    Value<int?> cloudinaryVersion = const Value.absent(),
+    Value<String?> cloudinarySignature = const Value.absent(),
     String? status,
     Value<String?> lastError = const Value.absent(),
   }) => PendingMediaUpload(
@@ -851,6 +1356,45 @@ class PendingMediaUpload extends DataClass
     uploadUrlExpiresAt: uploadUrlExpiresAt.present
         ? uploadUrlExpiresAt.value
         : this.uploadUrlExpiresAt,
+    cloudinaryApiKey: cloudinaryApiKey.present
+        ? cloudinaryApiKey.value
+        : this.cloudinaryApiKey,
+    cloudinaryTimestamp: cloudinaryTimestamp.present
+        ? cloudinaryTimestamp.value
+        : this.cloudinaryTimestamp,
+    cloudinaryUploadSignature: cloudinaryUploadSignature.present
+        ? cloudinaryUploadSignature.value
+        : this.cloudinaryUploadSignature,
+    cloudinaryFolder: cloudinaryFolder.present
+        ? cloudinaryFolder.value
+        : this.cloudinaryFolder,
+    cloudinaryResourceType: cloudinaryResourceType.present
+        ? cloudinaryResourceType.value
+        : this.cloudinaryResourceType,
+    cloudinaryPublicId: cloudinaryPublicId.present
+        ? cloudinaryPublicId.value
+        : this.cloudinaryPublicId,
+    cloudinaryAssetId: cloudinaryAssetId.present
+        ? cloudinaryAssetId.value
+        : this.cloudinaryAssetId,
+    cloudinarySecureUrl: cloudinarySecureUrl.present
+        ? cloudinarySecureUrl.value
+        : this.cloudinarySecureUrl,
+    cloudinaryFormat: cloudinaryFormat.present
+        ? cloudinaryFormat.value
+        : this.cloudinaryFormat,
+    cloudinaryBytes: cloudinaryBytes.present
+        ? cloudinaryBytes.value
+        : this.cloudinaryBytes,
+    cloudinaryDurationSeconds: cloudinaryDurationSeconds.present
+        ? cloudinaryDurationSeconds.value
+        : this.cloudinaryDurationSeconds,
+    cloudinaryVersion: cloudinaryVersion.present
+        ? cloudinaryVersion.value
+        : this.cloudinaryVersion,
+    cloudinarySignature: cloudinarySignature.present
+        ? cloudinarySignature.value
+        : this.cloudinarySignature,
     status: status ?? this.status,
     lastError: lastError.present ? lastError.value : this.lastError,
   );
@@ -872,6 +1416,45 @@ class PendingMediaUpload extends DataClass
       uploadUrlExpiresAt: data.uploadUrlExpiresAt.present
           ? data.uploadUrlExpiresAt.value
           : this.uploadUrlExpiresAt,
+      cloudinaryApiKey: data.cloudinaryApiKey.present
+          ? data.cloudinaryApiKey.value
+          : this.cloudinaryApiKey,
+      cloudinaryTimestamp: data.cloudinaryTimestamp.present
+          ? data.cloudinaryTimestamp.value
+          : this.cloudinaryTimestamp,
+      cloudinaryUploadSignature: data.cloudinaryUploadSignature.present
+          ? data.cloudinaryUploadSignature.value
+          : this.cloudinaryUploadSignature,
+      cloudinaryFolder: data.cloudinaryFolder.present
+          ? data.cloudinaryFolder.value
+          : this.cloudinaryFolder,
+      cloudinaryResourceType: data.cloudinaryResourceType.present
+          ? data.cloudinaryResourceType.value
+          : this.cloudinaryResourceType,
+      cloudinaryPublicId: data.cloudinaryPublicId.present
+          ? data.cloudinaryPublicId.value
+          : this.cloudinaryPublicId,
+      cloudinaryAssetId: data.cloudinaryAssetId.present
+          ? data.cloudinaryAssetId.value
+          : this.cloudinaryAssetId,
+      cloudinarySecureUrl: data.cloudinarySecureUrl.present
+          ? data.cloudinarySecureUrl.value
+          : this.cloudinarySecureUrl,
+      cloudinaryFormat: data.cloudinaryFormat.present
+          ? data.cloudinaryFormat.value
+          : this.cloudinaryFormat,
+      cloudinaryBytes: data.cloudinaryBytes.present
+          ? data.cloudinaryBytes.value
+          : this.cloudinaryBytes,
+      cloudinaryDurationSeconds: data.cloudinaryDurationSeconds.present
+          ? data.cloudinaryDurationSeconds.value
+          : this.cloudinaryDurationSeconds,
+      cloudinaryVersion: data.cloudinaryVersion.present
+          ? data.cloudinaryVersion.value
+          : this.cloudinaryVersion,
+      cloudinarySignature: data.cloudinarySignature.present
+          ? data.cloudinarySignature.value
+          : this.cloudinarySignature,
       status: data.status.present ? data.status.value : this.status,
       lastError: data.lastError.present ? data.lastError.value : this.lastError,
     );
@@ -886,6 +1469,19 @@ class PendingMediaUpload extends DataClass
           ..write('mediaPublicId: $mediaPublicId, ')
           ..write('uploadUrl: $uploadUrl, ')
           ..write('uploadUrlExpiresAt: $uploadUrlExpiresAt, ')
+          ..write('cloudinaryApiKey: $cloudinaryApiKey, ')
+          ..write('cloudinaryTimestamp: $cloudinaryTimestamp, ')
+          ..write('cloudinaryUploadSignature: $cloudinaryUploadSignature, ')
+          ..write('cloudinaryFolder: $cloudinaryFolder, ')
+          ..write('cloudinaryResourceType: $cloudinaryResourceType, ')
+          ..write('cloudinaryPublicId: $cloudinaryPublicId, ')
+          ..write('cloudinaryAssetId: $cloudinaryAssetId, ')
+          ..write('cloudinarySecureUrl: $cloudinarySecureUrl, ')
+          ..write('cloudinaryFormat: $cloudinaryFormat, ')
+          ..write('cloudinaryBytes: $cloudinaryBytes, ')
+          ..write('cloudinaryDurationSeconds: $cloudinaryDurationSeconds, ')
+          ..write('cloudinaryVersion: $cloudinaryVersion, ')
+          ..write('cloudinarySignature: $cloudinarySignature, ')
           ..write('status: $status, ')
           ..write('lastError: $lastError')
           ..write(')'))
@@ -893,16 +1489,29 @@ class PendingMediaUpload extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     attemptPublicId,
     pinnedItemPublicId,
     localFilePath,
     mediaPublicId,
     uploadUrl,
     uploadUrlExpiresAt,
+    cloudinaryApiKey,
+    cloudinaryTimestamp,
+    cloudinaryUploadSignature,
+    cloudinaryFolder,
+    cloudinaryResourceType,
+    cloudinaryPublicId,
+    cloudinaryAssetId,
+    cloudinarySecureUrl,
+    cloudinaryFormat,
+    cloudinaryBytes,
+    cloudinaryDurationSeconds,
+    cloudinaryVersion,
+    cloudinarySignature,
     status,
     lastError,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -913,6 +1522,19 @@ class PendingMediaUpload extends DataClass
           other.mediaPublicId == this.mediaPublicId &&
           other.uploadUrl == this.uploadUrl &&
           other.uploadUrlExpiresAt == this.uploadUrlExpiresAt &&
+          other.cloudinaryApiKey == this.cloudinaryApiKey &&
+          other.cloudinaryTimestamp == this.cloudinaryTimestamp &&
+          other.cloudinaryUploadSignature == this.cloudinaryUploadSignature &&
+          other.cloudinaryFolder == this.cloudinaryFolder &&
+          other.cloudinaryResourceType == this.cloudinaryResourceType &&
+          other.cloudinaryPublicId == this.cloudinaryPublicId &&
+          other.cloudinaryAssetId == this.cloudinaryAssetId &&
+          other.cloudinarySecureUrl == this.cloudinarySecureUrl &&
+          other.cloudinaryFormat == this.cloudinaryFormat &&
+          other.cloudinaryBytes == this.cloudinaryBytes &&
+          other.cloudinaryDurationSeconds == this.cloudinaryDurationSeconds &&
+          other.cloudinaryVersion == this.cloudinaryVersion &&
+          other.cloudinarySignature == this.cloudinarySignature &&
           other.status == this.status &&
           other.lastError == this.lastError);
 }
@@ -925,6 +1547,19 @@ class PendingMediaUploadTableCompanion
   final Value<String?> mediaPublicId;
   final Value<String?> uploadUrl;
   final Value<int?> uploadUrlExpiresAt;
+  final Value<String?> cloudinaryApiKey;
+  final Value<String?> cloudinaryTimestamp;
+  final Value<String?> cloudinaryUploadSignature;
+  final Value<String?> cloudinaryFolder;
+  final Value<String?> cloudinaryResourceType;
+  final Value<String?> cloudinaryPublicId;
+  final Value<String?> cloudinaryAssetId;
+  final Value<String?> cloudinarySecureUrl;
+  final Value<String?> cloudinaryFormat;
+  final Value<int?> cloudinaryBytes;
+  final Value<int?> cloudinaryDurationSeconds;
+  final Value<int?> cloudinaryVersion;
+  final Value<String?> cloudinarySignature;
   final Value<String> status;
   final Value<String?> lastError;
   final Value<int> rowid;
@@ -935,6 +1570,19 @@ class PendingMediaUploadTableCompanion
     this.mediaPublicId = const Value.absent(),
     this.uploadUrl = const Value.absent(),
     this.uploadUrlExpiresAt = const Value.absent(),
+    this.cloudinaryApiKey = const Value.absent(),
+    this.cloudinaryTimestamp = const Value.absent(),
+    this.cloudinaryUploadSignature = const Value.absent(),
+    this.cloudinaryFolder = const Value.absent(),
+    this.cloudinaryResourceType = const Value.absent(),
+    this.cloudinaryPublicId = const Value.absent(),
+    this.cloudinaryAssetId = const Value.absent(),
+    this.cloudinarySecureUrl = const Value.absent(),
+    this.cloudinaryFormat = const Value.absent(),
+    this.cloudinaryBytes = const Value.absent(),
+    this.cloudinaryDurationSeconds = const Value.absent(),
+    this.cloudinaryVersion = const Value.absent(),
+    this.cloudinarySignature = const Value.absent(),
     this.status = const Value.absent(),
     this.lastError = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -946,6 +1594,19 @@ class PendingMediaUploadTableCompanion
     this.mediaPublicId = const Value.absent(),
     this.uploadUrl = const Value.absent(),
     this.uploadUrlExpiresAt = const Value.absent(),
+    this.cloudinaryApiKey = const Value.absent(),
+    this.cloudinaryTimestamp = const Value.absent(),
+    this.cloudinaryUploadSignature = const Value.absent(),
+    this.cloudinaryFolder = const Value.absent(),
+    this.cloudinaryResourceType = const Value.absent(),
+    this.cloudinaryPublicId = const Value.absent(),
+    this.cloudinaryAssetId = const Value.absent(),
+    this.cloudinarySecureUrl = const Value.absent(),
+    this.cloudinaryFormat = const Value.absent(),
+    this.cloudinaryBytes = const Value.absent(),
+    this.cloudinaryDurationSeconds = const Value.absent(),
+    this.cloudinaryVersion = const Value.absent(),
+    this.cloudinarySignature = const Value.absent(),
     required String status,
     this.lastError = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -960,6 +1621,19 @@ class PendingMediaUploadTableCompanion
     Expression<String>? mediaPublicId,
     Expression<String>? uploadUrl,
     Expression<int>? uploadUrlExpiresAt,
+    Expression<String>? cloudinaryApiKey,
+    Expression<String>? cloudinaryTimestamp,
+    Expression<String>? cloudinaryUploadSignature,
+    Expression<String>? cloudinaryFolder,
+    Expression<String>? cloudinaryResourceType,
+    Expression<String>? cloudinaryPublicId,
+    Expression<String>? cloudinaryAssetId,
+    Expression<String>? cloudinarySecureUrl,
+    Expression<String>? cloudinaryFormat,
+    Expression<int>? cloudinaryBytes,
+    Expression<int>? cloudinaryDurationSeconds,
+    Expression<int>? cloudinaryVersion,
+    Expression<String>? cloudinarySignature,
     Expression<String>? status,
     Expression<String>? lastError,
     Expression<int>? rowid,
@@ -973,6 +1647,26 @@ class PendingMediaUploadTableCompanion
       if (uploadUrl != null) 'upload_url': uploadUrl,
       if (uploadUrlExpiresAt != null)
         'upload_url_expires_at': uploadUrlExpiresAt,
+      if (cloudinaryApiKey != null) 'cloudinary_api_key': cloudinaryApiKey,
+      if (cloudinaryTimestamp != null)
+        'cloudinary_timestamp': cloudinaryTimestamp,
+      if (cloudinaryUploadSignature != null)
+        'cloudinary_upload_signature': cloudinaryUploadSignature,
+      if (cloudinaryFolder != null) 'cloudinary_folder': cloudinaryFolder,
+      if (cloudinaryResourceType != null)
+        'cloudinary_resource_type': cloudinaryResourceType,
+      if (cloudinaryPublicId != null)
+        'cloudinary_public_id': cloudinaryPublicId,
+      if (cloudinaryAssetId != null) 'cloudinary_asset_id': cloudinaryAssetId,
+      if (cloudinarySecureUrl != null)
+        'cloudinary_secure_url': cloudinarySecureUrl,
+      if (cloudinaryFormat != null) 'cloudinary_format': cloudinaryFormat,
+      if (cloudinaryBytes != null) 'cloudinary_bytes': cloudinaryBytes,
+      if (cloudinaryDurationSeconds != null)
+        'cloudinary_duration_seconds': cloudinaryDurationSeconds,
+      if (cloudinaryVersion != null) 'cloudinary_version': cloudinaryVersion,
+      if (cloudinarySignature != null)
+        'cloudinary_signature': cloudinarySignature,
       if (status != null) 'status': status,
       if (lastError != null) 'last_error': lastError,
       if (rowid != null) 'rowid': rowid,
@@ -986,6 +1680,19 @@ class PendingMediaUploadTableCompanion
     Value<String?>? mediaPublicId,
     Value<String?>? uploadUrl,
     Value<int?>? uploadUrlExpiresAt,
+    Value<String?>? cloudinaryApiKey,
+    Value<String?>? cloudinaryTimestamp,
+    Value<String?>? cloudinaryUploadSignature,
+    Value<String?>? cloudinaryFolder,
+    Value<String?>? cloudinaryResourceType,
+    Value<String?>? cloudinaryPublicId,
+    Value<String?>? cloudinaryAssetId,
+    Value<String?>? cloudinarySecureUrl,
+    Value<String?>? cloudinaryFormat,
+    Value<int?>? cloudinaryBytes,
+    Value<int?>? cloudinaryDurationSeconds,
+    Value<int?>? cloudinaryVersion,
+    Value<String?>? cloudinarySignature,
     Value<String>? status,
     Value<String?>? lastError,
     Value<int>? rowid,
@@ -997,6 +1704,22 @@ class PendingMediaUploadTableCompanion
       mediaPublicId: mediaPublicId ?? this.mediaPublicId,
       uploadUrl: uploadUrl ?? this.uploadUrl,
       uploadUrlExpiresAt: uploadUrlExpiresAt ?? this.uploadUrlExpiresAt,
+      cloudinaryApiKey: cloudinaryApiKey ?? this.cloudinaryApiKey,
+      cloudinaryTimestamp: cloudinaryTimestamp ?? this.cloudinaryTimestamp,
+      cloudinaryUploadSignature:
+          cloudinaryUploadSignature ?? this.cloudinaryUploadSignature,
+      cloudinaryFolder: cloudinaryFolder ?? this.cloudinaryFolder,
+      cloudinaryResourceType:
+          cloudinaryResourceType ?? this.cloudinaryResourceType,
+      cloudinaryPublicId: cloudinaryPublicId ?? this.cloudinaryPublicId,
+      cloudinaryAssetId: cloudinaryAssetId ?? this.cloudinaryAssetId,
+      cloudinarySecureUrl: cloudinarySecureUrl ?? this.cloudinarySecureUrl,
+      cloudinaryFormat: cloudinaryFormat ?? this.cloudinaryFormat,
+      cloudinaryBytes: cloudinaryBytes ?? this.cloudinaryBytes,
+      cloudinaryDurationSeconds:
+          cloudinaryDurationSeconds ?? this.cloudinaryDurationSeconds,
+      cloudinaryVersion: cloudinaryVersion ?? this.cloudinaryVersion,
+      cloudinarySignature: cloudinarySignature ?? this.cloudinarySignature,
       status: status ?? this.status,
       lastError: lastError ?? this.lastError,
       rowid: rowid ?? this.rowid,
@@ -1024,6 +1747,53 @@ class PendingMediaUploadTableCompanion
     if (uploadUrlExpiresAt.present) {
       map['upload_url_expires_at'] = Variable<int>(uploadUrlExpiresAt.value);
     }
+    if (cloudinaryApiKey.present) {
+      map['cloudinary_api_key'] = Variable<String>(cloudinaryApiKey.value);
+    }
+    if (cloudinaryTimestamp.present) {
+      map['cloudinary_timestamp'] = Variable<String>(cloudinaryTimestamp.value);
+    }
+    if (cloudinaryUploadSignature.present) {
+      map['cloudinary_upload_signature'] = Variable<String>(
+        cloudinaryUploadSignature.value,
+      );
+    }
+    if (cloudinaryFolder.present) {
+      map['cloudinary_folder'] = Variable<String>(cloudinaryFolder.value);
+    }
+    if (cloudinaryResourceType.present) {
+      map['cloudinary_resource_type'] = Variable<String>(
+        cloudinaryResourceType.value,
+      );
+    }
+    if (cloudinaryPublicId.present) {
+      map['cloudinary_public_id'] = Variable<String>(cloudinaryPublicId.value);
+    }
+    if (cloudinaryAssetId.present) {
+      map['cloudinary_asset_id'] = Variable<String>(cloudinaryAssetId.value);
+    }
+    if (cloudinarySecureUrl.present) {
+      map['cloudinary_secure_url'] = Variable<String>(
+        cloudinarySecureUrl.value,
+      );
+    }
+    if (cloudinaryFormat.present) {
+      map['cloudinary_format'] = Variable<String>(cloudinaryFormat.value);
+    }
+    if (cloudinaryBytes.present) {
+      map['cloudinary_bytes'] = Variable<int>(cloudinaryBytes.value);
+    }
+    if (cloudinaryDurationSeconds.present) {
+      map['cloudinary_duration_seconds'] = Variable<int>(
+        cloudinaryDurationSeconds.value,
+      );
+    }
+    if (cloudinaryVersion.present) {
+      map['cloudinary_version'] = Variable<int>(cloudinaryVersion.value);
+    }
+    if (cloudinarySignature.present) {
+      map['cloudinary_signature'] = Variable<String>(cloudinarySignature.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -1045,6 +1815,19 @@ class PendingMediaUploadTableCompanion
           ..write('mediaPublicId: $mediaPublicId, ')
           ..write('uploadUrl: $uploadUrl, ')
           ..write('uploadUrlExpiresAt: $uploadUrlExpiresAt, ')
+          ..write('cloudinaryApiKey: $cloudinaryApiKey, ')
+          ..write('cloudinaryTimestamp: $cloudinaryTimestamp, ')
+          ..write('cloudinaryUploadSignature: $cloudinaryUploadSignature, ')
+          ..write('cloudinaryFolder: $cloudinaryFolder, ')
+          ..write('cloudinaryResourceType: $cloudinaryResourceType, ')
+          ..write('cloudinaryPublicId: $cloudinaryPublicId, ')
+          ..write('cloudinaryAssetId: $cloudinaryAssetId, ')
+          ..write('cloudinarySecureUrl: $cloudinarySecureUrl, ')
+          ..write('cloudinaryFormat: $cloudinaryFormat, ')
+          ..write('cloudinaryBytes: $cloudinaryBytes, ')
+          ..write('cloudinaryDurationSeconds: $cloudinaryDurationSeconds, ')
+          ..write('cloudinaryVersion: $cloudinaryVersion, ')
+          ..write('cloudinarySignature: $cloudinarySignature, ')
           ..write('status: $status, ')
           ..write('lastError: $lastError, ')
           ..write('rowid: $rowid')
@@ -1071,6 +1854,18 @@ class $LocalViolationsTableTable extends LocalViolationsTable
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _clientEventIdMeta = const VerificationMeta(
+    'clientEventId',
+  );
+  @override
+  late final GeneratedColumn<String> clientEventId = GeneratedColumn<String>(
+    'client_event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _attemptPublicIdMeta = const VerificationMeta(
     'attemptPublicId',
@@ -1140,15 +1935,44 @@ class $LocalViolationsTableTable extends LocalViolationsTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _terminalMeta = const VerificationMeta(
+    'terminal',
+  );
+  @override
+  late final GeneratedColumn<bool> terminal = GeneratedColumn<bool>(
+    'terminal',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("terminal" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _terminalReasonMeta = const VerificationMeta(
+    'terminalReason',
+  );
+  @override
+  late final GeneratedColumn<String> terminalReason = GeneratedColumn<String>(
+    'terminal_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    clientEventId,
     attemptPublicId,
     violationType,
     severity,
     timestamp,
     metadata,
     sent,
+    terminal,
+    terminalReason,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1164,6 +1988,15 @@ class $LocalViolationsTableTable extends LocalViolationsTable
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('client_event_id')) {
+      context.handle(
+        _clientEventIdMeta,
+        clientEventId.isAcceptableOrUnknown(
+          data['client_event_id']!,
+          _clientEventIdMeta,
+        ),
+      );
     }
     if (data.containsKey('attempt_public_id')) {
       context.handle(
@@ -1215,6 +2048,21 @@ class $LocalViolationsTableTable extends LocalViolationsTable
         sent.isAcceptableOrUnknown(data['sent']!, _sentMeta),
       );
     }
+    if (data.containsKey('terminal')) {
+      context.handle(
+        _terminalMeta,
+        terminal.isAcceptableOrUnknown(data['terminal']!, _terminalMeta),
+      );
+    }
+    if (data.containsKey('terminal_reason')) {
+      context.handle(
+        _terminalReasonMeta,
+        terminalReason.isAcceptableOrUnknown(
+          data['terminal_reason']!,
+          _terminalReasonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1227,6 +2075,10 @@ class $LocalViolationsTableTable extends LocalViolationsTable
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      clientEventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_event_id'],
       )!,
       attemptPublicId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1252,6 +2104,14 @@ class $LocalViolationsTableTable extends LocalViolationsTable
         DriftSqlType.bool,
         data['${effectivePrefix}sent'],
       )!,
+      terminal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}terminal'],
+      )!,
+      terminalReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}terminal_reason'],
+      ),
     );
   }
 
@@ -1263,6 +2123,13 @@ class $LocalViolationsTableTable extends LocalViolationsTable
 
 class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   final int id;
+
+  /// Stable client-generated idempotency key. The empty SQL default exists so
+  /// SQLite can add this non-null column to an existing table; the migration
+  /// immediately backfills every old row and the DAO supplies the real value
+  /// for new rows. A unique index is created by AppDatabase after creation or
+  /// backfill because SQLite cannot add a UNIQUE column constraint with ALTER.
+  final String clientEventId;
 
   /// `attempt_public_id` — same opaque id as everywhere else (e.g.
   /// `AnswerOutboxTable.attemptPublicId`); the proctor endpoint already
@@ -1287,19 +2154,28 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   /// Sync flag. `false` until the violation has been acknowledged by
   /// the backend.
   final bool sent;
+
+  /// A policy or type rejection is terminal for this row. Keep the row and
+  /// reason for diagnostics, but do not retry it forever.
+  final bool terminal;
+  final String? terminalReason;
   const LocalViolation({
     required this.id,
+    required this.clientEventId,
     required this.attemptPublicId,
     required this.violationType,
     required this.severity,
     required this.timestamp,
     this.metadata,
     required this.sent,
+    required this.terminal,
+    this.terminalReason,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['client_event_id'] = Variable<String>(clientEventId);
     map['attempt_public_id'] = Variable<String>(attemptPublicId);
     map['violation_type'] = Variable<String>(violationType);
     map['severity'] = Variable<String>(severity);
@@ -1308,12 +2184,17 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
       map['metadata'] = Variable<String>(metadata);
     }
     map['sent'] = Variable<bool>(sent);
+    map['terminal'] = Variable<bool>(terminal);
+    if (!nullToAbsent || terminalReason != null) {
+      map['terminal_reason'] = Variable<String>(terminalReason);
+    }
     return map;
   }
 
   LocalViolationsTableCompanion toCompanion(bool nullToAbsent) {
     return LocalViolationsTableCompanion(
       id: Value(id),
+      clientEventId: Value(clientEventId),
       attemptPublicId: Value(attemptPublicId),
       violationType: Value(violationType),
       severity: Value(severity),
@@ -1322,6 +2203,10 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
           ? const Value.absent()
           : Value(metadata),
       sent: Value(sent),
+      terminal: Value(terminal),
+      terminalReason: terminalReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(terminalReason),
     );
   }
 
@@ -1332,12 +2217,15 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LocalViolation(
       id: serializer.fromJson<int>(json['id']),
+      clientEventId: serializer.fromJson<String>(json['clientEventId']),
       attemptPublicId: serializer.fromJson<String>(json['attemptPublicId']),
       violationType: serializer.fromJson<String>(json['violationType']),
       severity: serializer.fromJson<String>(json['severity']),
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       metadata: serializer.fromJson<String?>(json['metadata']),
       sent: serializer.fromJson<bool>(json['sent']),
+      terminal: serializer.fromJson<bool>(json['terminal']),
+      terminalReason: serializer.fromJson<String?>(json['terminalReason']),
     );
   }
   @override
@@ -1345,35 +2233,49 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'clientEventId': serializer.toJson<String>(clientEventId),
       'attemptPublicId': serializer.toJson<String>(attemptPublicId),
       'violationType': serializer.toJson<String>(violationType),
       'severity': serializer.toJson<String>(severity),
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'metadata': serializer.toJson<String?>(metadata),
       'sent': serializer.toJson<bool>(sent),
+      'terminal': serializer.toJson<bool>(terminal),
+      'terminalReason': serializer.toJson<String?>(terminalReason),
     };
   }
 
   LocalViolation copyWith({
     int? id,
+    String? clientEventId,
     String? attemptPublicId,
     String? violationType,
     String? severity,
     DateTime? timestamp,
     Value<String?> metadata = const Value.absent(),
     bool? sent,
+    bool? terminal,
+    Value<String?> terminalReason = const Value.absent(),
   }) => LocalViolation(
     id: id ?? this.id,
+    clientEventId: clientEventId ?? this.clientEventId,
     attemptPublicId: attemptPublicId ?? this.attemptPublicId,
     violationType: violationType ?? this.violationType,
     severity: severity ?? this.severity,
     timestamp: timestamp ?? this.timestamp,
     metadata: metadata.present ? metadata.value : this.metadata,
     sent: sent ?? this.sent,
+    terminal: terminal ?? this.terminal,
+    terminalReason: terminalReason.present
+        ? terminalReason.value
+        : this.terminalReason,
   );
   LocalViolation copyWithCompanion(LocalViolationsTableCompanion data) {
     return LocalViolation(
       id: data.id.present ? data.id.value : this.id,
+      clientEventId: data.clientEventId.present
+          ? data.clientEventId.value
+          : this.clientEventId,
       attemptPublicId: data.attemptPublicId.present
           ? data.attemptPublicId.value
           : this.attemptPublicId,
@@ -1384,6 +2286,10 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
       sent: data.sent.present ? data.sent.value : this.sent,
+      terminal: data.terminal.present ? data.terminal.value : this.terminal,
+      terminalReason: data.terminalReason.present
+          ? data.terminalReason.value
+          : this.terminalReason,
     );
   }
 
@@ -1391,12 +2297,15 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   String toString() {
     return (StringBuffer('LocalViolation(')
           ..write('id: $id, ')
+          ..write('clientEventId: $clientEventId, ')
           ..write('attemptPublicId: $attemptPublicId, ')
           ..write('violationType: $violationType, ')
           ..write('severity: $severity, ')
           ..write('timestamp: $timestamp, ')
           ..write('metadata: $metadata, ')
-          ..write('sent: $sent')
+          ..write('sent: $sent, ')
+          ..write('terminal: $terminal, ')
+          ..write('terminalReason: $terminalReason')
           ..write(')'))
         .toString();
   }
@@ -1404,92 +2313,119 @@ class LocalViolation extends DataClass implements Insertable<LocalViolation> {
   @override
   int get hashCode => Object.hash(
     id,
+    clientEventId,
     attemptPublicId,
     violationType,
     severity,
     timestamp,
     metadata,
     sent,
+    terminal,
+    terminalReason,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalViolation &&
           other.id == this.id &&
+          other.clientEventId == this.clientEventId &&
           other.attemptPublicId == this.attemptPublicId &&
           other.violationType == this.violationType &&
           other.severity == this.severity &&
           other.timestamp == this.timestamp &&
           other.metadata == this.metadata &&
-          other.sent == this.sent);
+          other.sent == this.sent &&
+          other.terminal == this.terminal &&
+          other.terminalReason == this.terminalReason);
 }
 
 class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
   final Value<int> id;
+  final Value<String> clientEventId;
   final Value<String> attemptPublicId;
   final Value<String> violationType;
   final Value<String> severity;
   final Value<DateTime> timestamp;
   final Value<String?> metadata;
   final Value<bool> sent;
+  final Value<bool> terminal;
+  final Value<String?> terminalReason;
   const LocalViolationsTableCompanion({
     this.id = const Value.absent(),
+    this.clientEventId = const Value.absent(),
     this.attemptPublicId = const Value.absent(),
     this.violationType = const Value.absent(),
     this.severity = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.metadata = const Value.absent(),
     this.sent = const Value.absent(),
+    this.terminal = const Value.absent(),
+    this.terminalReason = const Value.absent(),
   });
   LocalViolationsTableCompanion.insert({
     this.id = const Value.absent(),
+    this.clientEventId = const Value.absent(),
     required String attemptPublicId,
     required String violationType,
     required String severity,
     required DateTime timestamp,
     this.metadata = const Value.absent(),
     this.sent = const Value.absent(),
+    this.terminal = const Value.absent(),
+    this.terminalReason = const Value.absent(),
   }) : attemptPublicId = Value(attemptPublicId),
        violationType = Value(violationType),
        severity = Value(severity),
        timestamp = Value(timestamp);
   static Insertable<LocalViolation> custom({
     Expression<int>? id,
+    Expression<String>? clientEventId,
     Expression<String>? attemptPublicId,
     Expression<String>? violationType,
     Expression<String>? severity,
     Expression<DateTime>? timestamp,
     Expression<String>? metadata,
     Expression<bool>? sent,
+    Expression<bool>? terminal,
+    Expression<String>? terminalReason,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (clientEventId != null) 'client_event_id': clientEventId,
       if (attemptPublicId != null) 'attempt_public_id': attemptPublicId,
       if (violationType != null) 'violation_type': violationType,
       if (severity != null) 'severity': severity,
       if (timestamp != null) 'timestamp': timestamp,
       if (metadata != null) 'metadata': metadata,
       if (sent != null) 'sent': sent,
+      if (terminal != null) 'terminal': terminal,
+      if (terminalReason != null) 'terminal_reason': terminalReason,
     });
   }
 
   LocalViolationsTableCompanion copyWith({
     Value<int>? id,
+    Value<String>? clientEventId,
     Value<String>? attemptPublicId,
     Value<String>? violationType,
     Value<String>? severity,
     Value<DateTime>? timestamp,
     Value<String?>? metadata,
     Value<bool>? sent,
+    Value<bool>? terminal,
+    Value<String?>? terminalReason,
   }) {
     return LocalViolationsTableCompanion(
       id: id ?? this.id,
+      clientEventId: clientEventId ?? this.clientEventId,
       attemptPublicId: attemptPublicId ?? this.attemptPublicId,
       violationType: violationType ?? this.violationType,
       severity: severity ?? this.severity,
       timestamp: timestamp ?? this.timestamp,
       metadata: metadata ?? this.metadata,
       sent: sent ?? this.sent,
+      terminal: terminal ?? this.terminal,
+      terminalReason: terminalReason ?? this.terminalReason,
     );
   }
 
@@ -1498,6 +2434,9 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (clientEventId.present) {
+      map['client_event_id'] = Variable<String>(clientEventId.value);
     }
     if (attemptPublicId.present) {
       map['attempt_public_id'] = Variable<String>(attemptPublicId.value);
@@ -1517,6 +2456,12 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
     if (sent.present) {
       map['sent'] = Variable<bool>(sent.value);
     }
+    if (terminal.present) {
+      map['terminal'] = Variable<bool>(terminal.value);
+    }
+    if (terminalReason.present) {
+      map['terminal_reason'] = Variable<String>(terminalReason.value);
+    }
     return map;
   }
 
@@ -1524,12 +2469,15 @@ class LocalViolationsTableCompanion extends UpdateCompanion<LocalViolation> {
   String toString() {
     return (StringBuffer('LocalViolationsTableCompanion(')
           ..write('id: $id, ')
+          ..write('clientEventId: $clientEventId, ')
           ..write('attemptPublicId: $attemptPublicId, ')
           ..write('violationType: $violationType, ')
           ..write('severity: $severity, ')
           ..write('timestamp: $timestamp, ')
           ..write('metadata: $metadata, ')
-          ..write('sent: $sent')
+          ..write('sent: $sent, ')
+          ..write('terminal: $terminal, ')
+          ..write('terminalReason: $terminalReason')
           ..write(')'))
         .toString();
   }
@@ -1824,6 +2772,19 @@ typedef $$PendingMediaUploadTableTableCreateCompanionBuilder =
       Value<String?> mediaPublicId,
       Value<String?> uploadUrl,
       Value<int?> uploadUrlExpiresAt,
+      Value<String?> cloudinaryApiKey,
+      Value<String?> cloudinaryTimestamp,
+      Value<String?> cloudinaryUploadSignature,
+      Value<String?> cloudinaryFolder,
+      Value<String?> cloudinaryResourceType,
+      Value<String?> cloudinaryPublicId,
+      Value<String?> cloudinaryAssetId,
+      Value<String?> cloudinarySecureUrl,
+      Value<String?> cloudinaryFormat,
+      Value<int?> cloudinaryBytes,
+      Value<int?> cloudinaryDurationSeconds,
+      Value<int?> cloudinaryVersion,
+      Value<String?> cloudinarySignature,
       required String status,
       Value<String?> lastError,
       Value<int> rowid,
@@ -1836,6 +2797,19 @@ typedef $$PendingMediaUploadTableTableUpdateCompanionBuilder =
       Value<String?> mediaPublicId,
       Value<String?> uploadUrl,
       Value<int?> uploadUrlExpiresAt,
+      Value<String?> cloudinaryApiKey,
+      Value<String?> cloudinaryTimestamp,
+      Value<String?> cloudinaryUploadSignature,
+      Value<String?> cloudinaryFolder,
+      Value<String?> cloudinaryResourceType,
+      Value<String?> cloudinaryPublicId,
+      Value<String?> cloudinaryAssetId,
+      Value<String?> cloudinarySecureUrl,
+      Value<String?> cloudinaryFormat,
+      Value<int?> cloudinaryBytes,
+      Value<int?> cloudinaryDurationSeconds,
+      Value<int?> cloudinaryVersion,
+      Value<String?> cloudinarySignature,
       Value<String> status,
       Value<String?> lastError,
       Value<int> rowid,
@@ -1877,6 +2851,71 @@ class $$PendingMediaUploadTableTableFilterComposer
 
   ColumnFilters<int> get uploadUrlExpiresAt => $composableBuilder(
     column: $table.uploadUrlExpiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryApiKey => $composableBuilder(
+    column: $table.cloudinaryApiKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryTimestamp => $composableBuilder(
+    column: $table.cloudinaryTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryUploadSignature => $composableBuilder(
+    column: $table.cloudinaryUploadSignature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryFolder => $composableBuilder(
+    column: $table.cloudinaryFolder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryResourceType => $composableBuilder(
+    column: $table.cloudinaryResourceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryPublicId => $composableBuilder(
+    column: $table.cloudinaryPublicId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryAssetId => $composableBuilder(
+    column: $table.cloudinaryAssetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinarySecureUrl => $composableBuilder(
+    column: $table.cloudinarySecureUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinaryFormat => $composableBuilder(
+    column: $table.cloudinaryFormat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cloudinaryBytes => $composableBuilder(
+    column: $table.cloudinaryBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cloudinaryDurationSeconds => $composableBuilder(
+    column: $table.cloudinaryDurationSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cloudinaryVersion => $composableBuilder(
+    column: $table.cloudinaryVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudinarySignature => $composableBuilder(
+    column: $table.cloudinarySignature,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1930,6 +2969,71 @@ class $$PendingMediaUploadTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cloudinaryApiKey => $composableBuilder(
+    column: $table.cloudinaryApiKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryTimestamp => $composableBuilder(
+    column: $table.cloudinaryTimestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryUploadSignature => $composableBuilder(
+    column: $table.cloudinaryUploadSignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryFolder => $composableBuilder(
+    column: $table.cloudinaryFolder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryResourceType => $composableBuilder(
+    column: $table.cloudinaryResourceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryPublicId => $composableBuilder(
+    column: $table.cloudinaryPublicId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryAssetId => $composableBuilder(
+    column: $table.cloudinaryAssetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinarySecureUrl => $composableBuilder(
+    column: $table.cloudinarySecureUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinaryFormat => $composableBuilder(
+    column: $table.cloudinaryFormat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cloudinaryBytes => $composableBuilder(
+    column: $table.cloudinaryBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cloudinaryDurationSeconds => $composableBuilder(
+    column: $table.cloudinaryDurationSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cloudinaryVersion => $composableBuilder(
+    column: $table.cloudinaryVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudinarySignature => $composableBuilder(
+    column: $table.cloudinarySignature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -1975,6 +3079,71 @@ class $$PendingMediaUploadTableTableAnnotationComposer
 
   GeneratedColumn<int> get uploadUrlExpiresAt => $composableBuilder(
     column: $table.uploadUrlExpiresAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryApiKey => $composableBuilder(
+    column: $table.cloudinaryApiKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryTimestamp => $composableBuilder(
+    column: $table.cloudinaryTimestamp,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryUploadSignature => $composableBuilder(
+    column: $table.cloudinaryUploadSignature,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryFolder => $composableBuilder(
+    column: $table.cloudinaryFolder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryResourceType => $composableBuilder(
+    column: $table.cloudinaryResourceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryPublicId => $composableBuilder(
+    column: $table.cloudinaryPublicId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryAssetId => $composableBuilder(
+    column: $table.cloudinaryAssetId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinarySecureUrl => $composableBuilder(
+    column: $table.cloudinarySecureUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinaryFormat => $composableBuilder(
+    column: $table.cloudinaryFormat,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cloudinaryBytes => $composableBuilder(
+    column: $table.cloudinaryBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cloudinaryDurationSeconds => $composableBuilder(
+    column: $table.cloudinaryDurationSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cloudinaryVersion => $composableBuilder(
+    column: $table.cloudinaryVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cloudinarySignature => $composableBuilder(
+    column: $table.cloudinarySignature,
     builder: (column) => column,
   );
 
@@ -2037,6 +3206,19 @@ class $$PendingMediaUploadTableTableTableManager
                 Value<String?> mediaPublicId = const Value.absent(),
                 Value<String?> uploadUrl = const Value.absent(),
                 Value<int?> uploadUrlExpiresAt = const Value.absent(),
+                Value<String?> cloudinaryApiKey = const Value.absent(),
+                Value<String?> cloudinaryTimestamp = const Value.absent(),
+                Value<String?> cloudinaryUploadSignature = const Value.absent(),
+                Value<String?> cloudinaryFolder = const Value.absent(),
+                Value<String?> cloudinaryResourceType = const Value.absent(),
+                Value<String?> cloudinaryPublicId = const Value.absent(),
+                Value<String?> cloudinaryAssetId = const Value.absent(),
+                Value<String?> cloudinarySecureUrl = const Value.absent(),
+                Value<String?> cloudinaryFormat = const Value.absent(),
+                Value<int?> cloudinaryBytes = const Value.absent(),
+                Value<int?> cloudinaryDurationSeconds = const Value.absent(),
+                Value<int?> cloudinaryVersion = const Value.absent(),
+                Value<String?> cloudinarySignature = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2047,6 +3229,19 @@ class $$PendingMediaUploadTableTableTableManager
                 mediaPublicId: mediaPublicId,
                 uploadUrl: uploadUrl,
                 uploadUrlExpiresAt: uploadUrlExpiresAt,
+                cloudinaryApiKey: cloudinaryApiKey,
+                cloudinaryTimestamp: cloudinaryTimestamp,
+                cloudinaryUploadSignature: cloudinaryUploadSignature,
+                cloudinaryFolder: cloudinaryFolder,
+                cloudinaryResourceType: cloudinaryResourceType,
+                cloudinaryPublicId: cloudinaryPublicId,
+                cloudinaryAssetId: cloudinaryAssetId,
+                cloudinarySecureUrl: cloudinarySecureUrl,
+                cloudinaryFormat: cloudinaryFormat,
+                cloudinaryBytes: cloudinaryBytes,
+                cloudinaryDurationSeconds: cloudinaryDurationSeconds,
+                cloudinaryVersion: cloudinaryVersion,
+                cloudinarySignature: cloudinarySignature,
                 status: status,
                 lastError: lastError,
                 rowid: rowid,
@@ -2059,6 +3254,19 @@ class $$PendingMediaUploadTableTableTableManager
                 Value<String?> mediaPublicId = const Value.absent(),
                 Value<String?> uploadUrl = const Value.absent(),
                 Value<int?> uploadUrlExpiresAt = const Value.absent(),
+                Value<String?> cloudinaryApiKey = const Value.absent(),
+                Value<String?> cloudinaryTimestamp = const Value.absent(),
+                Value<String?> cloudinaryUploadSignature = const Value.absent(),
+                Value<String?> cloudinaryFolder = const Value.absent(),
+                Value<String?> cloudinaryResourceType = const Value.absent(),
+                Value<String?> cloudinaryPublicId = const Value.absent(),
+                Value<String?> cloudinaryAssetId = const Value.absent(),
+                Value<String?> cloudinarySecureUrl = const Value.absent(),
+                Value<String?> cloudinaryFormat = const Value.absent(),
+                Value<int?> cloudinaryBytes = const Value.absent(),
+                Value<int?> cloudinaryDurationSeconds = const Value.absent(),
+                Value<int?> cloudinaryVersion = const Value.absent(),
+                Value<String?> cloudinarySignature = const Value.absent(),
                 required String status,
                 Value<String?> lastError = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2069,6 +3277,19 @@ class $$PendingMediaUploadTableTableTableManager
                 mediaPublicId: mediaPublicId,
                 uploadUrl: uploadUrl,
                 uploadUrlExpiresAt: uploadUrlExpiresAt,
+                cloudinaryApiKey: cloudinaryApiKey,
+                cloudinaryTimestamp: cloudinaryTimestamp,
+                cloudinaryUploadSignature: cloudinaryUploadSignature,
+                cloudinaryFolder: cloudinaryFolder,
+                cloudinaryResourceType: cloudinaryResourceType,
+                cloudinaryPublicId: cloudinaryPublicId,
+                cloudinaryAssetId: cloudinaryAssetId,
+                cloudinarySecureUrl: cloudinarySecureUrl,
+                cloudinaryFormat: cloudinaryFormat,
+                cloudinaryBytes: cloudinaryBytes,
+                cloudinaryDurationSeconds: cloudinaryDurationSeconds,
+                cloudinaryVersion: cloudinaryVersion,
+                cloudinarySignature: cloudinarySignature,
                 status: status,
                 lastError: lastError,
                 rowid: rowid,
@@ -2105,22 +3326,28 @@ typedef $$PendingMediaUploadTableTableProcessedTableManager =
 typedef $$LocalViolationsTableTableCreateCompanionBuilder =
     LocalViolationsTableCompanion Function({
       Value<int> id,
+      Value<String> clientEventId,
       required String attemptPublicId,
       required String violationType,
       required String severity,
       required DateTime timestamp,
       Value<String?> metadata,
       Value<bool> sent,
+      Value<bool> terminal,
+      Value<String?> terminalReason,
     });
 typedef $$LocalViolationsTableTableUpdateCompanionBuilder =
     LocalViolationsTableCompanion Function({
       Value<int> id,
+      Value<String> clientEventId,
       Value<String> attemptPublicId,
       Value<String> violationType,
       Value<String> severity,
       Value<DateTime> timestamp,
       Value<String?> metadata,
       Value<bool> sent,
+      Value<bool> terminal,
+      Value<String?> terminalReason,
     });
 
 class $$LocalViolationsTableTableFilterComposer
@@ -2134,6 +3361,11 @@ class $$LocalViolationsTableTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2166,6 +3398,16 @@ class $$LocalViolationsTableTableFilterComposer
     column: $table.sent,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get terminal => $composableBuilder(
+    column: $table.terminal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$LocalViolationsTableTableOrderingComposer
@@ -2179,6 +3421,11 @@ class $$LocalViolationsTableTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2211,6 +3458,16 @@ class $$LocalViolationsTableTableOrderingComposer
     column: $table.sent,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get terminal => $composableBuilder(
+    column: $table.terminal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalViolationsTableTableAnnotationComposer
@@ -2224,6 +3481,11 @@ class $$LocalViolationsTableTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get clientEventId => $composableBuilder(
+    column: $table.clientEventId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get attemptPublicId => $composableBuilder(
     column: $table.attemptPublicId,
@@ -2246,6 +3508,14 @@ class $$LocalViolationsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get sent =>
       $composableBuilder(column: $table.sent, builder: (column) => column);
+
+  GeneratedColumn<bool> get terminal =>
+      $composableBuilder(column: $table.terminal, builder: (column) => column);
+
+  GeneratedColumn<String> get terminalReason => $composableBuilder(
+    column: $table.terminalReason,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalViolationsTableTableTableManager
@@ -2292,38 +3562,50 @@ class $$LocalViolationsTableTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> clientEventId = const Value.absent(),
                 Value<String> attemptPublicId = const Value.absent(),
                 Value<String> violationType = const Value.absent(),
                 Value<String> severity = const Value.absent(),
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
+                Value<bool> terminal = const Value.absent(),
+                Value<String?> terminalReason = const Value.absent(),
               }) => LocalViolationsTableCompanion(
                 id: id,
+                clientEventId: clientEventId,
                 attemptPublicId: attemptPublicId,
                 violationType: violationType,
                 severity: severity,
                 timestamp: timestamp,
                 metadata: metadata,
                 sent: sent,
+                terminal: terminal,
+                terminalReason: terminalReason,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> clientEventId = const Value.absent(),
                 required String attemptPublicId,
                 required String violationType,
                 required String severity,
                 required DateTime timestamp,
                 Value<String?> metadata = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
+                Value<bool> terminal = const Value.absent(),
+                Value<String?> terminalReason = const Value.absent(),
               }) => LocalViolationsTableCompanion.insert(
                 id: id,
+                clientEventId: clientEventId,
                 attemptPublicId: attemptPublicId,
                 violationType: violationType,
                 severity: severity,
                 timestamp: timestamp,
                 metadata: metadata,
                 sent: sent,
+                terminal: terminal,
+                terminalReason: terminalReason,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

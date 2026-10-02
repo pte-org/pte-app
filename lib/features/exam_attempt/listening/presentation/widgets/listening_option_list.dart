@@ -24,7 +24,8 @@ class ListeningOptionList extends StatelessWidget {
       onChanged: (value) {
         if (value != null) onChanged(value);
       },
-      child: ListView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [for (final option in options) RadioListTile<String>(title: Text(option.text), value: option.orderIndex)],
       ),
     );

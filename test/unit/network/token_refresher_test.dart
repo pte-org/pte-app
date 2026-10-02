@@ -51,7 +51,7 @@ void main() {
     final refresher = TokenRefresher(
       refreshDio: refreshDio,
       tokenStore: tokenStore,
-      refreshEndpoint: '/api/iam/auth/refresh',
+      refreshEndpoint: '/api/v1/auth/refresh',
     );
 
     final results = await Future.wait([refresher.refresh(), refresher.refresh()]);
@@ -69,7 +69,7 @@ void main() {
         .thenAnswer((_) async {});
     when(() => secureStorage.read(key: TokenStore.refreshTokenKey)).thenAnswer((_) async => 'stale');
     final tokenStore = TokenStore(secureStorage: secureStorage);
-    final refresher = TokenRefresher(refreshDio: refreshDio, tokenStore: tokenStore, refreshEndpoint: '/api/iam/auth/refresh');
+    final refresher = TokenRefresher(refreshDio: refreshDio, tokenStore: tokenStore, refreshEndpoint: '/api/v1/auth/refresh');
 
     await refresher.refresh();
     await refresher.refresh();

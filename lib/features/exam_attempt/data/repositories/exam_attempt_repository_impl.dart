@@ -1,6 +1,9 @@
 import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/features/exam_attempt/domain/attempt_preflight.dart';
+import 'package:pte_app/features/exam_attempt/domain/client_capability_manifest.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
+import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
 class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
@@ -10,9 +13,22 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   final ApiClient _apiClient;
 
   @override
+  Future<AttemptPreflight> preflight(String sessionPublicId) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '${AppConfig.examAttemptsPath}/preflight',
+      data: {
+        'sessionPublicId': sessionPublicId,
+        'capabilityManifest': ClientCapabilityManifest.fromRegistry().toJson(),
+      },
+    );
+    return AttemptPreflight.fromJson(response.data!);
+  }
+
+  @override
   Future<AttemptTaskResponse> startOrResumeAttempt(
-    String sessionPublicId,
-  ) async {
+    String sessionPublicId, {
+    bool deviceCheckConfirmed = false,
+  }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       AppConfig.examAttemptsPath,
       data: {
@@ -20,17 +36,12 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
         // Required by the server's `StartAttemptRequest` (a primitive
         // `boolean`, not nullable — omitting it fails JSON deserialization
         // outright, HTTP 500, before any business logic runs). Always
-        // `false` for now: the standalone "Test Mic and Sound" dev-preview
-        // screen (features/device_check) is not wired into this real
-        // pre-exam flow yet (explicit, separate product decision — see
-        // plans/phat-device-check-test-mic-and-sound-ui), so there is no
-        // real device-check result to report here. `false` is honest per
-        // the server field's own doc comment ("absent/false always means
-        // not confirmed") and only blocks attempt start when a session's
-        // policy specifically requires device check, which none currently
-        // do. Revisit once/if device check is wired into this flow for real
-        // (plans/phat-speaking-api-e2e-verify Phase 3 finding).
-        'deviceCheckConfirmed': false,
+        // The real pre-exam device-check flow supplies `true` after the
+        // student confirms both microphone playback and test sound. The
+        // initial request deliberately remains false so a session policy
+        // requiring the check cannot be bypassed.
+        'deviceCheckConfirmed': deviceCheckConfirmed,
+        'capabilityManifest': ClientCapabilityManifest.fromRegistry().toJson(),
       },
     );
     return AttemptTaskResponse.fromJson(response.data!);
@@ -45,9 +56,36 @@ class ExamAttemptRepositoryImpl implements ExamAttemptRepository {
   }
 
   @override
-  Future<void> forceSubmit(String attemptPublicId) {
-    return _apiClient.post<void>(
+  Future<List<AttemptTaskResponse>> fetchAllTasks(String attemptPublicId) async {
+    final response = await _apiClient.get<List<dynamic>>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/tasks',
+    );
+    return (response.data! as List<dynamic>)
+        .map((item) => AttemptTaskResponse.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<AttemptTaskResponse> navigateTask({
+    required String attemptPublicId,
+    required String fromPinnedItemPublicId,
+    required TaskNavigationDirection direction,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '${AppConfig.examAttemptsPath}/$attemptPublicId/navigate',
+      data: {
+        'fromPinnedItemPublicId': fromPinnedItemPublicId,
+        'direction': direction.name.toUpperCase(),
+      },
+    );
+    return AttemptTaskResponse.fromJson(response.data!);
+  }
+
+  @override
+  Future<AttemptTaskResponse> forceSubmit(String attemptPublicId) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '${AppConfig.examAttemptsPath}/$attemptPublicId/submit',
     );
+    return AttemptTaskResponse.fromJson(response.data!);
   }
 }
