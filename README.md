@@ -30,6 +30,25 @@ never lost**, even offline, even if the app is killed mid-exam.
   dart format lib/ test/ --check
   ```
 
+## Build-time Configuration (dart-define)
+
+AppConfig uses compile-time dart-define variables to configure API paths and timeouts.
+Pass these via `--dart-define` flag when building or running:
+
+```bash
+flutter run --dart-define=PTE_API_BASE_URL=http://localhost:8080 \
+            --dart-define=PTE_EXAM_ATTEMPTS_PATH=/api/v1/attempts \
+            --dart-define=PTE_SESSION_CODE_RESOLVE_PATH=/api/v1/student/exam-sessions/resolve
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PTE_API_BASE_URL` | `http://localhost:8080` | Gateway base URL (no `/api` suffix; full paths passed by call sites) |
+| `PTE_EXAM_ATTEMPTS_PATH` | `/api/v1/attempts` | Exam attempt lifecycle and audio endpoints |
+| `PTE_SESSION_CODE_RESOLVE_PATH` | `/api/v1/student/exam-sessions/resolve` | Endpoint to resolve exam code to session UUID |
+
+Timeouts are currently hardcoded (`connectTimeout`, `receiveTimeout`, `sendTimeout` all 10 seconds) — override in `lib/core/config/app_config.dart` if needed.
+
 ## Directory Structure
 
 ```
@@ -42,8 +61,8 @@ pte-app/
 │   │                            # swap `home:` for a router/first real page when ready.
 │   ├── core/                    # Shared infrastructure. NOT a feature — no UI, no
 │   │                            # business rules, only services every feature can depend on.
-│   │   ├── config/               # AppConfig — API base URL, timeouts. One class, no env-var
-│   │   │                         # parsing yet (placeholder defaults).
+│   │   ├── config/               # AppConfig — compile-time dart-define configuration (gateway URL,
+│   │   │                         # exam attempts path, session code resolution path, timeouts).
 │   │   ├── network/                # Dio HTTP layer
 │   │   │   ├── dio_client.dart        # createDio()/createRefreshDio() — builds configured Dio instances
 │   │   │   ├── token_store.dart        # TokenStore interface + InMemoryTokenStore (NOT production-ready)

@@ -15,7 +15,7 @@ import 'package:pte_app/features/exam_attempt/listening/data/audio_player_servic
 import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/audio_prompt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
-import 'package:pte_app/features/exam_attempt/data/repositories/manual_session_entry_repository.dart';
+import 'package:pte_app/features/exam_attempt/data/repositories/exam_code_session_entry_repository.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
@@ -25,16 +25,18 @@ import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 
-/// GetIt registration for attempt lifecycle + the placeholder session-entry
-/// seam. `SessionEntryRepository`'s concrete registration below is the
-/// *only* line Member 3's eventual replacement needs to change (phase-03
-/// Design Constraints).
+/// GetIt registration for attempt lifecycle + the session-entry seam.
+/// `SessionEntryRepository`'s concrete registration below is the *only*
+/// line a different entry mechanism (e.g. a deep link) needs to change
+/// (phase-03 Design Constraints).
 void setupExamAttemptModule() {
   final getIt = GetIt.instance;
 
   getIt.registerLazySingleton<VolumeService>(() => VolumeService());
 
-  getIt.registerLazySingleton<SessionEntryRepository>(() => const ManualSessionEntryRepository());
+  getIt.registerLazySingleton<SessionEntryRepository>(
+    () => ExamCodeSessionEntryRepository(apiClient: getIt<ApiClient>()),
+  );
 
   getIt.registerLazySingleton<ExamAttemptRepository>(
     () => ExamAttemptRepositoryImpl(apiClient: getIt<ApiClient>()),

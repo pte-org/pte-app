@@ -112,6 +112,8 @@ class _LoginPageState extends State<LoginPage> {
     return TextFormField(
       controller: _sessionIdController,
       keyboardType: TextInputType.text,
+      // Exam codes are uppercase; a pasted session UUID is kept verbatim.
+      textCapitalization: TextCapitalization.characters,
       textInputAction: TextInputAction.done,
       autocorrect: false,
       enableSuggestions: false,

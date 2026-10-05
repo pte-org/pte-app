@@ -7,7 +7,7 @@ void main() {
   group('friendlyErrorMessage', () {
     test('ALREADY_ATTEMPTED conflict gets a specific, non-technical sentence', () {
       const error = ConflictException('ALREADY_ATTEMPTED');
-      expect(friendlyErrorMessage(error), contains("already used this session ID"));
+      expect(friendlyErrorMessage(error), contains("already used this exam code"));
       expect(friendlyErrorMessage(error), isNot(contains('ConflictException')));
     });
 

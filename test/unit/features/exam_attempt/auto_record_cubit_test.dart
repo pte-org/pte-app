@@ -227,15 +227,18 @@ void main() {
       'never stops in the same call',
       setUp: () => when(() => recorder.start(any())).thenAnswer((_) async {}),
       build: buildCubit,
-      act: (cubit) => cubit.onTimerSnapshot(responseExpiredSnapshot),
+      // Checked before teardown: close() deliberately stops an in-progress
+      // recording, which is not the call under test.
+      act: (cubit) async {
+        cubit.onTimerSnapshot(responseExpiredSnapshot);
+        await Future<void>.delayed(Duration.zero);
+        verifyNever(() => recorder.stop());
+      },
       wait: const Duration(milliseconds: 1),
       expect: () => [
         const AutoRecordState(recordingPhase: RecordingPhase.recording),
       ],
-      verify: (_) {
-        verify(() => recorder.start(any())).called(1);
-        verifyNever(() => recorder.stop());
-      },
+      verify: (_) => verify(() => recorder.start(any())).called(1),
     );
 
     blocTest<AutoRecordCubit, AutoRecordState>(
@@ -244,7 +247,9 @@ void main() {
       seed: () =>
           const AutoRecordState(recordingPhase: RecordingPhase.recording),
       build: buildCubit,
-      act: (cubit) {
+      // Checked before teardown: close() deliberately stops an in-progress
+      // recording, which is not the call under test.
+      act: (cubit) async {
         cubit.onTimerSnapshot(responseSnapshot);
         cubit.onTimerSnapshot(
           const TimerSnapshot(
@@ -253,13 +258,12 @@ void main() {
             currentOrderIndex: 1,
           ),
         );
+        await Future<void>.delayed(Duration.zero);
+        verifyNever(() => recorder.stop());
       },
       wait: const Duration(milliseconds: 1),
       expect: () => <AutoRecordState>[],
-      verify: (_) {
-        verifyNever(() => recorder.start(any()));
-        verifyNever(() => recorder.stop());
-      },
+      verify: (_) => verifyNever(() => recorder.start(any())),
     );
 
     blocTest<AutoRecordCubit, AutoRecordState>(

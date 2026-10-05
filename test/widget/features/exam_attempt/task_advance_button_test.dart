@@ -34,6 +34,7 @@ class _FakeFlushableAnswerCubit implements FlushableAnswerCubit {
 
 TaskView sampleTask({
   String pinnedItemPublicId = 'item-1',
+  String section = 'READING',
   bool canNavigatePrevious = true,
   bool canNavigateNext = true,
 }) {
@@ -41,7 +42,7 @@ TaskView sampleTask({
     pinnedItemPublicId: pinnedItemPublicId,
     orderIndex: 1,
     totalTasks: 5,
-    section: 'READING',
+    section: section,
     taskType: 'MC_READING_SINGLE',
     title: 'Task title',
     prepSeconds: 0,
@@ -201,23 +202,26 @@ void main() {
     });
   });
 
+  // Official READING/WRITING never auto-advance on expiry, so this runs on a
+  // LISTENING task.
   testWidgets('response timer expiry retains submit-and-advance behavior', (
     tester,
   ) async {
+    final listeningTask = sampleTask(section: 'LISTENING');
     final controller = StreamController<ExamAttemptState>.broadcast();
     whenListen(
       bloc,
       controller.stream,
       initialState: AttemptInProgress(
         'attempt-1',
-        sampleTask(),
+        listeningTask,
         _runningSnapshot,
       ),
     );
 
     await tester.pumpWidget(buildSubject());
     controller.add(
-      AttemptInProgress('attempt-1', sampleTask(), _expiredSnapshot),
+      AttemptInProgress('attempt-1', listeningTask, _expiredSnapshot),
     );
     await tester.pump();
 

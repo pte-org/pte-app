@@ -42,6 +42,8 @@ void main() {
     autoRecordCubit = _MockAutoRecordCubit();
     cubitStateController = StreamController<AutoRecordState>.broadcast();
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    // Any non-practice state — practice mode deliberately never auto-advances.
+    when(() => bloc.state).thenReturn(const AttemptIdle());
   });
 
   tearDown(() => cubitStateController.close());
