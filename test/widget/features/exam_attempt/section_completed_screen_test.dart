@@ -7,7 +7,14 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/pages/section
 void main() {
   Widget buildSubject({required bool timeExpired, VoidCallback? onContinue}) {
     return MaterialApp(
-      home: SectionCompletedScreen(timeExpired: timeExpired, onContinue: onContinue ?? () {}),
+      home: SectionCompletedScreen(
+        timeExpired: timeExpired,
+        attemptNumber: 1,
+        remainingRetries: 0,
+        canRetry: false,
+        onContinue: onContinue ?? () {},
+        onRetry: () {},
+      ),
     );
   }
 

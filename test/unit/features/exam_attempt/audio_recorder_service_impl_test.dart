@@ -58,7 +58,7 @@ void main() {
 
       verify(
         () => recorder.start(
-          const RecordConfig(encoder: AudioEncoder.wav),
+          const RecordConfig(encoder: AudioEncoder.wav, autoGain: true),
           path: '/tmp/answer.wav',
         ),
       ).called(1);

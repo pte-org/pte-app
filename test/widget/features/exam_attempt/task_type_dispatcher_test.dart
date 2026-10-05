@@ -256,6 +256,8 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    // The dispatcher restores the saved answer before building any screen.
+    when(() => outboxDao.getAnswer(any(), any())).thenAnswer((_) async => null);
 
     const snapshot = TimerSnapshot(
       phase: TimerPhase.response,
@@ -297,23 +299,26 @@ void main() {
     );
   }
 
+  /// One extra frame lets the dispatcher's saved-answer FutureBuilder
+  /// resolve, so the task screen itself is on screen.
+  Future<void> pumpTask(WidgetTester tester, TaskView task) async {
+    await tester.pumpWidget(buildSubject(task));
+    await tester.pump();
+  }
+
   group(
     'TaskTypeDispatcher — ValueKey(pinnedItemPublicId) forces a fresh Element/cubit per task',
     () {
       testWidgets(
         'two consecutive MC_READING_SINGLE tasks with different pinnedItemPublicId produce distinct cubit instances',
         (tester) async {
-          await tester.pumpWidget(
-            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
-          );
+          await pumpTask(tester, _mcTask(pinnedItemPublicId: 'item-1'));
           final firstCubit = tester
               .element(find.byType(McOptionList))
               .read<McReadingSingleCubit>();
           expect(firstCubit.pinnedItemPublicId, 'item-1');
 
-          await tester.pumpWidget(
-            buildSubject(_mcTask(pinnedItemPublicId: 'item-2')),
-          );
+          await pumpTask(tester, _mcTask(pinnedItemPublicId: 'item-2'));
           final secondCubit = tester
               .element(find.byType(McOptionList))
               .read<McReadingSingleCubit>();
@@ -332,16 +337,12 @@ void main() {
       testWidgets(
         're-pumping with the same pinnedItemPublicId reuses the same cubit instance (sanity check)',
         (tester) async {
-          await tester.pumpWidget(
-            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
-          );
+          await pumpTask(tester, _mcTask(pinnedItemPublicId: 'item-1'));
           final firstCubit = tester
               .element(find.byType(McOptionList))
               .read<McReadingSingleCubit>();
 
-          await tester.pumpWidget(
-            buildSubject(_mcTask(pinnedItemPublicId: 'item-1')),
-          );
+          await pumpTask(tester, _mcTask(pinnedItemPublicId: 'item-1'));
           final secondCubit = tester
               .element(find.byType(McOptionList))
               .read<McReadingSingleCubit>();
@@ -367,7 +368,7 @@ void main() {
             responseSeconds: 60,
           );
 
-          await tester.pumpWidget(buildSubject(task));
+          await pumpTask(tester, task);
 
           expect(
             find.text(ExamAttemptStrings.unsupportedTaskTitle),
@@ -411,7 +412,7 @@ void main() {
             responseSeconds: 60,
           );
 
-          await tester.pumpWidget(buildSubject(task));
+          await pumpTask(tester, task);
 
           expect(find.byType(McOptionList), findsOneWidget);
           expect(
@@ -442,7 +443,7 @@ void main() {
             responseSeconds: 60,
           );
 
-          await tester.pumpWidget(buildSubject(task));
+          await pumpTask(tester, task);
 
           expect(
             find.text(ExamAttemptStrings.unsupportedTaskTitle),
@@ -458,9 +459,7 @@ void main() {
     testWidgets(
       'routes to McMultipleOptionList / McReadingMultipleCubit, not the single-select path',
       (tester) async {
-        await tester.pumpWidget(
-          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')),
-        );
+        await pumpTask(tester, _mcMultipleTask(pinnedItemPublicId: 'item-1'));
 
         expect(find.byType(McMultipleOptionList), findsOneWidget);
         expect(find.byType(McOptionList), findsNothing);
@@ -474,16 +473,12 @@ void main() {
     testWidgets(
       'ValueKey(pinnedItemPublicId) forces a fresh cubit for a new MC_READING_MULTIPLE task',
       (tester) async {
-        await tester.pumpWidget(
-          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-1')),
-        );
+        await pumpTask(tester, _mcMultipleTask(pinnedItemPublicId: 'item-1'));
         final firstCubit = tester
             .element(find.byType(McMultipleOptionList))
             .read<McReadingMultipleCubit>();
 
-        await tester.pumpWidget(
-          buildSubject(_mcMultipleTask(pinnedItemPublicId: 'item-2')),
-        );
+        await pumpTask(tester, _mcMultipleTask(pinnedItemPublicId: 'item-2'));
         final secondCubit = tester
             .element(find.byType(McMultipleOptionList))
             .read<McReadingMultipleCubit>();
@@ -509,8 +504,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(_repeatSentenceTask(pinnedItemPublicId: 'item-99')),
+        await pumpTask(
+          tester,
+          _repeatSentenceTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -542,8 +538,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(_describeImageTask(pinnedItemPublicId: 'item-99')),
+        await pumpTask(
+          tester,
+          _describeImageTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -573,8 +570,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(_retellLectureTask(pinnedItemPublicId: 'item-99')),
+        await pumpTask(
+          tester,
+          _retellLectureTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -605,8 +603,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(_answerShortQuestionTask(pinnedItemPublicId: 'item-99')),
+        await pumpTask(
+          tester,
+          _answerShortQuestionTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -636,10 +635,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(
-            _personalIntroductionTask(pinnedItemPublicId: 'item-99'),
-          ),
+        await pumpTask(
+          tester,
+          _personalIntroductionTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -669,10 +667,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(
-            _summarizeGroupDiscussionTask(pinnedItemPublicId: 'item-99'),
-          ),
+        await pumpTask(
+          tester,
+          _summarizeGroupDiscussionTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
@@ -702,8 +699,9 @@ void main() {
         // state's task ('item-1') so the timer-bridge identity guard never
         // matches — this test only checks routing/rendering, not auto-record
         // behavior, so no recorder stub is set up here.
-        await tester.pumpWidget(
-          buildSubject(_respondToASituationTask(pinnedItemPublicId: 'item-99')),
+        await pumpTask(
+          tester,
+          _respondToASituationTask(pinnedItemPublicId: 'item-99'),
         );
 
         expect(find.textContaining('Unsupported task type'), findsNothing);
