@@ -84,22 +84,46 @@ class AudioListeningStatusCard extends StatelessWidget {
   }
 }
 
-/// Functional volume slider backed by [VolumeService] from GetIt.
-class _VolumeSlider extends StatelessWidget {
+/// Functional volume slider backed by the shared [VolumeService] from GetIt.
+/// Falls back to a local one when none is registered (widget tests, previews),
+/// same as `TestMicAndSoundScreen`.
+class _VolumeSlider extends StatefulWidget {
   const _VolumeSlider();
 
   @override
+  State<_VolumeSlider> createState() => _VolumeSliderState();
+}
+
+class _VolumeSliderState extends State<_VolumeSlider> {
+  late final VolumeService _volumeService;
+  late final bool _ownsVolumeService;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsVolumeService = !GetIt.instance.isRegistered<VolumeService>();
+    _volumeService = _ownsVolumeService
+        ? VolumeService()
+        : GetIt.instance<VolumeService>();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsVolumeService) _volumeService.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final volumeService = GetIt.instance<VolumeService>();
     return ValueListenableBuilder<double>(
-      valueListenable: volumeService,
+      valueListenable: _volumeService,
       builder: (context, volume, _) {
         return Slider(
           value: volume,
           min: 0.0,
           max: 1.0,
           activeColor: AppColors.primary,
-          onChanged: (v) => volumeService.value = v,
+          onChanged: (v) => _volumeService.value = v,
         );
       },
     );
