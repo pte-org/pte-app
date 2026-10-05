@@ -225,7 +225,8 @@ class _AppAuthGateState extends State<AppAuthGate> {
   }
 }
 
-/// The student exam flow starts the session ID captured from login.
+/// The student exam flow starts the exam code (or pasted session UUID)
+/// captured from login.
 /// [AttemptInProgress] shows the live task via
 /// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
 /// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
@@ -363,7 +364,7 @@ class StudentExamGateState extends State<StudentExamGate> {
             );
           }
           // AppAuthGate only constructs this widget after a student supplies
-          // a session ID; there is no second session-entry screen.
+          // an exam code; there is no second session-entry screen.
           return const Scaffold(body: LoadingView());
         },
       ),

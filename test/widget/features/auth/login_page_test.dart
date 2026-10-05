@@ -110,6 +110,21 @@ void main() {
     expect(providedSessionId, 'session-123');
   });
 
+  testWidgets('session field requests uppercase characters for exam codes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+
+    final sessionField = tester.widget<EditableText>(
+      find.descendant(
+        of: find.byType(TextFormField).at(2),
+        matching: find.byType(EditableText),
+      ),
+    );
+
+    expect(sessionField.textCapitalization, TextCapitalization.characters);
+  });
+
   testWidgets('student login requires a session ID before submitting', (
     tester,
   ) async {

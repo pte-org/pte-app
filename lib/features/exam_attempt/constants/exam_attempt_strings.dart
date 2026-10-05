@@ -32,9 +32,9 @@ class ExamAttemptStrings {
   static const String retryLimitReachedMessage =
       'You have used all attempts for this exam. Please contact your host if you need help.';
   static const String attemptStartRetry = 'Try again';
-  static const String attemptStartChangeSession = 'Use a different session';
+  static const String attemptStartChangeSession = 'Use a different exam code';
   static const String sessionResolutionFailureMessage =
-      'We could not open this exam session. Check the session ID from your host and try again.';
+      "We couldn't find that exam code. Check the code from your host and try again.";
   static const String lockdownStartFailureMessage =
       'Some required security checks could not be completed. Review the details and retry after fixing them.';
   static const String forceSubmitButtonLabel = 'Finish exam';

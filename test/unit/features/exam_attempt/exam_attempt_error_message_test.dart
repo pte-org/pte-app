@@ -8,7 +8,7 @@ void main() {
   test('session resolution failure is shown as student-friendly copy', () {
     expect(
       examAttemptFriendlyErrorMessage(
-        const SessionResolutionException('Session ID cannot be empty.'),
+        const SessionResolutionException('Exam code cannot be empty.'),
       ),
       ExamAttemptStrings.sessionResolutionFailureMessage,
     );

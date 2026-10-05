@@ -237,7 +237,7 @@ void main() {
       bloc,
       const Stream<ExamAttemptState>.empty(),
       initialState: const AttemptError(
-        SessionResolutionException('Session ID cannot be empty.'),
+        SessionResolutionException('Exam code cannot be empty.'),
       ),
     );
     GetIt.instance.unregister<ExamAttemptBloc>();

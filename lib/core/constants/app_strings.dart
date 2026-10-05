@@ -16,15 +16,15 @@ class AppStrings {
   static const String loginTitle = 'Candidate Sign-In';
   static const String loginUsernameLabel = 'Login username';
   static const String loginPasswordLabel = 'Login password';
-  static const String loginSessionIdLabel = 'Exam session ID (optional)';
-  static const String loginSessionIdRequiredLabel = 'Exam session ID';
+  static const String loginSessionIdLabel = 'Exam code (optional)';
+  static const String loginSessionIdRequiredLabel = 'Exam code';
   static const String loginSessionIdHint =
-      'Enter the session ID provided by your exam host. Students must provide '
+      'Enter the exam code provided by your exam host. Students must provide '
       'one before they can open an exam.';
   static const String loginSessionIdRequiredHint =
-      'Enter the session ID provided by your exam host to continue.';
+      'Enter the exam code provided by your exam host to continue.';
   static const String loginSessionIdRequired =
-      'Exam session ID is required for student sign-in';
+      'Exam code is required for student sign-in';
   static const String loginSubmit = 'Log in';
   static const String loginEmailLabel = loginUsernameLabel;
   static const String loginEmailRequired = 'Login username is required';
