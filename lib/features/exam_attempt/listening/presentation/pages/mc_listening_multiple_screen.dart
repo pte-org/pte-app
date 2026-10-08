@@ -25,7 +25,6 @@ class McListeningMultipleScreen extends StatelessWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -34,7 +33,6 @@ class McListeningMultipleScreen extends StatelessWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +44,6 @@ class McListeningMultipleScreen extends StatelessWidget {
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioUrl ?? '',
         initialPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -61,37 +58,9 @@ class McListeningMultipleScreen extends StatelessWidget {
                 instruction:
                     TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
                     'Select all the correct responses.',
-                stimulus: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AudioListeningStatusCard(
-                      statusLabel: !state.hasStartedPlaying
-                          ? 'Tap to listen'
-                          : state.hasFinishedPlaying
-                              ? 'Audio finished'
-                              : 'Playing audio...',
-                      progress: !state.hasStartedPlaying
-                          ? 0.0
-                          : state.hasFinishedPlaying
-                              ? 1.0
-                              : state.progress,
-                    ),
-                    if (isPractice) ...[
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          if (!state.hasStartedPlaying) {
-                            context.read<McListeningMultipleCubit>().startPlayback();
-                          } else {
-                            context.read<McListeningMultipleCubit>().replayAudio();
-                          }
-                        },
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                      ),
-                    ],
-                  ],
+                stimulus: AudioListeningStatusCard(
+                  statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                  progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                 ),
                 response: ListeningMultipleOptionList(
                   options: task.options ?? const [],

@@ -9,6 +9,7 @@ import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
+import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
@@ -17,7 +18,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_status_card.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
@@ -107,13 +107,10 @@ class _DescribeImageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ExamAttemptBloc, ExamAttemptState>(
-      builder: (context, examState) {
-        final snapshot =
-            examState is AttemptInProgress ? examState.timerSnapshot : null;
-        // Practice suppresses the timer bridge, so the student records manually.
-        final isPractice =
-            examState is AttemptInProgress && examState.isPractice;
+    return BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
+      selector: (state) =>
+          state is AttemptInProgress ? state.timerSnapshot : null,
+      builder: (context, snapshot) {
         return BlocBuilder<AutoRecordCubit, AutoRecordState>(
           builder: (context, state) {
             return RecordResponseTemplate(
@@ -127,16 +124,11 @@ class _DescribeImageBody extends StatelessWidget {
               stimulus: SingleChildScrollView(
                 child: _ImageRegion(imageUrl: task.imageUrl),
               ),
-              response: isPractice
-                  ? PracticeRecordCard(
-                      recordingState: state,
-                      responseSeconds: task.responseSeconds,
-                    )
-                  : AutoRecordStatusCard(
-                      task: task,
-                      recordingState: state,
-                      snapshot: snapshot,
-                    ),
+              response: AutoRecordStatusCard(
+                task: task,
+                recordingState: state,
+                snapshot: snapshot,
+              ),
             );
           },
         );

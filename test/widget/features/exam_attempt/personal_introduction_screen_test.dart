@@ -301,37 +301,4 @@ void main() {
       verifyNever(() => recorder.start(any()));
     },
   );
-
-  testWidgets(
-    'practice mode: a response-phase snapshot never auto-starts recording; the student starts it with the '
-    '"Start recording" button',
-    (tester) async {
-      const response = TimerSnapshot(
-        phase: TimerPhase.response,
-        remaining: Duration(seconds: 30),
-        currentOrderIndex: 1,
-      );
-      stubBlocState(
-        AttemptInProgress(
-          'attempt-1',
-          _personalIntroductionTask(),
-          response,
-          examMode: 'PRACTICE',
-        ),
-      );
-
-      await tester.pumpWidget(buildSubject());
-      await tester.pump();
-
-      verifyNever(() => recorder.start(any()));
-      expect(find.text('Tap to start recording'), findsOneWidget);
-
-      await tester.tap(find.text('Start recording'));
-      await tester.pump();
-      await tester.pump();
-
-      verify(() => recorder.start(any())).called(1);
-      expect(find.text('Recording…'), findsOneWidget);
-    },
-  );
 }

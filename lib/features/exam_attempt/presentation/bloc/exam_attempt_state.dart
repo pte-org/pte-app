@@ -58,11 +58,9 @@ final class AttemptInProgress extends ExamAttemptState {
 
   final Exception? submissionError;
 
-  /// Wire value from server — `"PRACTICE"` or `"OFFICIAL_EXAM"`. Null only
-  /// for legacy attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
+  /// Wire value from server — `"OFFICIAL_EXAM"`. Null only for legacy
+  /// attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
   final String? examMode;
-
-  bool get isPractice => examMode == 'PRACTICE';
 
   TaskView get task => allTasks[currentIndex];
 

@@ -26,7 +26,6 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -35,7 +34,6 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +45,6 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioUrl ?? '',
         initialPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -69,37 +66,9 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
                     subtitle: task.section,
                     instruction:
                         'Select the summary that best represents the recording.',
-                    stimulus: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AudioListeningStatusCard(
-                          statusLabel: !state.hasStartedPlaying
-                              ? 'Tap to listen'
-                              : state.hasFinishedPlaying
-                                  ? 'Audio finished'
-                                  : 'Playing audio...',
-                          progress: !state.hasStartedPlaying
-                              ? 0.0
-                              : state.hasFinishedPlaying
-                                  ? 1.0
-                                  : state.progress,
-                        ),
-                        if (isPractice) ...[
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              if (!state.hasStartedPlaying) {
-                                context.read<HighlightCorrectSummaryCubit>().startPlayback();
-                              } else {
-                                context.read<HighlightCorrectSummaryCubit>().replayAudio();
-                              }
-                            },
-                            icon: const Icon(Icons.play_circle_outline),
-                            label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                          ),
-                        ],
-                      ],
+                    stimulus: AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(
                       child: ChoiceList(

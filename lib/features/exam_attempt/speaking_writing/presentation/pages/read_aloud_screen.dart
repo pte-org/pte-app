@@ -17,7 +17,6 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_status_card.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
@@ -108,12 +107,10 @@ class _ReadAloudBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ExamAttemptBloc, ExamAttemptState>(
-      builder: (context, examState) {
-        final snapshot =
-            examState is AttemptInProgress ? examState.timerSnapshot : null;
-        final isPractice =
-            examState is AttemptInProgress && examState.isPractice;
+    return BlocSelector<ExamAttemptBloc, ExamAttemptState, TimerSnapshot?>(
+      selector: (state) =>
+          state is AttemptInProgress ? state.timerSnapshot : null,
+      builder: (context, snapshot) {
         return BlocBuilder<AutoRecordCubit, AutoRecordState>(
           builder: (context, state) {
             return RecordResponseTemplate(
@@ -124,16 +121,11 @@ class _ReadAloudBody extends StatelessWidget {
               stimulus: SingleChildScrollView(
                 child: Text(task.promptText ?? ''),
               ),
-              response: isPractice
-                  ? PracticeRecordCard(
-                      recordingState: state,
-                      responseSeconds: task.responseSeconds,
-                    )
-                  : AutoRecordStatusCard(
-                      task: task,
-                      recordingState: state,
-                      snapshot: snapshot,
-                    ),
+              response: AutoRecordStatusCard(
+                task: task,
+                recordingState: state,
+                snapshot: snapshot,
+              ),
               layout: ExamTemplateLayout.centeredResponse,
             );
           },

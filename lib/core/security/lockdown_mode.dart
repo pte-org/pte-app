@@ -1,7 +1,7 @@
 /// The level of exam lockdown a backend exam-policy demands.
 ///
-/// Backend mapping (Phase 1): PRACTICE → none, MOCK_TEST → standard,
-/// REAL_EXAM → strict. This enum drives the [LockdownService] activation
+/// Parsed from the server-pinned `lockdownMode` (`NONE` / `STANDARD` /
+/// `STRICT`). This enum drives the [LockdownService] activation
 /// flow: `none` skips every enforcement step, `standard` enforces but
 /// emits violations at warning severity, `strict` enforces AND
 /// terminates forbidden apps on activation.

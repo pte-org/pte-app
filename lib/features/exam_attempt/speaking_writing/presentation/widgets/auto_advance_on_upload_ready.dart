@@ -7,7 +7,6 @@ import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
-import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/upload_tracking_state.dart';
 
 /// Auto-advances once the recording finishes uploading — real PTE speaking
@@ -41,10 +40,6 @@ class _AutoAdvanceOnUploadReadyState<C extends StateStreamable<S>, S extends Upl
 
   Future<void> _advance() async {
     if (_isAdvancing) return;
-    // Practice mode: upload finishes but the student stays on screen — they
-    // control their own pace (re-record, re-listen, then tap Next manually).
-    final examState = context.read<ExamAttemptBloc>().state;
-    if (examState is AttemptInProgress && examState.isPractice) return;
     setState(() => _isAdvancing = true);
     await widget.syncEngine.flushOne(widget.pinnedItemPublicId);
     if (!mounted) return;

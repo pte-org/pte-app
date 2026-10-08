@@ -152,7 +152,7 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   @override
   Future<void> close() async {
     unawaited(_rowSubscription.cancel());
-    // If navigation interrupts an active recording (practice-mode prev/next),
+    // If navigation interrupts an active recording (e.g. a forced advance),
     // stop and persist the audio before tearing down so the partial answer is
     // uploaded in the background and the recorder is freed for the next task.
     if (state.recordingPhase == RecordingPhase.recording && !_stopInFlight) {

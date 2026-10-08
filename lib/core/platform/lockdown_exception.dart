@@ -18,8 +18,8 @@ final class FullscreenEnforcementException extends LockdownException {
 }
 
 /// The native runner could not install or release the app-level exit gate.
-/// This is deliberately separate from fullscreen: practice attempts may use
-/// the exit guard even when anti-cheat fullscreen is disabled.
+/// This is deliberately separate from fullscreen: `NONE` lockdown attempts
+/// still use the exit guard even when anti-cheat fullscreen is disabled.
 final class ExitGuardException extends LockdownException {
   const ExitGuardException(super.message);
 }

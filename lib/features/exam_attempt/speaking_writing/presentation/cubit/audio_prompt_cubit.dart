@@ -80,17 +80,6 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
     unawaited(_play());
   }
 
-  /// Manually triggers playback — used in practice mode where timer-driven
-  /// auto-play is disabled. Resets the one-shot guard after each play so
-  /// subsequent "Listen again" taps each start a fresh play session.
-  Future<void> playManually() async {
-    if (task.audioPromptRef == null) return;
-    _triggered = false;
-    _triggered = true;
-    await _play();
-    _triggered = false;
-  }
-
   Future<void> _play() async {
     emit(state.copyWith(phase: AudioPromptPlaybackPhase.loading));
     try {

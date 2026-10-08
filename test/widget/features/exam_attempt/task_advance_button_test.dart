@@ -96,7 +96,7 @@ void main() {
     );
   });
 
-  Widget buildSubject() {
+  Widget buildSubject({bool autoAdvanceOnExpiration = true}) {
     return MaterialApp(
       home: BlocProvider<ExamAttemptBloc>.value(
         value: bloc,
@@ -105,6 +105,7 @@ void main() {
             cubit: cubit,
             pinnedItemPublicId: 'item-1',
             syncEngine: syncEngine,
+            autoAdvanceOnExpiration: autoAdvanceOnExpiration,
           ),
         ),
       ),
@@ -233,4 +234,48 @@ void main() {
     ).called(1);
     await controller.close();
   });
+
+  for (final section in ['READING', 'WRITING']) {
+    testWidgets('$section: response timer expiry never auto-advances', (
+      tester,
+    ) async {
+      final task = sampleTask(section: section);
+      final controller = StreamController<ExamAttemptState>.broadcast();
+      whenListen(
+        bloc,
+        controller.stream,
+        initialState: AttemptInProgress('attempt-1', task, _runningSnapshot),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      controller.add(AttemptInProgress('attempt-1', task, _expiredSnapshot));
+      await tester.pump();
+
+      expect(cubit.calls, isEmpty);
+      verifyNever(() => syncEngine.flushOne(any()));
+      verifyNever(() => bloc.add(any(that: isA<NextTaskRequested>())));
+      await controller.close();
+    });
+  }
+
+  testWidgets(
+    'LISTENING: autoAdvanceOnExpiration=false suppresses auto-advance on expiry',
+    (tester) async {
+      final task = sampleTask(section: 'LISTENING');
+      final controller = StreamController<ExamAttemptState>.broadcast();
+      whenListen(
+        bloc,
+        controller.stream,
+        initialState: AttemptInProgress('attempt-1', task, _runningSnapshot),
+      );
+
+      await tester.pumpWidget(buildSubject(autoAdvanceOnExpiration: false));
+      controller.add(AttemptInProgress('attempt-1', task, _expiredSnapshot));
+      await tester.pump();
+
+      expect(cubit.calls, isEmpty);
+      verifyNever(() => bloc.add(any(that: isA<NextTaskRequested>())));
+      await controller.close();
+    },
+  );
 }
