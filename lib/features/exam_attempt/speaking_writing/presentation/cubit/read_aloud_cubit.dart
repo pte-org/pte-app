@@ -74,6 +74,10 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
 
   late final StreamSubscription<PendingMediaUpload?> _rowSubscription;
 
+  /// Live mic level (dBFS) while recording — see
+  /// [AudioRecorderService.inputLevels].
+  Stream<double> get inputLevels => _recorder.inputLevels;
+
   /// In-flight guards for the auto-record path. [state.recordingPhase] only
   /// flips *after* [startRecording]/[stopRecording] have awaited real async
   /// work (path resolution + the recorder plugin), so it can't by itself stop

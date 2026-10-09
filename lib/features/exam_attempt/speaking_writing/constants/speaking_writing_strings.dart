@@ -39,6 +39,8 @@ class SpeakingWritingStrings {
       'Uploaded — ready to continue.';
   static const String recordingMicrophoneUnavailableLabel =
       'Microphone unavailable. Connect one before continuing.';
+  static const String recordingInputLevelSemanticsLabel =
+      'Microphone input level';
 
   // Describe-image instruction + image fallback labels (from origin/dev).
   static const String describeImageInstructionPrefix =

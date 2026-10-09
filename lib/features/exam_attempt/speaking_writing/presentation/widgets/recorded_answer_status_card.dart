@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recording_level_waveform.dart';
 
 /// Purely presentational "Recorded Answer" status card — takes an already
 /// resolved [statusLabel] and [progress] as props, no BLoC/context reads of
@@ -14,6 +15,7 @@ class RecordedAnswerStatusCard extends StatelessWidget {
     super.key,
     required this.statusLabel,
     required this.progress,
+    this.inputLevels,
   });
 
   final String statusLabel;
@@ -21,6 +23,10 @@ class RecordedAnswerStatusCard extends StatelessWidget {
   /// `0.0`–`1.0`, clamped by the caller — how much of the current
   /// prep/response window has elapsed.
   final double progress;
+
+  /// Live mic levels (dBFS); when set, a [RecordingLevelWaveform] is shown
+  /// under the status label. Callers pass it only while actually recording.
+  final Stream<double>? inputLevels;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +61,10 @@ class RecordedAnswerStatusCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          if (inputLevels case final levels?) ...[
+            const SizedBox(height: AppDimensions.spacingMedium),
+            RecordingLevelWaveform(levels: levels),
+          ],
           const SizedBox(height: AppDimensions.spacingMedium),
           ClipRRect(
             borderRadius: BorderRadius.circular(

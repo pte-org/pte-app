@@ -84,6 +84,7 @@ class AudioPromptRecordBody extends StatelessWidget {
                 recordingState: state,
                 snapshot: snapshot,
                 preRecordSeconds: preRecordSeconds,
+                inputLevels: context.read<AutoRecordCubit>().inputLevels,
               ),
             );
           },
@@ -174,12 +175,16 @@ class RecordedAnswerPrepCard extends StatelessWidget {
     required this.recordingState,
     required this.snapshot,
     required this.preRecordSeconds,
+    this.inputLevels,
   });
 
   final TaskView task;
   final AutoRecordState recordingState;
   final TimerSnapshot? snapshot;
   final int preRecordSeconds;
+
+  /// Live mic levels (dBFS), drawn as a waveform only while recording.
+  final Stream<double>? inputLevels;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +211,9 @@ class RecordedAnswerPrepCard extends StatelessWidget {
           totalSeconds: task.responseSeconds,
           remainingSeconds: snapshot!.remaining.inSeconds,
         ),
+        inputLevels: recordingState.recordingPhase == RecordingPhase.recording
+            ? inputLevels
+            : null,
       );
     }
 

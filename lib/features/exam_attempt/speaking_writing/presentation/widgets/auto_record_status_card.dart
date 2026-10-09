@@ -30,11 +30,15 @@ class AutoRecordStatusCard extends StatelessWidget {
     required this.task,
     required this.recordingState,
     required this.snapshot,
+    this.inputLevels,
   });
 
   final TaskView task;
   final AutoRecordState recordingState;
   final TimerSnapshot? snapshot;
+
+  /// Live mic levels (dBFS), drawn as a waveform only while recording.
+  final Stream<double>? inputLevels;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +65,9 @@ class AutoRecordStatusCard extends StatelessWidget {
           totalSeconds: task.responseSeconds,
           remaining: snapshot!.remaining,
         ),
+        inputLevels: recordingState.recordingPhase == RecordingPhase.recording
+            ? inputLevels
+            : null,
       );
     }
     final remaining =

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
+import 'package:pte_app/core/widgets/secondary_button.dart';
+import 'package:pte_app/core/widgets/status_screen.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
 /// Completion screen shown after `AttemptCompleted`, before the
@@ -30,52 +34,107 @@ class SectionCompletedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = timeExpired
-        ? AppStrings.sectionCompletedTimeUpTitle
-        : AppStrings.sectionCompletedNaturalTitle;
-    final message = timeExpired
-        ? AppStrings.sectionCompletedTimeUpMessage
-        : AppStrings.sectionCompletedNaturalMessage;
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: AppDimensions.spacingMedium),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: AppDimensions.spacingMedium),
-              Text('${AppStrings.examAttemptNumberLabel} $attemptNumber'),
-              if (canRetry) ...[
-                const SizedBox(height: AppDimensions.spacingSm),
-                Text(
-                  '${AppStrings.examRetriesRemainingMessage}: $remainingRetries',
-                ),
-              ] else ...[
-                const SizedBox(height: AppDimensions.spacingSm),
-                Text(
-                  ExamAttemptStrings.retryLimitReachedMessage,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              const SizedBox(height: AppDimensions.spacingMedium),
-              PrimaryButton(
-                label: AppStrings.sectionCompletedContinueButton,
-                onPressed: onContinue,
-              ),
-              if (canRetry) ...[
-                const SizedBox(height: AppDimensions.spacingSm),
-                TextButton(
-                  onPressed: onRetry,
-                  child: const Text(ExamAttemptStrings.attemptStartRetry),
-                ),
-              ],
-            ],
+    return StatusScreen(
+      icon: timeExpired ? Icons.timer_off_outlined : Icons.check_circle_outline,
+      title: timeExpired
+          ? AppStrings.sectionCompletedTimeUpTitle
+          : AppStrings.sectionCompletedNaturalTitle,
+      message: timeExpired
+          ? AppStrings.sectionCompletedTimeUpMessage
+          : AppStrings.sectionCompletedNaturalMessage,
+      children: [
+        _AttemptSummary(
+          attemptNumber: attemptNumber,
+          remainingRetries: remainingRetries,
+          canRetry: canRetry,
+        ),
+        const SizedBox(height: AppDimensions.spacingLg),
+        PrimaryButton(
+          label: AppStrings.sectionCompletedContinueButton,
+          onPressed: onContinue,
+        ),
+        if (canRetry) ...[
+          const SizedBox(height: AppDimensions.spacingSm),
+          SecondaryButton(
+            label: ExamAttemptStrings.attemptStartRetry,
+            onPressed: onRetry,
           ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AttemptSummary extends StatelessWidget {
+  const _AttemptSummary({
+    required this.attemptNumber,
+    required this.remainingRetries,
+    required this.canRetry,
+  });
+
+  final int attemptNumber;
+  final int remainingRetries;
+  final bool canRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.spacingMd),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceSubtle,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        borderRadius: BorderRadius.all(
+          Radius.circular(AppDimensions.radiusDefault),
         ),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SummaryRow(
+            label: AppStrings.examAttemptNumberLabel,
+            value: '$attemptNumber',
+          ),
+          const SizedBox(height: AppDimensions.spacingSm),
+          if (canRetry)
+            _SummaryRow(
+              label: AppStrings.examRetriesRemainingMessage,
+              value: '$remainingRetries',
+            )
+          else
+            Text(
+              ExamAttemptStrings.retryLimitReachedMessage,
+              style: AppTypography.bodyRegular.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.bodyRegular.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: AppTypography.bodyBold.copyWith(color: AppColors.textPrimary),
+        ),
+      ],
     );
   }
 }
