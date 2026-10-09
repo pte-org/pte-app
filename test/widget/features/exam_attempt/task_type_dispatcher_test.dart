@@ -226,6 +226,9 @@ void main() {
     outboxDao = _MockAnswerOutboxDao();
     syncEngine = _MockSyncEngine();
     audioRecorderService = _MockAudioRecorderService();
+    when(
+      () => audioRecorderService.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
     mediaDao = _MockPendingMediaUploadDao();
     mediaUploadCoordinator = _MockMediaUploadCoordinator();
     audioPlayerService = _MockAudioPlayerService();

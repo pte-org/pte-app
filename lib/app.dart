@@ -9,6 +9,7 @@ import 'core/audio/volume_service.dart';
 import 'core/constants/app_strings.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_dimensions.dart';
+import 'core/constants/app_theme.dart';
 import 'core/constants/app_typography.dart';
 import 'core/security/lockdown_service.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
@@ -17,6 +18,8 @@ import 'core/sync/media_upload_coordinator.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/widgets/loading_view.dart';
 import 'core/widgets/primary_button.dart';
+import 'core/widgets/secondary_button.dart';
+import 'core/widgets/status_screen.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
@@ -54,10 +57,7 @@ class PteApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: AppTypography.fontFamily,
-      ),
+      theme: AppTheme.light(),
       home: kIsDevSkipAuth
           ? const _DevStandaloneMenu()
           : BlocProvider<AuthBloc>.value(
@@ -545,62 +545,24 @@ class _AttemptStartErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surfaceCanvas,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimensions.spacingXl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppDimensions.spacingXl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: AppColors.error,
-                      size: AppDimensions.statusBannerIconSize,
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMd),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingSm),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingLg),
-                    PrimaryButton(
-                      label: ExamAttemptStrings.attemptStartRetry,
-                      onPressed: onRetry,
-                    ),
-                    if (onChangeSession != null) ...[
-                      const SizedBox(height: AppDimensions.spacingSm),
-                      OutlinedButton(
-                        onPressed: onChangeSession,
-                        child: const Text(
-                          ExamAttemptStrings.attemptStartChangeSession,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
+    return StatusScreen(
+      icon: Icons.error_outline,
+      title: title,
+      message: message,
+      isError: true,
+      children: [
+        PrimaryButton(
+          label: ExamAttemptStrings.attemptStartRetry,
+          onPressed: onRetry,
         ),
-      ),
+        if (onChangeSession != null) ...[
+          const SizedBox(height: AppDimensions.spacingSm),
+          SecondaryButton(
+            label: ExamAttemptStrings.attemptStartChangeSession,
+            onPressed: onChangeSession,
+          ),
+        ],
+      ],
     );
   }
 }

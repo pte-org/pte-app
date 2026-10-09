@@ -18,14 +18,11 @@ class McListeningMultipleCubit
     required this.pinnedItemPublicId,
     required String audioSource,
     String? initialPayload,
-    bool isPractice = false,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       _audioSource = audioSource,
        super(
          McListeningMultipleState(
            selectedOrderIndexes: optionIndexesFromAnswerPayload(initialPayload),
-           hasStartedPlaying: !isPractice,
          ),
          answerChanged:
              (
@@ -38,12 +35,11 @@ class McListeningMultipleCubit
     });
     _positionSubscription = _audioPlayerService.position.listen(_onPosition);
     _durationSubscription = _audioPlayerService.duration.listen(_onDuration);
-    if (!isPractice) unawaited(_audioPlayerService.play(_audioSource));
+    unawaited(_audioPlayerService.play(audioSource));
   }
 
   final AnswerOutboxDao _outboxDao;
   final AudioPlayerService _audioPlayerService;
-  final String _audioSource;
   final String attemptPublicId;
   final String pinnedItemPublicId;
   late final StreamSubscription<bool> _finishedSubscription;
@@ -51,16 +47,6 @@ class McListeningMultipleCubit
   late final StreamSubscription<Duration?> _durationSubscription;
   Duration _lastPosition = Duration.zero;
   Duration? _lastDuration;
-
-  Future<void> startPlayback() async {
-    emit(state.copyWith(hasStartedPlaying: true));
-    unawaited(_audioPlayerService.play(_audioSource));
-  }
-
-  Future<void> replayAudio() async {
-    emit(state.copyWith(hasFinishedPlaying: false, progress: 0.0));
-    await _audioPlayerService.replay();
-  }
 
   Future<void> toggleOption(String orderIndex) async {
     final updated = Set<String>.of(state.selectedOrderIndexes);

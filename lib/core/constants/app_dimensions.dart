@@ -59,6 +59,9 @@ class AppDimensions {
   static const double writingHeaderPaddingVertical = spacingSm;
   static const double recordingProgressBarHeight = 6.0;
   static const double recordingProgressBarRadius = 0.0;
+  static const double recordingWaveformHeight = 40.0;
+  static const double recordingWaveformBarWidth = 3.0;
+  static const double recordingWaveformBarGap = 3.0;
   static const double examBrandFontSize = 11.0;
   static const double audioListeningMeterHeight = 2.0;
   static const double audioListeningDotSize = 12.0;

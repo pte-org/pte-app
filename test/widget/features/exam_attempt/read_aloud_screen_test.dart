@@ -79,6 +79,7 @@ void main() {
     when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    when(() => recorder.inputLevels).thenAnswer((_) => const Stream<double>.empty());
   });
 
   tearDown(() => stateController.close());

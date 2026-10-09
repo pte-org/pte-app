@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/task_type_meta.dart';
-import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
-import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
@@ -189,8 +186,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
     final mediaUploadCoordinator = widget.mediaUploadCoordinator;
     final audioPlayerService = widget.audioPlayerService;
     final audioPromptRepository = widget.audioPromptRepository;
-    final examState = context.read<ExamAttemptBloc>().state;
-    final isPractice = examState is AttemptInProgress && examState.isPractice;
 
     // Keyed on attempt + pinned item so Flutter tears down and recreates the
     // Element (and therefore the screen's cubit/controller) on every task
@@ -357,7 +352,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeSummarizeSpokenText => SummarizeSpokenTextScreen(
         key: key,
@@ -367,7 +361,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeMcListeningSingle => McListeningSingleScreen(
         key: key,
@@ -377,7 +370,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeMcListeningMultiple => McListeningMultipleScreen(
         key: key,
@@ -387,7 +379,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeSelectMissingWord => SelectMissingWordScreen(
         key: key,
@@ -397,7 +388,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeHighlightIncorrectWords => HighlightIncorrectWordsScreen(
         key: key,
@@ -407,7 +397,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeHighlightCorrectSummary => HighlightCorrectSummaryScreen(
         key: key,
@@ -417,7 +406,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _taskTypeFillBlanksListening => FillBlanksListeningScreen(
         key: key,
@@ -427,7 +415,6 @@ class _TaskTypeDispatcherState extends State<TaskTypeDispatcher> {
         syncEngine: syncEngine,
         audioPlayerService: audioPlayerService,
         initialAnswerPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       _ => _UnsupportedTaskScreen(key: key, resolution: resolution),
     };

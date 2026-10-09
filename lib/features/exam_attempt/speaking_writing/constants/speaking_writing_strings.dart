@@ -39,6 +39,8 @@ class SpeakingWritingStrings {
       'Uploaded — ready to continue.';
   static const String recordingMicrophoneUnavailableLabel =
       'Microphone unavailable. Connect one before continuing.';
+  static const String recordingInputLevelSemanticsLabel =
+      'Microphone input level';
 
   // Describe-image instruction + image fallback labels (from origin/dev).
   static const String describeImageInstructionPrefix =
@@ -98,14 +100,4 @@ class SpeakingWritingStrings {
       ' seconds, you must reply in your own words, as naturally and clearly as possible. You have ';
   static const String personalIntroductionInstructionSuffix =
       ' seconds to record your response.';
-
-  // Practice mode speaking UI — manual listen/record controls replace
-  // the timer-driven auto-play and auto-record of official mode.
-  static const String practiceListenTapLabel = 'Tap to listen';
-  static const String practiceListenLoadingLabel = 'Loading audio…';
-  static const String practiceListenPlayingLabel = 'Playing…';
-  static const String practiceListenAgainLabel = 'Listen again';
-  static const String practiceRecordIdleLabel = 'Tap to start recording';
-  static const String practiceRecordedLabel = 'Recording saved';
-  static const String practiceRecordAgainLabel = 'Record again';
 }

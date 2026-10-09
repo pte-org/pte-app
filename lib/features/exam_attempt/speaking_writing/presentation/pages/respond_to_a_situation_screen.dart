@@ -180,6 +180,7 @@ class _RespondToASituationBody extends StatelessWidget {
                 recordingState: state,
                 snapshot: snapshot,
                 preRecordSeconds: task.preRecordSeconds!,
+                inputLevels: context.read<AutoRecordCubit>().inputLevels,
               ),
             );
           },

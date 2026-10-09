@@ -95,6 +95,7 @@ void main() {
     when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    when(() => recorder.inputLevels).thenAnswer((_) => const Stream<double>.empty());
     // AudioPromptCubit subscribes to these in its constructor (every
     // screen build) and calls playAudio/playUrl/close whenever a
     // snapshot's elapsed time enters the mocked "Playing" sub-stage —

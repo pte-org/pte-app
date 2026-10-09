@@ -128,7 +128,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         // fullscreen/shortcut/clipboard hooks aren't installed.
         await _activateLockdownForResponse(response);
         // The submit-before-exit guard applies to every real attempt,
-        // including Practice/NONE where anti-cheat fullscreen is disabled.
+        // including NONE lockdown where anti-cheat fullscreen is disabled.
         // It is a separate native gate and is released only after the
         // backend acknowledges terminal submission.
         await _lockdownService.activateAttemptExitGuard(
@@ -637,7 +637,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         attemptPublicId,
         event.task,
         _timerService.currentSnapshot,
-        examMode: 'PRACTICE',
+        examMode: 'OFFICIAL_EXAM',
       ),
     );
   }

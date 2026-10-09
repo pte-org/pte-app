@@ -15,6 +15,7 @@ import 'package:pte_app/core/widgets/exam/exam_header_bar.dart';
 import 'package:pte_app/core/widgets/exam/exam_shell.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recording_level_waveform.dart';
 import 'package:pte_app/features/device_check/constants/device_check_strings.dart';
 import 'package:pte_app/features/device_check/domain/device_check_audio_player.dart';
 import 'package:pte_app/features/device_check/presentation/cubit/device_check_cubit.dart';
@@ -351,6 +352,10 @@ class _MicSection extends StatelessWidget {
             ),
           ],
         ),
+        if (micPhase == MicCheckPhase.recording) ...[
+          const SizedBox(height: AppDimensions.spacingMedium),
+          RecordingLevelWaveform(levels: cubit.inputLevels),
+        ],
         if (state.micErrorMessage != null) ...[
           const SizedBox(height: AppDimensions.spacingSm),
           Text(

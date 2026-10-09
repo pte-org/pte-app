@@ -49,6 +49,9 @@ void main() {
     audioPromptCubit = _MockAudioPromptCubit();
     stateController = StreamController<ExamAttemptState>.broadcast();
     when(() => autoRecordCubit.state).thenReturn(const AutoRecordState());
+    when(
+      () => autoRecordCubit.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
     whenListen(
       autoRecordCubit,
       const Stream<AutoRecordState>.empty(),

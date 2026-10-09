@@ -46,13 +46,11 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
 
   /// Returns true only when the per-task timer expiring should auto-submit
   /// and advance. Rules:
-  /// - Practice mode: never auto-advance (student controls their own pace).
-  /// - Official READING/WRITING: never auto-advance (section timer is
-  ///   informational; only force-submit or manual next chốt answers).
-  /// - Official LISTENING/SPEAKING: respect the caller's [widget.autoAdvanceOnExpiration].
+  /// - READING/WRITING: never auto-advance (section timer is informational;
+  ///   only force-submit or manual next commits answers).
+  /// - LISTENING/SPEAKING: respect the caller's [widget.autoAdvanceOnExpiration].
   bool _shouldAutoAdvanceOnExpiration(AttemptInProgress state) {
     if (!widget.autoAdvanceOnExpiration) return false;
-    if (state.isPractice) return false;
     final section = state.task.section.toUpperCase();
     if (section == 'READING' || section == 'WRITING') return false;
     return true;

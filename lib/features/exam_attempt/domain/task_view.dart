@@ -309,10 +309,10 @@ class AttemptTaskResponse {
   final int remainingRetries;
   final bool canRetry;
 
-  /// Wire value of `PinnedExamSnapshot.examMode` — `"PRACTICE"` or
-  /// `"OFFICIAL_EXAM"`. Null only for legacy attempts predating the field;
-  /// treated as `"OFFICIAL_EXAM"` by consumers to avoid relaxing constraints
-  /// on unknown legacy data.
+  /// Wire value of `PinnedExamSnapshot.examMode` — `"OFFICIAL_EXAM"`. Null
+  /// only for legacy attempts predating the field; treated as
+  /// `"OFFICIAL_EXAM"` by consumers to avoid relaxing constraints on unknown
+  /// legacy data.
   final String? examMode;
 
   factory AttemptTaskResponse.fromJson(Map<String, dynamic> json) {

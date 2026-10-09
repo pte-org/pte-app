@@ -64,4 +64,21 @@ void main() {
       ).called(1);
     },
   );
+
+  test(
+    'inputLevels forwards the current dBFS level as one cached stream',
+    () async {
+      when(
+        () => recorder.onAmplitudeChanged(const Duration(milliseconds: 100)),
+      ).thenAnswer(
+        (_) => Stream.fromIterable([
+          Amplitude(current: -42.5, max: -10),
+          Amplitude(current: -12, max: -10),
+        ]),
+      );
+
+      expect(identical(service.inputLevels, service.inputLevels), isTrue);
+      expect(await service.inputLevels.toList(), [-42.5, -12.0]);
+    },
+  );
 }

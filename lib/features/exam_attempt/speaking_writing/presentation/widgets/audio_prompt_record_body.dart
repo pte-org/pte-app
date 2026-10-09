@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -86,6 +84,7 @@ class AudioPromptRecordBody extends StatelessWidget {
                 recordingState: state,
                 snapshot: snapshot,
                 preRecordSeconds: preRecordSeconds,
+                inputLevels: context.read<AutoRecordCubit>().inputLevels,
               ),
             );
           },
@@ -117,21 +116,6 @@ class AudioListeningPrepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<ExamAttemptBloc, ExamAttemptState, bool>(
-      selector: (state) => state is AttemptInProgress && state.isPractice,
-      builder: (context, isPractice) {
-        if (isPractice) {
-          return BlocBuilder<AudioPromptCubit, AudioPromptPlaybackState>(
-            builder: (context, playback) =>
-                _PracticeListenCard(playback: playback),
-          );
-        }
-        return _buildOfficialListenCard(context);
-      },
-    );
-  }
-
-  Widget _buildOfficialListenCard(BuildContext context) {
     final elapsed = elapsedPrepSeconds(task, snapshot);
     if (elapsed < preListenSeconds) {
       final remaining = preListenSeconds - elapsed;
@@ -191,6 +175,7 @@ class RecordedAnswerPrepCard extends StatelessWidget {
     required this.recordingState,
     required this.snapshot,
     required this.preRecordSeconds,
+    this.inputLevels,
   });
 
   final TaskView task;
@@ -198,23 +183,11 @@ class RecordedAnswerPrepCard extends StatelessWidget {
   final TimerSnapshot? snapshot;
   final int preRecordSeconds;
 
+  /// Live mic levels (dBFS), drawn as a waveform only while recording.
+  final Stream<double>? inputLevels;
+
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<ExamAttemptBloc, ExamAttemptState, bool>(
-      selector: (state) => state is AttemptInProgress && state.isPractice,
-      builder: (context, isPractice) {
-        if (isPractice) {
-          return PracticeRecordCard(
-            recordingState: recordingState,
-            responseSeconds: task.responseSeconds,
-          );
-        }
-        return _buildOfficialRecordCard();
-      },
-    );
-  }
-
-  Widget _buildOfficialRecordCard() {
     if (recordingState.recordingPhase == RecordingPhase.unavailable) {
       return const RecordedAnswerStatusCard(
         statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
@@ -238,6 +211,9 @@ class RecordedAnswerPrepCard extends StatelessWidget {
           totalSeconds: task.responseSeconds,
           remainingSeconds: snapshot!.remaining.inSeconds,
         ),
+        inputLevels: recordingState.recordingPhase == RecordingPhase.recording
+            ? inputLevels
+            : null,
       );
     }
 
@@ -288,179 +264,5 @@ class RecordedAnswerPrepCard extends StatelessWidget {
     return status == PendingMediaUploadStatus.ready
         ? SpeakingWritingStrings.recordingUploadReadyLabel
         : SpeakingWritingStrings.recordingStillUploadingLabel;
-  }
-}
-
-/// Practice-mode listening card — shows current playback state and a manual
-/// "Tap to listen" / "Listen again" button. Replaces the timer-driven
-/// countdown display that official mode uses.
-class _PracticeListenCard extends StatelessWidget {
-  const _PracticeListenCard({required this.playback});
-
-  final AudioPromptPlaybackState playback;
-
-  @override
-  Widget build(BuildContext context) {
-    final isLoading = playback.phase == AudioPromptPlaybackPhase.loading;
-
-    final String statusLabel;
-    switch (playback.phase) {
-      case AudioPromptPlaybackPhase.idle:
-        statusLabel = SpeakingWritingStrings.practiceListenTapLabel;
-      case AudioPromptPlaybackPhase.loading:
-        statusLabel = SpeakingWritingStrings.practiceListenLoadingLabel;
-      case AudioPromptPlaybackPhase.playing:
-        statusLabel = SpeakingWritingStrings.practiceListenPlayingLabel;
-      case AudioPromptPlaybackPhase.error:
-        statusLabel =
-            playback.errorMessage ??
-            SpeakingWritingStrings.audioPromptGenericErrorMessage;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AudioListeningStatusCard(
-          statusLabel: statusLabel,
-          progress: playback.phase == AudioPromptPlaybackPhase.playing
-              ? playback.progress
-              : 0.0,
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: isLoading
-              ? null
-              : () => unawaited(
-                  context.read<AudioPromptCubit>().playManually(),
-                ),
-          icon: const Icon(Icons.play_circle_outline),
-          label: Text(
-            playback.phase == AudioPromptPlaybackPhase.idle
-                ? SpeakingWritingStrings.practiceListenTapLabel
-                : SpeakingWritingStrings.practiceListenAgainLabel,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Practice-mode record card — shows "Start Recording" / "Record again"
-/// buttons driven by manual taps; auto-stops after [responseSeconds] with
-/// a live progress bar. No manual "Stop" button — the time limit enforces
-/// the upper bound instead.
-class PracticeRecordCard extends StatefulWidget {
-  const PracticeRecordCard({
-    super.key,
-    required this.recordingState,
-    required this.responseSeconds,
-  });
-
-  final AutoRecordState recordingState;
-  final int responseSeconds;
-
-  @override
-  State<PracticeRecordCard> createState() => _PracticeRecordCardState();
-}
-
-class _PracticeRecordCardState extends State<PracticeRecordCard> {
-  Timer? _timer;
-  double _progress = 0.0;
-
-  @override
-  void didUpdateWidget(PracticeRecordCard old) {
-    super.didUpdateWidget(old);
-    final wasRecording =
-        old.recordingState.recordingPhase == RecordingPhase.recording;
-    final isRecording =
-        widget.recordingState.recordingPhase == RecordingPhase.recording;
-    if (!wasRecording && isRecording) {
-      _progress = 0.0;
-      _startTimer();
-    } else if (wasRecording && !isRecording) {
-      _cancelTimer();
-    }
-  }
-
-  void _startTimer() {
-    _cancelTimer();
-    const tick = 100; // ms
-    final totalMs = widget.responseSeconds * 1000;
-    int elapsed = 0;
-    _timer = Timer.periodic(const Duration(milliseconds: tick), (t) {
-      elapsed += tick;
-      if (!mounted) { t.cancel(); return; }
-      final p = (elapsed / totalMs).clamp(0.0, 1.0);
-      setState(() => _progress = p);
-      if (elapsed >= totalMs) {
-        t.cancel();
-        _autoStop();
-      }
-    });
-  }
-
-  void _cancelTimer() {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  void _autoStop() {
-    if (!mounted) return;
-    final cubit = context.read<AutoRecordCubit>();
-    if (cubit.state.recordingPhase == RecordingPhase.recording) {
-      unawaited(cubit.stopRecording());
-    }
-  }
-
-  @override
-  void dispose() {
-    _cancelTimer();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final phase = widget.recordingState.recordingPhase;
-
-    if (phase == RecordingPhase.unavailable) {
-      return const RecordedAnswerStatusCard(
-        statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
-        progress: 0.0,
-      );
-    }
-
-    final statusLabel = switch (phase) {
-      RecordingPhase.idle => SpeakingWritingStrings.practiceRecordIdleLabel,
-      RecordingPhase.recording => SpeakingWritingStrings.readAloudRecordingIndicator,
-      RecordingPhase.recorded => SpeakingWritingStrings.practiceRecordedLabel,
-      RecordingPhase.unavailable => '',
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RecordedAnswerStatusCard(
-          statusLabel: statusLabel,
-          progress: phase == RecordingPhase.recording
-              ? _progress
-              : phase == RecordingPhase.recorded
-                  ? 1.0
-                  : 0.0,
-        ),
-        if (phase == RecordingPhase.idle || phase == RecordingPhase.recorded) ...[
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () =>
-                unawaited(context.read<AutoRecordCubit>().startRecording()),
-            icon: const Icon(Icons.mic),
-            label: Text(
-              phase == RecordingPhase.idle
-                  ? SpeakingWritingStrings.readAloudStartRecordingLabel
-                  : SpeakingWritingStrings.practiceRecordAgainLabel,
-            ),
-          ),
-        ],
-      ],
-    );
   }
 }

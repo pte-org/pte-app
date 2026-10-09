@@ -29,7 +29,6 @@ class FillBlanksListeningScreen extends StatefulWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -38,7 +37,6 @@ class FillBlanksListeningScreen extends StatefulWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   State<FillBlanksListeningScreen> createState() =>
@@ -64,7 +62,6 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
       gapCount: gapCount,
       audioSource: widget.task.audioUrl ?? '',
       initialPayload: widget.initialAnswerPayload,
-      isPractice: widget.isPractice,
     );
     _controllers = [
       for (var gapIndex = 0; gapIndex < gapCount; gapIndex++)
@@ -101,37 +98,9 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
               instruction:
                   TaskTypeMeta.forTaskType(widget.task.taskType)?.instruction ??
                   'Type the missing words as you listen.',
-              stimulus: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AudioListeningStatusCard(
-                    statusLabel: !state.hasStartedPlaying
-                        ? 'Tap to listen'
-                        : state.hasFinishedPlaying
-                            ? 'Audio finished'
-                            : 'Playing audio...',
-                    progress: !state.hasStartedPlaying
-                        ? 0.0
-                        : state.hasFinishedPlaying
-                            ? 1.0
-                            : state.progress,
-                  ),
-                  if (widget.isPractice) ...[
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        if (!state.hasStartedPlaying) {
-                          context.read<FillBlanksListeningCubit>().startPlayback();
-                        } else {
-                          context.read<FillBlanksListeningCubit>().replayAudio();
-                        }
-                      },
-                      icon: const Icon(Icons.play_circle_outline),
-                      label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                    ),
-                  ],
-                ],
+              stimulus: AudioListeningStatusCard(
+                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: SingleChildScrollView(
                 child: FillBlanksListeningText(

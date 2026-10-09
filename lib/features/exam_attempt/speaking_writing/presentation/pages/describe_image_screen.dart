@@ -128,6 +128,7 @@ class _DescribeImageBody extends StatelessWidget {
                 task: task,
                 recordingState: state,
                 snapshot: snapshot,
+                inputLevels: context.read<AutoRecordCubit>().inputLevels,
               ),
             );
           },
