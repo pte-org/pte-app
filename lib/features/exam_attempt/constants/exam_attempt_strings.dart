@@ -31,6 +31,15 @@ class ExamAttemptStrings {
   static const String retryLimitReachedCode = 'RETRY_LIMIT_REACHED';
   static const String retryLimitReachedMessage =
       'You have used all attempts for this exam. Please contact your host if you need help.';
+  static const String sessionNotStartedCode = 'SESSION_NOT_STARTED';
+  static const String sessionNotStartedMessage =
+      "This exam hasn't opened yet. Please come back at the scheduled start time.";
+  static const String sessionClosedCode = 'SESSION_CLOSED';
+  static const String sessionClosedMessage =
+      'This exam has already closed. Please contact your host if you need help.';
+  static const String notEntitledCode = 'NOT_ENTITLED';
+  static const String notEntitledMessage =
+      "You aren't registered for this exam. Check the exam code or contact your host.";
   static const String attemptStartRetry = 'Try again';
   static const String attemptStartChangeSession = 'Use a different exam code';
   static const String sessionResolutionFailureMessage =
