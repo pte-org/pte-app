@@ -38,7 +38,7 @@ class SummarizeSpokenTextCubit
     });
     _positionSubscription = _audioPlayerService.position.listen(_onPosition);
     _durationSubscription = _audioPlayerService.duration.listen(_onDuration);
-    unawaited(_audioPlayerService.play(audioSource));
+    unawaited(_playAudio(audioSource));
   }
 
   final AnswerOutboxDao _outboxDao;
@@ -50,6 +50,14 @@ class SummarizeSpokenTextCubit
   late final StreamSubscription<Duration?> _durationSubscription;
   Duration _lastPosition = Duration.zero;
   Duration? _lastDuration;
+
+  Future<void> _playAudio(String audioSource) async {
+    try {
+      await _audioPlayerService.play(audioSource);
+    } catch (_) {
+      if (!isClosed) emit(state.copyWith(playbackFailed: true));
+    }
+  }
 
   void draftChanged(String text) {
     emit(state.copyWith(draftText: text, wordCount: countWords(text)));
