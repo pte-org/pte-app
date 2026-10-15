@@ -23,12 +23,23 @@ class TaskAdvanceButton extends StatefulWidget {
     this.pinnedItemPublicId,
     required this.syncEngine,
     this.autoAdvanceOnExpiration = true,
+    this.forwardOnlyNext = false,
+    this.forwardOnlyNextEnabled = true,
   });
 
   final FlushableAnswerCubit? cubit;
   final String? pinnedItemPublicId;
   final SyncEngine syncEngine;
   final bool autoAdvanceOnExpiration;
+
+  /// Enables Next for a section that has no manual navigation (see the
+  /// server's `ManualNavigationPolicy`): the tap submits the answer and moves
+  /// on exactly like the per-task timer expiring, and Previous stays disabled.
+  final bool forwardOnlyNext;
+
+  /// Lets a screen hold [forwardOnlyNext] back until the task allows moving on
+  /// (e.g. its audio has finished). Timer expiry still advances regardless.
+  final bool forwardOnlyNextEnabled;
 
   @override
   State<TaskAdvanceButton> createState() => _TaskAdvanceButtonState();
@@ -56,7 +67,10 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
     return true;
   }
 
-  Future<void> _advanceOnExpiration() async {
+  Future<void> _advanceOnExpiration() =>
+      _submitAndAdvance(AdvanceReason.timeExpired);
+
+  Future<void> _submitAndAdvance(AdvanceReason reason) async {
     if (_isNavigating) return;
     final state = context.read<ExamAttemptBloc>().state;
     if (state is! AttemptInProgress) return;
@@ -67,9 +81,7 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
     await widget.cubit?.flushPendingEdit();
     await widget.syncEngine.flushOne(state.task.pinnedItemPublicId);
     if (!mounted) return;
-    context.read<ExamAttemptBloc>().add(
-      const NextTaskRequested(reason: AdvanceReason.timeExpired),
-    );
+    context.read<ExamAttemptBloc>().add(NextTaskRequested(reason: reason));
   }
 
   Future<void> _navigate(
@@ -162,8 +174,12 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
             onPrevious: canNavigate && !_isNavigating && task.canNavigatePrevious
                 ? () => _navigate(task, TaskNavigationDirection.previous)
                 : null,
-            onNext: canNavigate && task.canNavigateNext
+            onNext: _isNavigating || !canNavigate
+                ? null
+                : task.canNavigateNext
                 ? () => _navigate(task, TaskNavigationDirection.next)
+                : widget.forwardOnlyNext && widget.forwardOnlyNextEnabled
+                ? () => _submitAndAdvance(AdvanceReason.manual)
                 : null,
             nextLabel: state.submissionStatus == AttemptSubmissionStatus.submitting
                 ? ExamAttemptStrings.forceSubmitSubmittingLabel

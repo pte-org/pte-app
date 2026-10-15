@@ -96,7 +96,11 @@ void main() {
     );
   });
 
-  Widget buildSubject({bool autoAdvanceOnExpiration = true}) {
+  Widget buildSubject({
+    bool autoAdvanceOnExpiration = true,
+    bool forwardOnlyNext = false,
+    bool forwardOnlyNextEnabled = true,
+  }) {
     return MaterialApp(
       home: BlocProvider<ExamAttemptBloc>.value(
         value: bloc,
@@ -106,6 +110,8 @@ void main() {
             pinnedItemPublicId: 'item-1',
             syncEngine: syncEngine,
             autoAdvanceOnExpiration: autoAdvanceOnExpiration,
+            forwardOnlyNext: forwardOnlyNext,
+            forwardOnlyNextEnabled: forwardOnlyNextEnabled,
           ),
         ),
       ),
@@ -278,4 +284,66 @@ void main() {
       await controller.close();
     },
   );
+
+  group('forwardOnlyNext on a section without manual navigation', () {
+    void listeningTask() {
+      whenListen(
+        bloc,
+        const Stream<ExamAttemptState>.empty(),
+        initialState: AttemptInProgress(
+          'attempt-1',
+          sampleTask(
+            section: 'LISTENING',
+            canNavigatePrevious: false,
+            canNavigateNext: false,
+          ),
+          _runningSnapshot,
+        ),
+      );
+    }
+
+    testWidgets('Next is disabled by default', (tester) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject());
+
+      final next = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(next.onPressed, isNull);
+    });
+
+    testWidgets('Next submits and advances like a manual next task', (
+      tester,
+    ) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject(forwardOnlyNext: true));
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(cubit.calls, ['flushPendingEdit']);
+      verify(() => syncEngine.flushOne('item-1')).called(1);
+      verify(() => bloc.add(const NextTaskRequested())).called(1);
+      verifyNever(() => bloc.add(any(that: isA<NavigateTaskRequested>())));
+    });
+
+    testWidgets('Next stays disabled while forwardOnlyNextEnabled is false', (
+      tester,
+    ) async {
+      listeningTask();
+      await tester.pumpWidget(
+        buildSubject(forwardOnlyNext: true, forwardOnlyNextEnabled: false),
+      );
+
+      final next = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(next.onPressed, isNull);
+    });
+
+    testWidgets('Previous stays disabled', (tester) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject(forwardOnlyNext: true));
+
+      final previous = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Previous'),
+      );
+      expect(previous.onPressed, isNull);
+    });
+  });
 }
