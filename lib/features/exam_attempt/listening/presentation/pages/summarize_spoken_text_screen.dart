@@ -111,10 +111,18 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
             );
           },
         ),
-        bottomAction: TaskAdvanceButton(
-          cubit: _cubit,
-          pinnedItemPublicId: widget.task.pinnedItemPublicId,
-          syncEngine: widget.syncEngine,
+        // Next unlocks once the audio has played to the end (or failed to
+        // play at all, so a broken file cannot trap the student).
+        bottomAction: BlocSelector<SummarizeSpokenTextCubit,
+            SummarizeSpokenTextState, bool>(
+          selector: (state) => state.hasFinishedPlaying || state.playbackFailed,
+          builder: (context, audioDone) => TaskAdvanceButton(
+            cubit: _cubit,
+            pinnedItemPublicId: widget.task.pinnedItemPublicId,
+            syncEngine: widget.syncEngine,
+            forwardOnlyNext: true,
+            forwardOnlyNextEnabled: audioDone,
+          ),
         ),
       ),
     );
