@@ -43,12 +43,15 @@ class SectionCompletedScreen extends StatelessWidget {
           ? AppStrings.sectionCompletedTimeUpMessage
           : AppStrings.sectionCompletedNaturalMessage,
       children: [
-        _AttemptSummary(
-          attemptNumber: attemptNumber,
-          remainingRetries: remainingRetries,
-          canRetry: canRetry,
-        ),
-        const SizedBox(height: AppDimensions.spacingLg),
+        // A single sitting is the norm, so the attempt summary only appears
+        // when the student actually has retries to talk about.
+        if (canRetry) ...[
+          _AttemptSummary(
+            attemptNumber: attemptNumber,
+            remainingRetries: remainingRetries,
+          ),
+          const SizedBox(height: AppDimensions.spacingLg),
+        ],
         PrimaryButton(
           label: AppStrings.sectionCompletedContinueButton,
           onPressed: onContinue,
@@ -69,12 +72,10 @@ class _AttemptSummary extends StatelessWidget {
   const _AttemptSummary({
     required this.attemptNumber,
     required this.remainingRetries,
-    required this.canRetry,
   });
 
   final int attemptNumber;
   final int remainingRetries;
-  final bool canRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -95,18 +96,10 @@ class _AttemptSummary extends StatelessWidget {
             value: '$attemptNumber',
           ),
           const SizedBox(height: AppDimensions.spacingSm),
-          if (canRetry)
-            _SummaryRow(
-              label: AppStrings.examRetriesRemainingMessage,
-              value: '$remainingRetries',
-            )
-          else
-            Text(
-              ExamAttemptStrings.retryLimitReachedMessage,
-              style: AppTypography.bodyRegular.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
+          _SummaryRow(
+            label: AppStrings.examRetriesRemainingMessage,
+            value: '$remainingRetries',
+          ),
         ],
       ),
     );

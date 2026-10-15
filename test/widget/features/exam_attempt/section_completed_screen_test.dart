@@ -56,7 +56,6 @@ void main() {
 
     expect(find.text(AppStrings.examRetriesRemainingMessage), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
-    expect(find.text(ExamAttemptStrings.retryLimitReachedMessage), findsNothing);
 
     await tester.tap(find.text(ExamAttemptStrings.attemptStartRetry));
     await tester.pump();
@@ -64,12 +63,13 @@ void main() {
     expect(retryCount, 1);
   });
 
-  testWidgets('with no retries left, shows the limit message and no Try again', (
+  testWidgets('with no retries left, hides the attempt summary and Try again', (
     tester,
   ) async {
     await tester.pumpWidget(buildSubject(timeExpired: false));
 
-    expect(find.text(ExamAttemptStrings.retryLimitReachedMessage), findsOneWidget);
+    expect(find.text(AppStrings.examAttemptNumberLabel), findsNothing);
+    expect(find.text(ExamAttemptStrings.retryLimitReachedMessage), findsNothing);
     expect(find.text(ExamAttemptStrings.attemptStartRetry), findsNothing);
   });
 
