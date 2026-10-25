@@ -15,17 +15,13 @@ import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
+import 'package:pte_app/features/auth/presentation/pages/exam_access_denied_page.dart';
 import 'package:pte_app/features/auth/presentation/pages/login_page.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
-import 'package:pte_app/features/host_console/presentation/pages/host_console_page.dart';
-import 'package:pte_app/features/live_proctor/presentation/pages/proctor_workspace_page.dart';
-import 'package:pte_app/features/live_proctor/domain/live_proctor_types.dart';
-import 'package:pte_app/features/live_proctor/domain/repositories/live_proctor_repository.dart';
-import 'package:pte_app/features/live_proctor/presentation/bloc/assigned_sessions_bloc.dart';
 
 class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
     implements AuthBloc {}
@@ -33,23 +29,11 @@ class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
     implements ExamAttemptBloc {}
 
-class _FakeLiveProctorRepository implements LiveProctorRepository {
-  @override
-  Future<List<AssignedProctorSession>> loadAssignedSessions() async => const [];
-
-  @override
-  Future<List<ViolationEvent>> loadViolations(String sessionPublicId) async =>
-      const [];
-}
-
 void main() {
   setUpAll(() {
     registerFallbackValue(const LogoutRequested());
     registerFallbackValue(
       const SessionResolutionRequested(rawInput: 'session-id'),
-    );
-    GetIt.instance.registerFactory<AssignedSessionsBloc>(
-      () => AssignedSessionsBloc(repository: _FakeLiveProctorRepository()),
     );
     // StudentExamGate resolves an ExamAttemptBloc from GetIt eagerly (its
     // State's field initializer) — this gate-routing test only cares which
@@ -67,7 +51,6 @@ void main() {
   });
 
   tearDownAll(() {
-    GetIt.instance.unregister<AssignedSessionsBloc>();
     GetIt.instance.unregister<ExamAttemptBloc>();
   });
 
@@ -148,19 +131,28 @@ void main() {
     expect(find.text(AppStrings.loginSessionIdRequiredHint), findsOneWidget);
   });
 
-  for (final role in <String>['HOST_ADMIN', 'HOST_AUTHOR']) {
-    testWidgets('$role enters HostConsolePage', (tester) async {
+  for (final roles in <List<String>>[
+    ['HOST_ADMIN'],
+    ['HOST_AUTHOR'],
+    ['PROCTOR'],
+    ['EXAMINER'],
+    ['PLATFORM_ADMIN'],
+    [],
+  ]) {
+    testWidgets('roles $roles are refused the exam client', (tester) async {
       final bloc = _MockAuthBloc();
       addTearDown(bloc.close);
 
       await tester.pumpWidget(
         buildSubject(
-          AuthAuthenticated(JwtClaims(roles: [role], tenantId: 'tenant-1')),
+          AuthAuthenticated(JwtClaims(roles: roles, tenantId: 'tenant-1')),
           bloc: bloc,
         ),
       );
 
-      expect(find.byType(HostConsolePage), findsOneWidget);
+      expect(find.byType(ExamAccessDeniedPage), findsOneWidget);
+      expect(find.byType(LoginPage), findsNothing);
+      expect(find.byType(StudentExamGate), findsNothing);
     });
   }
 
@@ -179,7 +171,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(HostConsolePage), findsNothing);
+    expect(find.byType(ExamAccessDeniedPage), findsNothing);
     expect(find.byType(StudentExamGate), findsNothing);
     expect(find.byType(LoginPage), findsOneWidget);
     expect(find.text(AppStrings.loginSessionIdRequiredHint), findsOneWidget);
@@ -272,24 +264,9 @@ void main() {
     expect(find.text('Enter session ID'), findsNothing);
   });
 
-  testWidgets('PROCTOR enters the assigned-session workspace', (tester) async {
-    final bloc = _MockAuthBloc();
-    addTearDown(bloc.close);
-
-    await tester.pumpWidget(
-      buildSubject(
-        const AuthAuthenticated(
-          JwtClaims(roles: ['PROCTOR'], tenantId: 'tenant-1'),
-        ),
-        bloc: bloc,
-      ),
-    );
-
-    expect(find.byType(ProctorWorkspacePage), findsOneWidget);
-    expect(find.byType(HostConsolePage), findsNothing);
-  });
-
-  testWidgets('Host console logout dispatches LogoutRequested', (tester) async {
+  testWidgets('refused account logout dispatches LogoutRequested', (
+    tester,
+  ) async {
     final bloc = _MockAuthBloc();
     addTearDown(bloc.close);
 
@@ -301,7 +278,7 @@ void main() {
         bloc: bloc,
       ),
     );
-    await tester.tap(find.widgetWithText(TextButton, AppStrings.logout));
+    await tester.tap(find.text(AppStrings.logout));
 
     verify(() => bloc.add(any(that: isA<LogoutRequested>()))).called(1);
   });
@@ -330,7 +307,7 @@ void main() {
     );
 
     unawaited(
-      Navigator.of(tester.element(find.byType(HostConsolePage))).push(
+      Navigator.of(tester.element(find.byType(ExamAccessDeniedPage))).push(
         MaterialPageRoute<void>(
           builder: (_) => const Scaffold(body: Text('protected route')),
         ),
