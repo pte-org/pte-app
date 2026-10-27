@@ -23,6 +23,8 @@ import 'core/widgets/status_screen.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/auth/domain/exam_access_policy.dart';
+import 'features/auth/presentation/pages/exam_access_denied_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
 import 'features/device_check/constants/device_check_strings.dart';
@@ -44,10 +46,6 @@ import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dar
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'features/host_console/domain/host_access_policy.dart';
-import 'features/host_console/presentation/pages/host_console_page.dart';
-import 'features/live_proctor/domain/live_proctor_access_policy.dart';
-import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -206,11 +204,8 @@ class _AppAuthGateState extends State<AppAuthGate> {
               onSessionIdProvided: _rememberSessionId,
             ),
             AuthAuthenticated(:final claims)
-                when HostAccessPolicy.canEnterHostConsole(claims) =>
-              const HostConsolePage(),
-            AuthAuthenticated(:final claims)
-                when LiveProctorAccessPolicy.canControl(claims) =>
-              const ProctorWorkspacePage(),
+                when !ExamAccessPolicy.canTakeExam(claims) =>
+              const ExamAccessDeniedPage(),
             AuthAuthenticated() when _sessionIdForStudent == null => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
