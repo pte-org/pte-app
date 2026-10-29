@@ -8,6 +8,8 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/storage/storage_module.dart';
 import 'package:pte_app/features/auth/auth_module.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
+import 'package:pte_app/features/exam_preview/data/preview_audio_session.dart';
+import 'package:pte_app/features/exam_preview/exam_preview_module.dart';
 import 'package:pte_app/features/report/report_module.dart';
 
 Future<void> main() async {
@@ -33,6 +35,8 @@ Future<void> main() async {
   // path.
   await getIt<LockdownService>().initialize();
   setupExamAttemptModule();
+  setupExamPreviewModule();
+  await PreviewAudioSession.cleanupOrphans();
   setupReportModule();
   runApp(const PteApp());
 }

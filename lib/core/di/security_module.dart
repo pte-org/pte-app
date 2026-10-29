@@ -78,8 +78,8 @@ void setupSecurityModule() {
     ),
   );
 
-  // Security audit delivery is app-scoped, not attempt-scoped. Start it once
-  // during bootstrap so events can be retried even while the login/report UI
-  // is visible or after the attempt screen has been torn down.
-  getIt<ViolationRetryCoordinator>().start();
+  // The coordinator is intentionally not started during bootstrap. It is
+  // owned by the authenticated student session so a host preview can never
+  // flush student security rows with a host token. AppAuthGate starts and
+  // disposes it on the corresponding identity transitions.
 }

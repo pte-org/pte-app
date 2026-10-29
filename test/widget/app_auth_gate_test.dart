@@ -17,6 +17,8 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:pte_app/features/auth/presentation/pages/exam_access_denied_page.dart';
 import 'package:pte_app/features/auth/presentation/pages/login_page.dart';
+import 'package:pte_app/features/exam_preview/domain/repositories/host_exam_preview_repository.dart';
+import 'package:pte_app/features/exam_preview/presentation/pages/host_exam_list_screen.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -28,6 +30,9 @@ class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
     implements ExamAttemptBloc {}
+
+class _MockHostExamPreviewRepository extends Mock
+    implements HostExamPreviewRepository {}
 
 void main() {
   setUpAll(() {
@@ -48,10 +53,14 @@ void main() {
       );
       return bloc;
     });
+    final repository = _MockHostExamPreviewRepository();
+    when(() => repository.listExams()).thenAnswer((_) async => const []);
+    GetIt.instance.registerSingleton<HostExamPreviewRepository>(repository);
   });
 
   tearDownAll(() {
     GetIt.instance.unregister<ExamAttemptBloc>();
+    GetIt.instance.unregister<HostExamPreviewRepository>();
   });
 
   Widget buildSubject(AuthState state, {required _MockAuthBloc bloc}) {
@@ -132,7 +141,6 @@ void main() {
   });
 
   for (final roles in <List<String>>[
-    ['HOST_ADMIN'],
     ['HOST_AUTHOR'],
     ['PROCTOR'],
     ['EXAMINER'],
@@ -155,6 +163,26 @@ void main() {
       expect(find.byType(StudentExamGate), findsNothing);
     });
   }
+
+  testWidgets('HOST_ADMIN routes to the authenticated host preview list', (
+    tester,
+  ) async {
+    final bloc = _MockAuthBloc();
+    addTearDown(bloc.close);
+
+    await tester.pumpWidget(
+      buildSubject(
+        const AuthAuthenticated(
+          JwtClaims(roles: ['HOST_ADMIN'], tenantId: 'tenant-1'),
+        ),
+        bloc: bloc,
+      ),
+    );
+
+    expect(find.byType(HostExamListScreen), findsOneWidget);
+    expect(find.byType(StudentExamGate), findsNothing);
+    expect(find.byType(ExamAccessDeniedPage), findsNothing);
+  });
 
   testWidgets('student without a session ID returns to login for one', (
     tester,
@@ -273,7 +301,7 @@ void main() {
     await tester.pumpWidget(
       buildSubject(
         const AuthAuthenticated(
-          JwtClaims(roles: ['HOST_ADMIN'], tenantId: 'tenant-1'),
+          JwtClaims(roles: ['HOST_AUTHOR'], tenantId: 'tenant-1'),
         ),
         bloc: bloc,
       ),
@@ -307,7 +335,7 @@ void main() {
     );
 
     unawaited(
-      Navigator.of(tester.element(find.byType(ExamAccessDeniedPage))).push(
+      Navigator.of(tester.element(find.byType(HostExamListScreen))).push(
         MaterialPageRoute<void>(
           builder: (_) => const Scaffold(body: Text('protected route')),
         ),
