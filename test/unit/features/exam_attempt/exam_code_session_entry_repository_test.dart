@@ -88,29 +88,39 @@ void main() {
       });
     }
 
-    test('an unknown code (404) becomes a friendly SessionResolutionException', () async {
-      when(resolveCall).thenThrow(const NotFoundException('SESSION_NOT_FOUND'));
+    test(
+      'an unknown code (404) becomes a friendly SessionResolutionException',
+      () async {
+        when(
+          resolveCall,
+        ).thenThrow(const NotFoundException('SESSION_NOT_FOUND'));
 
-      await expectLater(
-        repository.resolveSessionPublicId(_canonicalCode),
-        throwsA(
-          isA<SessionResolutionException>().having(
-            (e) => e.message,
-            'message',
-            "We couldn't find that exam code. Check the code from your host and try again.",
+        await expectLater(
+          repository.resolveSessionPublicId(_canonicalCode),
+          throwsA(
+            isA<SessionResolutionException>().having(
+              (e) => e.message,
+              'message',
+              "We couldn't find that exam code. Check the code from your host and try again.",
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
-    test('a code the server rejects as malformed (400) is the same wrong code', () async {
-      when(resolveCall).thenThrow(const ValidationException('Request rejected (400)'));
+    test(
+      'a code the server rejects as malformed (400) is the same wrong code',
+      () async {
+        when(
+          resolveCall,
+        ).thenThrow(const ValidationException('Request rejected (400)'));
 
-      await expectLater(
-        repository.resolveSessionPublicId('FPTEDUVN-261010-K7QM-TOOLONG'),
-        throwsA(isA<SessionResolutionException>()),
-      );
-    });
+        await expectLater(
+          repository.resolveSessionPublicId('FPTEDUVN-261010-K7QM-TOOLONG'),
+          throwsA(isA<SessionResolutionException>()),
+        );
+      },
+    );
   });
 
   group('transport failures are not swallowed', () {

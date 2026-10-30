@@ -9,8 +9,10 @@ void main() {
       'MC_READING_SINGLE': AppStrings.readingInstructionMcSingle,
       'MC_READING_MULTIPLE': AppStrings.readingInstructionMcMultiple,
       'RE_ORDER_PARAGRAPHS': AppStrings.readingInstructionReorderParagraphs,
-      'FILL_IN_THE_BLANKS_DRAG_AND_DROP': AppStrings.readingInstructionFillBlanksDragDrop,
-      'FILL_IN_THE_BLANKS_DROPDOWN': AppStrings.readingInstructionFillBlanksDropdown,
+      'FILL_IN_THE_BLANKS_DRAG_AND_DROP':
+          AppStrings.readingInstructionFillBlanksDragDrop,
+      'FILL_IN_THE_BLANKS_DROPDOWN':
+          AppStrings.readingInstructionFillBlanksDropdown,
     };
 
     for (final entry in cases.entries) {

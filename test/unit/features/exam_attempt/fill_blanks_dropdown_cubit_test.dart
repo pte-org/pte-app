@@ -49,51 +49,70 @@ void main() {
       await cubit.close();
     });
 
-    test('multi-gap task writes entries in gap-index order regardless of selection order', () async {
-      final cubit = buildCubit(blankGroupCount: 3);
+    test(
+      'multi-gap task writes entries in gap-index order regardless of selection order',
+      () async {
+        final cubit = buildCubit(blankGroupCount: 3);
 
-      await cubit.selectOption(2, '1');
-      await cubit.selectOption(0, '0');
+        await cubit.selectOption(2, '1');
+        await cubit.selectOption(0, '0');
 
-      expect(capturedPayloads().last, '0,,1');
-      await cubit.close();
-    });
+        expect(capturedPayloads().last, '0,,1');
+        await cubit.close();
+      },
+    );
 
-    test('the required trailing empty entry is preserved for an unanswered final gap', () async {
-      final cubit = buildCubit(blankGroupCount: 3);
+    test(
+      'the required trailing empty entry is preserved for an unanswered final gap',
+      () async {
+        final cubit = buildCubit(blankGroupCount: 3);
 
-      await cubit.selectOption(0, '2');
-      await cubit.selectOption(1, '0');
+        await cubit.selectOption(0, '2');
+        await cubit.selectOption(1, '0');
 
-      final payload = capturedPayloads().last;
-      expect(payload, '2,0,');
-      expect(payload.split(','), hasLength(3));
-      await cubit.close();
-    });
+        final payload = capturedPayloads().last;
+        expect(payload, '2,0,');
+        expect(payload.split(','), hasLength(3));
+        await cubit.close();
+      },
+    );
 
-    test('re-selecting a gap overwrites its previous choice without affecting other gaps', () async {
-      final cubit = buildCubit(blankGroupCount: 2);
+    test(
+      're-selecting a gap overwrites its previous choice without affecting other gaps',
+      () async {
+        final cubit = buildCubit(blankGroupCount: 2);
 
-      await cubit.selectOption(0, '1');
-      await cubit.selectOption(1, '2');
-      await cubit.selectOption(0, '0');
+        await cubit.selectOption(0, '1');
+        await cubit.selectOption(1, '2');
+        await cubit.selectOption(0, '0');
 
-      expect(capturedPayloads().last, '0,2');
-      await cubit.close();
-    });
+        expect(capturedPayloads().last, '0,2');
+        await cubit.close();
+      },
+    );
   });
 
-  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
-      'must still leave a submittable row)', () {
-    test('with no prior selection, writes an all-empty-gaps payload so skipping without answering still submits', () async {
-      final cubit = buildCubit(blankGroupCount: 1);
+  group(
+    'flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+    'must still leave a submittable row)',
+    () {
+      test(
+        'with no prior selection, writes an all-empty-gaps payload so skipping without answering still submits',
+        () async {
+          final cubit = buildCubit(blankGroupCount: 1);
 
-      await cubit.flushPendingEdit();
+          await cubit.flushPendingEdit();
 
-      verify(
-        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: ''),
-      ).called(1);
-      await cubit.close();
-    });
-  });
+          verify(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: 'attempt-1',
+              pinnedItemPublicId: 'item-1',
+              payload: '',
+            ),
+          ).called(1);
+          await cubit.close();
+        },
+      );
+    },
+  );
 }

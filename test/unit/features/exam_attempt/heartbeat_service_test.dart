@@ -9,7 +9,8 @@ import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 
 class _MockApiClient extends Mock implements ApiClient {}
 
-Response<void> _okResponse() => Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
+Response<void> _okResponse() =>
+    Response<void>(requestOptions: RequestOptions(path: '/x'), statusCode: 200);
 
 /// Mirrors `SyncEngineTest`'s fake-periodic-timer-factory convention —
 /// captures the callback so a test can drive it manually instead of
@@ -31,19 +32,27 @@ void main() {
 
   setUp(() {
     apiClient = _MockApiClient();
-    when(() => apiClient.sendHeartbeat(any())).thenAnswer((_) async => _okResponse());
+    when(
+      () => apiClient.sendHeartbeat(any()),
+    ).thenAnswer((_) async => _okResponse());
   });
 
-  test('start() pings immediately, synchronously scheduling the periodic timer at the configured interval', () async {
-    final factory = _CapturingPeriodicFactory();
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+  test(
+    'start() pings immediately, synchronously scheduling the periodic timer at the configured interval',
+    () async {
+      final factory = _CapturingPeriodicFactory();
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
 
-    service.start('attempt-1');
-    await Future<void>.delayed(Duration.zero);
+      service.start('attempt-1');
+      await Future<void>.delayed(Duration.zero);
 
-    verify(() => apiClient.sendHeartbeat('attempt-1')).called(1);
-    expect(factory.periods, [const Duration(seconds: 15)]);
-  });
+      verify(() => apiClient.sendHeartbeat('attempt-1')).called(1);
+      expect(factory.periods, [const Duration(seconds: 15)]);
+    },
+  );
 
   test('a custom interval is honored', () {
     final factory = _CapturingPeriodicFactory();
@@ -60,7 +69,10 @@ void main() {
 
   test('the periodic callback pings again on every fire', () async {
     final factory = _CapturingPeriodicFactory();
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+    final service = HeartbeatService(
+      apiClient: apiClient,
+      createPeriodicTimer: factory.call,
+    );
     service.start('attempt-1');
     await Future<void>.delayed(Duration.zero);
 
@@ -69,7 +81,9 @@ void main() {
     factory.callback!(Timer(Duration.zero, () {}));
     await Future<void>.delayed(Duration.zero);
 
-    verify(() => apiClient.sendHeartbeat('attempt-1')).called(3); // initial + 2 periodic fires
+    verify(
+      () => apiClient.sendHeartbeat('attempt-1'),
+    ).called(3); // initial + 2 periodic fires
   });
 
   test(
@@ -77,69 +91,110 @@ void main() {
     '(client-side-exam-timer Phase 4: must stay independent of TimerService/SyncEngine\'s task-scoped calls)',
     () async {
       final factory = _CapturingPeriodicFactory();
-      final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
 
       service.start('attempt-1');
       await Future<void>.delayed(Duration.zero);
-      service.start('attempt-1'); // e.g. every task transition calling this again
+      service.start(
+        'attempt-1',
+      ); // e.g. every task transition calling this again
       service.start('attempt-1');
       await Future<void>.delayed(Duration.zero);
 
-      expect(factory.periods, hasLength(1)); // only one periodic chain was ever created
-      verify(() => apiClient.sendHeartbeat('attempt-1')).called(1); // only the first immediate ping fired
+      expect(
+        factory.periods,
+        hasLength(1),
+      ); // only one periodic chain was ever created
+      verify(
+        () => apiClient.sendHeartbeat('attempt-1'),
+      ).called(1); // only the first immediate ping fired
     },
   );
 
-  test('calling start() for a DIFFERENT attempt supersedes the prior chain', () async {
-    final factory = _CapturingPeriodicFactory();
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+  test(
+    'calling start() for a DIFFERENT attempt supersedes the prior chain',
+    () async {
+      final factory = _CapturingPeriodicFactory();
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
 
-    service.start('attempt-1');
-    await Future<void>.delayed(Duration.zero);
-    service.start('attempt-2');
-    await Future<void>.delayed(Duration.zero);
+      service.start('attempt-1');
+      await Future<void>.delayed(Duration.zero);
+      service.start('attempt-2');
+      await Future<void>.delayed(Duration.zero);
 
-    expect(factory.periods, hasLength(2));
-    verify(() => apiClient.sendHeartbeat('attempt-1')).called(1);
-    verify(() => apiClient.sendHeartbeat('attempt-2')).called(1);
-  });
+      expect(factory.periods, hasLength(2));
+      verify(() => apiClient.sendHeartbeat('attempt-1')).called(1);
+      verify(() => apiClient.sendHeartbeat('attempt-2')).called(1);
+    },
+  );
 
-  test('stop() clears the running-attempt guard, so a later start() for the same id works again (not stuck no-op)', () async {
-    final factory = _CapturingPeriodicFactory();
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+  test(
+    'stop() clears the running-attempt guard, so a later start() for the same id works again (not stuck no-op)',
+    () async {
+      final factory = _CapturingPeriodicFactory();
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
 
-    service.start('attempt-1');
-    await Future<void>.delayed(Duration.zero);
-    service.stop();
-    service.start('attempt-1');
-    await Future<void>.delayed(Duration.zero);
+      service.start('attempt-1');
+      await Future<void>.delayed(Duration.zero);
+      service.stop();
+      service.start('attempt-1');
+      await Future<void>.delayed(Duration.zero);
 
-    expect(factory.periods, hasLength(2)); // a genuinely new chain, not suppressed by the old guard
-    verify(() => apiClient.sendHeartbeat('attempt-1')).called(2);
-  });
+      expect(
+        factory.periods,
+        hasLength(2),
+      ); // a genuinely new chain, not suppressed by the old guard
+      verify(() => apiClient.sendHeartbeat('attempt-1')).called(2);
+    },
+  );
 
-  test('a failed heartbeat is swallowed — never thrown, never surfaced, and the chain keeps running', () async {
-    final factory = _CapturingPeriodicFactory();
-    when(() => apiClient.sendHeartbeat(any())).thenThrow(Exception('network blip'));
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+  test(
+    'a failed heartbeat is swallowed — never thrown, never surfaced, and the chain keeps running',
+    () async {
+      final factory = _CapturingPeriodicFactory();
+      when(
+        () => apiClient.sendHeartbeat(any()),
+      ).thenThrow(Exception('network blip'));
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
 
-    expect(() => service.start('attempt-1'), returnsNormally);
-    await Future<void>.delayed(Duration.zero);
+      expect(() => service.start('attempt-1'), returnsNormally);
+      await Future<void>.delayed(Duration.zero);
 
-    expect(() => factory.callback!(Timer(Duration.zero, () {})), returnsNormally);
-    await Future<void>.delayed(Duration.zero);
+      expect(
+        () => factory.callback!(Timer(Duration.zero, () {})),
+        returnsNormally,
+      );
+      await Future<void>.delayed(Duration.zero);
 
-    verify(() => apiClient.sendHeartbeat('attempt-1')).called(2);
-  });
+      verify(() => apiClient.sendHeartbeat('attempt-1')).called(2);
+    },
+  );
 
   test('dispose() stops the chain', () async {
     final factory = _CapturingPeriodicFactory();
-    final service = HeartbeatService(apiClient: apiClient, createPeriodicTimer: factory.call);
+    final service = HeartbeatService(
+      apiClient: apiClient,
+      createPeriodicTimer: factory.call,
+    );
     service.start('attempt-1');
     await Future<void>.delayed(Duration.zero);
 
     expect(() => service.dispose(), returnsNormally);
-    service.start('attempt-1'); // must work again after dispose, same as after stop()
+    service.start(
+      'attempt-1',
+    ); // must work again after dispose, same as after stop()
 
     expect(factory.periods, hasLength(2));
   });

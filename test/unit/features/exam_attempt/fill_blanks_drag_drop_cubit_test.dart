@@ -54,27 +54,33 @@ void main() {
       await cubit.close();
     });
 
-    test('multi-gap task writes one entry per gap in gap-index order', () async {
-      final cubit = buildCubit(gapCount: 3);
+    test(
+      'multi-gap task writes one entry per gap in gap-index order',
+      () async {
+        final cubit = buildCubit(gapCount: 3);
 
-      await cubit.assignToGap(0, _wordC);
-      await cubit.assignToGap(1, _wordA);
-      await cubit.assignToGap(2, _wordB);
+        await cubit.assignToGap(0, _wordC);
+        await cubit.assignToGap(1, _wordA);
+        await cubit.assignToGap(2, _wordB);
 
-      expect(capturedPayloads().last, '2,0,1');
-      await cubit.close();
-    });
+        expect(capturedPayloads().last, '2,0,1');
+        await cubit.close();
+      },
+    );
 
-    test('reassigning an already-placed option to a different gap clears its old gap first', () async {
-      final cubit = buildCubit(gapCount: 3);
+    test(
+      'reassigning an already-placed option to a different gap clears its old gap first',
+      () async {
+        final cubit = buildCubit(gapCount: 3);
 
-      await cubit.assignToGap(0, _wordA);
-      await cubit.assignToGap(2, _wordA); // same option, new gap
+        await cubit.assignToGap(0, _wordA);
+        await cubit.assignToGap(2, _wordA); // same option, new gap
 
-      expect(cubit.state.gapAssignments, {2: _wordA});
-      expect(capturedPayloads().last, ',,0');
-      await cubit.close();
-    });
+        expect(cubit.state.gapAssignments, {2: _wordA});
+        expect(capturedPayloads().last, ',,0');
+        await cubit.close();
+      },
+    );
   });
 
   group('clearGap', () {
@@ -89,56 +95,78 @@ void main() {
       await cubit.close();
     });
 
-    test('clearing an already-empty gap is a no-op (no extra outbox write)', () async {
-      final cubit = buildCubit(gapCount: 2);
+    test(
+      'clearing an already-empty gap is a no-op (no extra outbox write)',
+      () async {
+        final cubit = buildCubit(gapCount: 2);
 
-      await cubit.clearGap(0);
+        await cubit.clearGap(0);
 
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
+        verifyNever(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        );
+        await cubit.close();
+      },
+    );
+  });
+
+  group(
+    'unanswered-trailing-gap empty-entry requirement (HIGH risk regression, Step 7)',
+    () {
+      test(
+        'a 3-gap task with only gap 0 and 1 filled writes "x,y," — trailing comma preserved, not "x,y"',
+        () async {
+          final cubit = buildCubit(gapCount: 3);
+
+          await cubit.assignToGap(0, _wordC);
+          await cubit.assignToGap(1, _wordA);
+
+          final payload = capturedPayloads().last;
+          expect(payload, '2,0,');
+          expect(payload.split(','), hasLength(3));
+          await cubit.close();
+        },
       );
-      await cubit.close();
-    });
-  });
 
-  group('unanswered-trailing-gap empty-entry requirement (HIGH risk regression, Step 7)', () {
-    test('a 3-gap task with only gap 0 and 1 filled writes "x,y," — trailing comma preserved, not "x,y"', () async {
-      final cubit = buildCubit(gapCount: 3);
+      test(
+        'only the middle gap filled writes a leading and trailing empty entry: ",0,"',
+        () async {
+          final cubit = buildCubit(gapCount: 3);
 
-      await cubit.assignToGap(0, _wordC);
-      await cubit.assignToGap(1, _wordA);
+          await cubit.assignToGap(1, _wordA);
 
-      final payload = capturedPayloads().last;
-      expect(payload, '2,0,');
-      expect(payload.split(',', ), hasLength(3));
-      await cubit.close();
-    });
+          expect(capturedPayloads().last, ',0,');
+          await cubit.close();
+        },
+      );
+    },
+  );
 
-    test('only the middle gap filled writes a leading and trailing empty entry: ",0,"', () async {
-      final cubit = buildCubit(gapCount: 3);
+  group(
+    'flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+    'must still leave a submittable row)',
+    () {
+      test(
+        'with no prior drop, writes an all-empty-gaps payload so skipping without answering still submits',
+        () async {
+          final cubit = buildCubit(gapCount: 1);
 
-      await cubit.assignToGap(1, _wordA);
+          await cubit.flushPendingEdit();
 
-      expect(capturedPayloads().last, ',0,');
-      await cubit.close();
-    });
-  });
-
-  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
-      'must still leave a submittable row)', () {
-    test('with no prior drop, writes an all-empty-gaps payload so skipping without answering still submits', () async {
-      final cubit = buildCubit(gapCount: 1);
-
-      await cubit.flushPendingEdit();
-
-      verify(
-        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: ''),
-      ).called(1);
-      await cubit.close();
-    });
-  });
+          verify(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: 'attempt-1',
+              pinnedItemPublicId: 'item-1',
+              payload: '',
+            ),
+          ).called(1);
+          await cubit.close();
+        },
+      );
+    },
+  );
 }
