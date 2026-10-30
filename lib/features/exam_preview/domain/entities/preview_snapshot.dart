@@ -40,6 +40,7 @@ class PreviewItem {
     required this.audioDurationSeconds,
     required this.audioUrlExpiresAt,
     required this.imageUrlExpiresAt,
+    this.taskTypeInstruction,
   });
 
   final int orderIndex;
@@ -66,6 +67,9 @@ class PreviewItem {
   final int? audioDurationSeconds;
   final DateTime? audioUrlExpiresAt;
   final DateTime? imageUrlExpiresAt;
+
+  /// Admin-editable instruction; null on older snapshots, where the UI falls back to [TaskTypeMeta.instruction].
+  final String? taskTypeInstruction;
 }
 
 class PreviewOption {

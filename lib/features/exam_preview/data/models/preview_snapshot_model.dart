@@ -57,6 +57,7 @@ class PreviewItemModel extends PreviewItem {
     required super.audioDurationSeconds,
     required super.audioUrlExpiresAt,
     required super.imageUrlExpiresAt,
+    super.taskTypeInstruction,
   });
 
   factory PreviewItemModel.fromJson(Map<String, dynamic> json) {
@@ -100,6 +101,7 @@ class PreviewItemModel extends PreviewItem {
       audioDurationSeconds: _int(json['audioDurationSeconds']),
       audioUrlExpiresAt: _date(json['audioUrlExpiresAt']),
       imageUrlExpiresAt: _date(json['imageUrlExpiresAt']),
+      taskTypeInstruction: _string(json['taskTypeInstruction']),
     );
   }
 }
