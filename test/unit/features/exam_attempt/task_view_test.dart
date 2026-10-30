@@ -120,7 +120,10 @@ void main() {
 
     test('overrides only the specified fields', () {
       final original = _taskFrom({'responseSeconds': 60});
-      final patched = original.copyWith(responseSeconds: 120, canNavigateNext: true);
+      final patched = original.copyWith(
+        responseSeconds: 120,
+        canNavigateNext: true,
+      );
 
       expect(patched.responseSeconds, 120);
       expect(patched.canNavigateNext, isTrue);
