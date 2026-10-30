@@ -28,9 +28,15 @@ void main() {
     player = _MockAudioPlayerService();
     finishedController = StreamController<bool>.broadcast();
     when(() => player.play(any())).thenAnswer((_) async {});
-    when(() => player.hasFinishedPlaying).thenAnswer((_) => finishedController.stream);
-    when(() => player.position).thenAnswer((_) => const Stream<Duration>.empty());
-    when(() => player.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => player.hasFinishedPlaying,
+    ).thenAnswer((_) => finishedController.stream);
+    when(
+      () => player.position,
+    ).thenAnswer((_) => const Stream<Duration>.empty());
+    when(
+      () => player.duration,
+    ).thenAnswer((_) => const Stream<Duration?>.empty());
     when(() => player.close()).thenAnswer((_) async {});
   });
 
@@ -99,13 +105,16 @@ void main() {
   };
 
   builders.forEach((name, build) {
-    test('$name: plays the audio source exactly once on construction', () async {
-      final cubit = build() as dynamic;
+    test(
+      '$name: plays the audio source exactly once on construction',
+      () async {
+        final cubit = build() as dynamic;
 
-      verify(() => player.play(source)).called(1);
-      verifyNever(() => player.playUrl(any()));
+        verify(() => player.play(source)).called(1);
+        verifyNever(() => player.playUrl(any()));
 
-      await cubit.close();
-    });
+        await cubit.close();
+      },
+    );
   });
 }

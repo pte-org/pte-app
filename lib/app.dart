@@ -12,6 +12,7 @@ import 'core/constants/app_dimensions.dart';
 import 'core/constants/app_theme.dart';
 import 'core/constants/app_typography.dart';
 import 'core/security/lockdown_service.dart';
+import 'core/security/violation_retry_coordinator.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
 import 'core/sync/media_upload_coordinator.dart';
@@ -43,6 +44,9 @@ import 'features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'features/exam_attempt/presentation/widgets/lockdown_activation_failure_dialog.dart';
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'features/exam_preview/domain/repositories/host_exam_preview_repository.dart';
+import 'features/exam_preview/presentation/pages/host_exam_preview_screen.dart';
+import 'features/exam_preview/data/preview_audio_session.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -178,22 +182,22 @@ class _AppAuthGateState extends State<AppAuthGate> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (_, state) =>
-          state is AuthIdle ||
-          state is AuthUnauthenticated ||
-          state is AuthError,
+      listenWhen: (_, state) => true,
       listener: (context, state) {
+        _syncSecuritySession(state);
         if (state is AuthUnauthenticated) {
           _sessionIdForStudent = null;
         }
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (state is AuthIdle ||
+            state is AuthUnauthenticated ||
+            state is AuthError) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           return switch (state) {
-            AuthIdle() ||
-            AuthUnauthenticated() ||
-            AuthError() => LoginPage(
+            AuthIdle() || AuthUnauthenticated() || AuthError() => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
@@ -204,12 +208,22 @@ class _AppAuthGateState extends State<AppAuthGate> {
               onSessionIdProvided: _rememberSessionId,
             ),
             AuthAuthenticated(:final claims)
-                when !ExamAccessPolicy.canTakeExam(claims) =>
+                when !ExamAccessPolicy.canTakeExam(claims) &&
+                    !ExamAccessPolicy.canPreviewExam(claims) =>
               const ExamAccessDeniedPage(),
             AuthAuthenticated() when _sessionIdForStudent == null => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
+            AuthAuthenticated(:final claims)
+                when ExamAccessPolicy.canPreviewExam(claims) =>
+              HostExamPreviewScreen(
+                sessionInput: _sessionIdForStudent!,
+                repository: GetIt.instance<HostExamPreviewRepository>(),
+                mediaSession: GetIt.instance<PreviewAudioSession>(),
+                onExit: () =>
+                    context.read<AuthBloc>().add(const LogoutRequested()),
+              ),
             AuthAuthenticated() => StudentExamGate(
               initialSessionId: _sessionIdForStudent!,
             ),
@@ -218,16 +232,28 @@ class _AppAuthGateState extends State<AppAuthGate> {
       ),
     );
   }
+
+  void _syncSecuritySession(AuthState state) {
+    final getIt = GetIt.instance;
+    if (!getIt.isRegistered<ViolationRetryCoordinator>()) return;
+    final coordinator = getIt<ViolationRetryCoordinator>();
+    if (state is AuthAuthenticated &&
+        ExamAccessPolicy.canTakeExam(state.claims) &&
+        !ExamAccessPolicy.canPreviewExam(state.claims)) {
+      coordinator.start();
+    } else {
+      unawaited(coordinator.dispose());
+    }
+  }
 }
 
 /// The student exam flow starts the exam code (or pasted session UUID)
 /// captured from login.
 /// [AttemptInProgress] shows the live task via
 /// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
-/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
-/// then hands off to [ReportScreen], with a back button (wired through
-/// `ReportScreen.onBack`, not a floating overlay — see that class's own
-/// doc) to reset [ExamAttemptBloc] and return to login for another session.
+/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen], whose
+/// continue action resets [ExamAttemptBloc] and returns to login. The app
+/// never shows a score: students receive results by email once published.
 class StudentExamGate extends StatefulWidget {
   const StudentExamGate({super.key, required this.initialSessionId});
 

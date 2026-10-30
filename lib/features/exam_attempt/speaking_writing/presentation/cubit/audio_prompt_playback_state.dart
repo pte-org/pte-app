@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 /// reason: none of this task's playback mechanics differ across the 5
 /// audio-prompt Speaking screens that share [AudioPromptCubit]
 /// (plans/phat-speaking-audio-prompt-e2e).
-enum AudioPromptPlaybackPhase { idle, loading, playing, error }
+enum AudioPromptPlaybackPhase { idle, loading, playing, completed, error }
 
 class AudioPromptPlaybackState extends Equatable {
   const AudioPromptPlaybackState({

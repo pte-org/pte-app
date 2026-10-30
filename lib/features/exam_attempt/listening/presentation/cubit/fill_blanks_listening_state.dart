@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
 
 class FillBlanksListeningState extends Equatable {
-  const FillBlanksListeningState({required this.answers, this.hasFinishedPlaying = false, this.progress = 0.0});
+  const FillBlanksListeningState({
+    required this.answers,
+    this.hasFinishedPlaying = false,
+    this.progress = 0.0,
+  });
 
   /// Fixed-length list (length = number of `{{n}}` markers), index-aligned
   /// to gap index — free-typed text per gap, `''` for unanswered.
@@ -10,7 +14,11 @@ class FillBlanksListeningState extends Equatable {
   final bool hasFinishedPlaying;
   final double progress;
 
-  FillBlanksListeningState copyWith({List<String>? answers, bool? hasFinishedPlaying, double? progress}) {
+  FillBlanksListeningState copyWith({
+    List<String>? answers,
+    bool? hasFinishedPlaying,
+    double? progress,
+  }) {
     return FillBlanksListeningState(
       answers: answers ?? this.answers,
       hasFinishedPlaying: hasFinishedPlaying ?? this.hasFinishedPlaying,

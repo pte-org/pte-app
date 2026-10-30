@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:pte_app/core/constants/app_colors.dart';
-import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/core/constants/app_typography.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/widgets/components/pte_audio_panel.dart';
 
 class AudioStimulusPlayer extends StatelessWidget {
   const AudioStimulusPlayer({
@@ -20,42 +20,18 @@ class AudioStimulusPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 420,
-      padding: const EdgeInsets.all(AppDimensions.spacingMd),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
-        borderRadius: BorderRadius.all(Radius.circular(3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: onPressed,
-                icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                color: AppColors.brandPrimary,
-              ),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.bodyBold.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.spacingSm),
-          LinearProgressIndicator(
-            value: progress.clamp(0, 1),
-            minHeight: 6,
-            backgroundColor: AppColors.divider,
-            color: AppColors.brandPrimary,
-          ),
-        ],
+    return PteAudioPanel(
+      variant: PteAudioPanelVariant.player,
+      statusLabel: label,
+      progress: progress,
+      onPrimaryAction: onPressed,
+      playing: playing,
+      showActivityMeter: true,
+      activityMeterActive: playing,
+      trailingControl: Semantics(
+        label: AppStrings.audioVolumeTooltip,
+        button: true,
+        child: Icon(Icons.volume_up, color: AppColors.audioPanelControl),
       ),
     );
   }

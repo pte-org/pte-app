@@ -35,27 +35,18 @@ void main() {
       },
     );
 
-    test(
-      'throws on malformed Base64 string',
-      () async {
-        // Act & Assert
-        expect(
-          () => encryptionHelper.parsePublicKey('not-valid-base64!!!!'),
-          throwsA(isA<FormatException>()),
-        );
-      },
-    );
+    test('throws on malformed Base64 string', () async {
+      // Act & Assert
+      expect(
+        () => encryptionHelper.parsePublicKey('not-valid-base64!!!!'),
+        throwsA(isA<FormatException>()),
+      );
+    });
 
-    test(
-      'throws on empty Base64 string',
-      () async {
-        // Act & Assert
-        expect(
-          () => encryptionHelper.parsePublicKey(''),
-          throwsA(anything),
-        );
-      },
-    );
+    test('throws on empty Base64 string', () async {
+      // Act & Assert
+      expect(() => encryptionHelper.parsePublicKey(''), throwsA(anything));
+    });
   });
 
   group('EncryptionHelper.encrypt', () {
@@ -96,8 +87,11 @@ void main() {
         final decodedIv = base64Decode(payload.iv);
 
         // Assert
-        expect(decodedIv.length, equals(12),
-            reason: 'IV must be exactly 12 bytes (96 bits) for AES-GCM');
+        expect(
+          decodedIv.length,
+          equals(12),
+          reason: 'IV must be exactly 12 bytes (96 bits) for AES-GCM',
+        );
       },
     );
 
@@ -113,9 +107,12 @@ void main() {
 
         // Assert
         // RSA-2048 wraps a 32-byte AES key → wrapped result is 256 bytes (RSA key size)
-        expect(decodedWrappedKey.length, equals(256),
-            reason:
-                'Wrapped 32-byte AES key via RSA-2048 must be 256 bytes (2048 bits)');
+        expect(
+          decodedWrappedKey.length,
+          equals(256),
+          reason:
+              'Wrapped 32-byte AES key via RSA-2048 must be 256 bytes (2048 bits)',
+        );
       },
     );
 
@@ -131,17 +128,27 @@ void main() {
 
         // Assert
         // IV must always be different (fresh random per call)
-        expect(payload1.iv, isNot(equals(payload2.iv)),
-            reason: 'Each encryption must generate a fresh IV');
+        expect(
+          payload1.iv,
+          isNot(equals(payload2.iv)),
+          reason: 'Each encryption must generate a fresh IV',
+        );
 
         // Wrapped key must be different (since IV changed, the encryption changed)
-        expect(payload1.wrappedKey, isNot(equals(payload2.wrappedKey)),
-            reason:
-                'Each encryption must generate a fresh wrapped key (due to fresh IV)');
+        expect(
+          payload1.wrappedKey,
+          isNot(equals(payload2.wrappedKey)),
+          reason:
+              'Each encryption must generate a fresh wrapped key (due to fresh IV)',
+        );
 
         // Ciphertext must be different (fresh IV means different GCM output)
-        expect(payload1.ciphertext, isNot(equals(payload2.ciphertext)),
-            reason: 'Each encryption must produce different ciphertext (due to fresh IV)');
+        expect(
+          payload1.ciphertext,
+          isNot(equals(payload2.ciphertext)),
+          reason:
+              'Each encryption must produce different ciphertext (due to fresh IV)',
+        );
       },
     );
 
@@ -157,9 +164,12 @@ void main() {
 
         // Assert
         // AES-GCM appends a 16-byte (128-bit) authentication tag
-        expect(decodedCiphertext.length, equals(plaintext.length + 16),
-            reason:
-                'Ciphertext (with GCM tag) must be plaintext length + 16 bytes');
+        expect(
+          decodedCiphertext.length,
+          equals(plaintext.length + 16),
+          reason:
+              'Ciphertext (with GCM tag) must be plaintext length + 16 bytes',
+        );
       },
     );
 
@@ -179,38 +189,32 @@ void main() {
       },
     );
 
-    test(
-      'handles empty plaintext correctly',
-      () async {
-        // Arrange
-        const plaintext = '';
+    test('handles empty plaintext correctly', () async {
+      // Arrange
+      const plaintext = '';
 
-        // Act
-        final payload = encryptionHelper.encrypt(plaintext, publicKey);
+      // Act
+      final payload = encryptionHelper.encrypt(plaintext, publicKey);
 
-        // Assert
-        expect(payload, isNotNull);
-        final decodedCiphertext = base64Decode(payload.ciphertext);
-        // Empty plaintext + 16-byte GCM tag = 16 bytes ciphertext
-        expect(decodedCiphertext.length, equals(16));
-      },
-    );
+      // Assert
+      expect(payload, isNotNull);
+      final decodedCiphertext = base64Decode(payload.ciphertext);
+      // Empty plaintext + 16-byte GCM tag = 16 bytes ciphertext
+      expect(decodedCiphertext.length, equals(16));
+    });
 
-    test(
-      'handles long plaintext correctly',
-      () async {
-        // Arrange
-        final plaintext = 'x' * 10000;
+    test('handles long plaintext correctly', () async {
+      // Arrange
+      final plaintext = 'x' * 10000;
 
-        // Act
-        final payload = encryptionHelper.encrypt(plaintext, publicKey);
+      // Act
+      final payload = encryptionHelper.encrypt(plaintext, publicKey);
 
-        // Assert
-        expect(payload, isNotNull);
-        final decodedCiphertext = base64Decode(payload.ciphertext);
-        expect(decodedCiphertext.length, equals(plaintext.length + 16));
-      },
-    );
+      // Assert
+      expect(payload, isNotNull);
+      final decodedCiphertext = base64Decode(payload.ciphertext);
+      expect(decodedCiphertext.length, equals(plaintext.length + 16));
+    });
   });
 
   group('EncryptedPayload', () {

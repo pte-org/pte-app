@@ -20,6 +20,7 @@ class ExamUiPreviewStimulus extends StatefulWidget {
     this.onAudioPressed,
     this.audioPlaying = false,
     this.audioProgress = 0,
+    this.imageOnly,
   });
 
   final ExamTaskUiModel model;
@@ -27,6 +28,7 @@ class ExamUiPreviewStimulus extends StatefulWidget {
   final VoidCallback? onAudioPressed;
   final bool audioPlaying;
   final double audioProgress;
+  final bool? imageOnly;
 
   @override
   State<ExamUiPreviewStimulus> createState() => _ExamUiPreviewStimulusState();
@@ -49,6 +51,10 @@ class _ExamUiPreviewStimulusState extends State<ExamUiPreviewStimulus> {
     final model = widget.model;
     final parts = <Widget>[];
     for (final part in model.stimulus.parts) {
+      if (widget.imageOnly != null &&
+          (part.kind == StimulusPartKind.image) != widget.imageOnly) {
+        continue;
+      }
       parts.add(switch (part.kind) {
         StimulusPartKind.audio => AudioStimulusPlayer(
           label: widget.audioLabel ?? 'Offline audio fixture',

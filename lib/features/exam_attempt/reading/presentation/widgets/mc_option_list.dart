@@ -25,6 +25,7 @@ class McOptionList extends StatelessWidget {
             if (options[index].orderIndex == state.selectedOrderIndex) index,
         };
         return ChoiceList(
+          plain: true,
           labels: [for (final option in options) option.text],
           selectedIndices: selectedIndices,
           mode: ChoiceSelectionMode.single,

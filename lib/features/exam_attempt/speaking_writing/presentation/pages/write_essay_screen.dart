@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/widgets/templates/free_text_template.dart';
+import 'package:pte_app/core/widgets/components/exam_textarea.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/text_editor_toolbar.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -47,7 +50,8 @@ class _WriteEssayScreenState extends State<WriteEssayScreen> {
       attemptPublicId: widget.attemptPublicId,
       pinnedItemPublicId: widget.task.pinnedItemPublicId,
     );
-    _controller = TextEditingController()..addListener(() => _cubit.draftChanged(_controller.text));
+    _controller = TextEditingController()
+      ..addListener(() => _cubit.draftChanged(_controller.text));
   }
 
   @override
@@ -63,21 +67,21 @@ class _WriteEssayScreenState extends State<WriteEssayScreen> {
       value: _cubit,
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
-        body: Padding(
-          padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-          child: Column(
+        body: FreeTextTemplate(
+          title: AppStrings.writeEssayV2Title,
+          instruction: AppStrings.writeEssayV2Instruction,
+          stimulus: Text(widget.task.promptText ?? ''),
+          response: Column(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: const InputDecoration(labelText: SpeakingWritingStrings.writeEssayTextFieldLabel),
-                ),
+              WordCountLabel(
+                minWordCount: widget.task.minWordCount,
+                maxWordCount: widget.task.maxWordCount,
               ),
-              const SizedBox(height: AppDimensions.spacingMedium),
-              WordCountLabel(minWordCount: widget.task.minWordCount, maxWordCount: widget.task.maxWordCount),
+              TextEditorToolbar(controller: _controller),
+              ExamTextarea(
+                controller: _controller,
+                labelText: SpeakingWritingStrings.writeEssayTextFieldLabel,
+              ),
             ],
           ),
         ),

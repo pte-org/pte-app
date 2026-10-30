@@ -16,18 +16,24 @@ import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
 /// GetIt registration for auth + the shared networking primitives every
 /// later feature module depends on (`ApiClient`, `TokenStore`). Real-module
 /// counterpart to Phase 0's `_example_module.dart` template.
-Dio _newGatewayDio() => Dio(BaseOptions(
-      baseUrl: AppConfig.gatewayBaseUrl,
-      connectTimeout: AppConfig.connectTimeout,
-      receiveTimeout: AppConfig.receiveTimeout,
-      sendTimeout: AppConfig.sendTimeout,
-    ));
+Dio _newGatewayDio() => Dio(
+  BaseOptions(
+    baseUrl: AppConfig.gatewayBaseUrl,
+    connectTimeout: AppConfig.connectTimeout,
+    receiveTimeout: AppConfig.receiveTimeout,
+    sendTimeout: AppConfig.sendTimeout,
+  ),
+);
 
 void setupAuthModule() {
   final getIt = GetIt.instance;
 
-  getIt.registerLazySingleton<FlutterSecureStorage>(() => const FlutterSecureStorage());
-  getIt.registerLazySingleton<TokenStore>(() => TokenStore(secureStorage: getIt()));
+  getIt.registerLazySingleton<FlutterSecureStorage>(
+    () => const FlutterSecureStorage(),
+  );
+  getIt.registerLazySingleton<TokenStore>(
+    () => TokenStore(secureStorage: getIt()),
+  );
 
   // refreshDio: no interceptors, so the refresh call and its retry can
   // never recurse into TokenRefreshInterceptor.

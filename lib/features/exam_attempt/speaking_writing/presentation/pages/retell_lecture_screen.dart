@@ -23,8 +23,8 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
-/// same fully-automatic advance, same [AudioPromptRecordBody]-shared 2-card
-/// layout) — only the sub-stage constants and instruction text differ.
+/// same fully-automatic advance, same [AudioPromptRecordBody]-shared single
+/// panel layout) — only the sub-stage constants and instruction text differ.
 class RetellLectureScreen extends StatefulWidget {
   const RetellLectureScreen({
     super.key,
@@ -102,7 +102,8 @@ class _RetellLectureScreenState extends State<RetellLectureScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _RetellLectureBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,
@@ -127,7 +128,10 @@ class _RetellLectureBody extends StatelessWidget {
       task: task,
       preListenSeconds: task.preListenSeconds!,
       preRecordSeconds: task.preRecordSeconds!,
-      instructionText: _instructionText(task.preRecordSeconds!, task.responseSeconds),
+      instructionText: _instructionText(
+        task.preRecordSeconds!,
+        task.responseSeconds,
+      ),
     );
   }
 

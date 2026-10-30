@@ -13,12 +13,14 @@ class ChoiceRow extends StatelessWidget {
     required this.selected,
     required this.mode,
     required this.onTap,
+    this.plain = false,
   });
 
   final String label;
   final bool selected;
   final ChoiceSelectionMode mode;
   final VoidCallback? onTap;
+  final bool plain;
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +31,21 @@ class ChoiceRow extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.interactiveSelected : AppColors.surface,
-            border: Border.all(
-              color: selected ? AppColors.brandPrimary : AppColors.border,
-            ),
-            borderRadius: const BorderRadius.all(Radius.circular(3)),
+          padding: EdgeInsets.symmetric(
+            horizontal: plain ? 4 : 18,
+            vertical: plain ? 8 : 14,
           ),
+          decoration: plain
+              ? null
+              : BoxDecoration(
+                  color: selected
+                      ? AppColors.interactiveSelected
+                      : AppColors.surface,
+                  border: Border.all(
+                    color: selected ? AppColors.brandPrimary : AppColors.border,
+                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(3)),
+                ),
           child: Row(
             children: [
               Icon(
@@ -54,7 +63,7 @@ class ChoiceRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: AppTypography.bodyRegular.copyWith(
+                  style: AppTypography.examAnswer.copyWith(
                     color: AppColors.textPrimary,
                   ),
                 ),

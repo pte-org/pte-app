@@ -17,11 +17,7 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 
 /// Feature-bound adapter from [ExamAttemptState] to the pure design header.
 class ExamAppBar extends StatelessWidget {
-  const ExamAppBar({
-    super.key,
-    required this.totalTasks,
-    this.outboxDao,
-  });
+  const ExamAppBar({super.key, required this.totalTasks, this.outboxDao});
 
   final int totalTasks;
   final AnswerOutboxDao? outboxDao;
@@ -68,12 +64,13 @@ class ExamAppBar extends StatelessWidget {
         state.submissionStatus == AttemptSubmissionStatus.submitting) {
       return;
     }
-    final answeredTasks = await (outboxDao?.countAnsweredByAttempt(
-          state.attemptPublicId,
-        ) ??
-        Future<int>.value(0));
+    final answeredTasks =
+        await (outboxDao?.countAnsweredByAttempt(state.attemptPublicId) ??
+            Future<int>.value(0));
     if (!context.mounted) return;
-    final total = state.task.totalTasks > 0 ? state.task.totalTasks : totalTasks;
+    final total = state.task.totalTasks > 0
+        ? state.task.totalTasks
+        : totalTasks;
     final unanswered = total - answeredTasks;
     final unansweredTasks = unanswered < 0 ? 0 : unanswered;
     final confirmed = await showConfirmDialog(
@@ -102,8 +99,11 @@ class _ExamGlobalTimerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<ExamAttemptBloc, ExamAttemptState,
-        _ExamGlobalTimerSelection?>(
+    return BlocSelector<
+      ExamAttemptBloc,
+      ExamAttemptState,
+      _ExamGlobalTimerSelection?
+    >(
       selector: (state) {
         if (state is! AttemptInProgress) return null;
         return _ExamGlobalTimerSelection(
@@ -111,9 +111,8 @@ class _ExamGlobalTimerLabel extends StatelessWidget {
           fallbackRemaining: state.timerSnapshot.remaining,
         );
       },
-      builder: (context, selection) => _ExamGlobalTimerText(
-        selection: selection,
-      ),
+      builder: (context, selection) =>
+          _ExamGlobalTimerText(selection: selection),
     );
   }
 }
@@ -189,9 +188,7 @@ class _ExamGlobalTimerTextState extends State<_ExamGlobalTimerText> {
     return Text(
       ExamChromeConfig.formatDuration(_remaining),
       key: const ValueKey('examAppBarCountdown'),
-      style: AppTypography.timerTabular.copyWith(
-        color: AppColors.textPrimary,
-      ),
+      style: AppTypography.timerTabular.copyWith(color: AppColors.textPrimary),
     );
   }
 }

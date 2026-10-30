@@ -25,7 +25,10 @@ class TokenRefreshInterceptor extends Interceptor {
     unawaited(_handleError(err, handler));
   }
 
-  Future<void> _handleError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> _handleError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     if (err.response?.statusCode != 401) {
       handler.next(err);
       return;
@@ -42,7 +45,10 @@ class TokenRefreshInterceptor extends Interceptor {
     }
   }
 
-  Future<Response<dynamic>> _retryWithToken(RequestOptions options, String accessToken) {
+  Future<Response<dynamic>> _retryWithToken(
+    RequestOptions options,
+    String accessToken,
+  ) {
     final retryOptions = options.copyWith(
       headers: {...options.headers, 'Authorization': 'Bearer $accessToken'},
     );

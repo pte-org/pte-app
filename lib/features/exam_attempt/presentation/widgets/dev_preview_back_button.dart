@@ -17,7 +17,9 @@ class DevPreviewBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + AppDimensions.devPreviewBackButtonOffset,
+      top:
+          MediaQuery.of(context).padding.top +
+          AppDimensions.devPreviewBackButtonOffset,
       left: AppDimensions.devPreviewBackButtonOffset,
       child: FloatingActionButton.small(
         heroTag: 'dev-preview-back',

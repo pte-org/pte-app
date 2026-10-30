@@ -101,7 +101,9 @@ class ExamHeaderBar extends StatelessWidget {
       label: compact ? const SizedBox.shrink() : Text(finishLabel),
       style: TextButton.styleFrom(
         minimumSize: const Size(0, AppDimensions.buttonHeight),
-        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingSm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.spacingSm,
+        ),
         foregroundColor: AppColors.primary,
         disabledForegroundColor: AppColors.textMuted,
         textStyle: AppTypography.bodyBold,

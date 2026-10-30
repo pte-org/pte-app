@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/choice_list.dart';
@@ -62,12 +63,16 @@ class HighlightCorrectSummaryScreen extends StatelessWidget {
                         index,
                   };
                   return SingleSelectTemplate(
-                    title: task.title,
+                    title:
+                        TaskTypeMeta.forTaskType(task.taskType)?.title ??
+                        task.title,
                     subtitle: task.section,
                     instruction:
                         'Select the summary that best represents the recording.',
                     stimulus: AudioListeningStatusCard(
-                      statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
                       progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(

@@ -90,7 +90,8 @@ class _PersonalIntroductionScreenState extends State<PersonalIntroductionScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _PersonalIntroductionBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,

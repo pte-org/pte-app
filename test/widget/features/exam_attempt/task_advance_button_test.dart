@@ -138,19 +138,20 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('Previous requests the previous task', (tester) async {
+    testWidgets('student does not show Previous even when backend allows it', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildSubject());
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Previous'));
-      await tester.pump();
+      expect(find.widgetWithText(OutlinedButton, 'Previous'), findsNothing);
 
-      verify(
+      verifyNever(
         () => bloc.add(
           const NavigateTaskRequested(
             fromPinnedItemPublicId: 'item-1',
             direction: TaskNavigationDirection.previous,
           ),
         ),
-      ).called(1);
+      );
     });
 
     testWidgets('navigation loading ends after the next task is received', (
@@ -336,14 +337,13 @@ void main() {
       expect(next.onPressed, isNull);
     });
 
-    testWidgets('Previous stays disabled', (tester) async {
+    testWidgets('Previous is hidden for forward-only student tasks', (
+      tester,
+    ) async {
       listeningTask();
       await tester.pumpWidget(buildSubject(forwardOnlyNext: true));
 
-      final previous = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Previous'),
-      );
-      expect(previous.onPressed, isNull);
+      expect(find.widgetWithText(OutlinedButton, 'Previous'), findsNothing);
     });
   });
 }

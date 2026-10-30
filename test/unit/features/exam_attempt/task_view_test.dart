@@ -120,7 +120,10 @@ void main() {
 
     test('overrides only the specified fields', () {
       final original = _taskFrom({'responseSeconds': 60});
-      final patched = original.copyWith(responseSeconds: 120, canNavigateNext: true);
+      final patched = original.copyWith(
+        responseSeconds: 120,
+        canNavigateNext: true,
+      );
 
       expect(patched.responseSeconds, 120);
       expect(patched.canNavigateNext, isTrue);
@@ -145,6 +148,21 @@ void main() {
 
       expect(task.canNavigatePrevious, isTrue);
       expect(task.canNavigateNext, isFalse);
+    });
+  });
+
+  group('TaskView.fromJson — taskTypeInstruction', () {
+    test('reads the server instruction and keeps it through copyWith', () {
+      final task = _taskFrom({'taskTypeInstruction': 'Select one answer.'});
+      expect(task.taskTypeInstruction, 'Select one answer.');
+      expect(
+        task.copyWith(orderIndex: 1).taskTypeInstruction,
+        'Select one answer.',
+      );
+    });
+
+    test('is null for older responses without the field', () {
+      expect(_taskFrom({}).taskTypeInstruction, isNull);
     });
   });
 }

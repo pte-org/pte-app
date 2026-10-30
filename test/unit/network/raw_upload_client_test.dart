@@ -110,8 +110,7 @@ void main() {
         });
 
         await client.upload(
-          uploadUrl:
-              'https://api.cloudinary.com/test/video/upload',
+          uploadUrl: 'https://api.cloudinary.com/test/video/upload',
           file: file,
           contentType: 'audio/wav',
           apiKey: 'test-key',
@@ -132,10 +131,7 @@ void main() {
           ),
           isFalse,
         );
-        expect(
-          adapter.lastRequest!.uri.path,
-          endsWith('/video/upload'),
-        );
+        expect(adapter.lastRequest!.uri.path, endsWith('/video/upload'));
         final uploadForm = adapter.lastRequest!.data as FormData;
         expect(uploadForm.fields.any((field) => field.key == 'type'), isFalse);
       },

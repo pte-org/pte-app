@@ -20,11 +20,13 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 // parameter, and since Read Aloud, Repeat Sentence, and Describe Image all
 // share the same AutoRecordCubit/AutoRecordState now, one binding covers
 // all three screens' usage.
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
-class _MockAutoRecordCubit extends MockCubit<AutoRecordState> implements AutoRecordCubit {}
+class _MockAutoRecordCubit extends MockCubit<AutoRecordState>
+    implements AutoRecordCubit {}
 
 void main() {
   setUpAll(() {
@@ -65,58 +67,88 @@ void main() {
 
   void stubCubitState(AutoRecordState initial) {
     when(() => autoRecordCubit.state).thenReturn(initial);
-    whenListen(autoRecordCubit, cubitStateController.stream, initialState: initial);
+    whenListen(
+      autoRecordCubit,
+      cubitStateController.stream,
+      initialState: initial,
+    );
   }
 
-  group('AutoAdvanceOnUploadReady — advances on its own once ready, no tap required', () {
-    testWidgets('renders nothing while not yet ready, and never advances', (tester) async {
-      stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
+  group(
+    'AutoAdvanceOnUploadReady — advances on its own once ready, no tap required',
+    () {
+      testWidgets('renders nothing while not yet ready, and never advances', (
+        tester,
+      ) async {
+        stubCubitState(
+          const AutoRecordState(
+            uploadStatus: PendingMediaUploadStatus.uploading,
+          ),
+        );
 
-      await tester.pumpWidget(buildSubject());
-      await tester.pump();
-
-      verifyNever(() => syncEngine.flushOne(any()));
-      verifyNever(() => bloc.add(any()));
-    });
-
-    testWidgets(
-      'the moment uploadStatus transitions to ready, flushOne is called then NextTaskRequested is dispatched — '
-      'automatically, with no user interaction',
-      (tester) async {
-        stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
         await tester.pumpWidget(buildSubject());
-
-        cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
-        await tester.pump();
         await tester.pump();
 
-        verify(() => syncEngine.flushOne('item-1')).called(1);
-        verify(() => bloc.add(const NextTaskRequested())).called(1);
-      },
-    );
+        verifyNever(() => syncEngine.flushOne(any()));
+        verifyNever(() => bloc.add(any()));
+      });
 
-    testWidgets('a later unrelated rebuild while already ready never advances a second time', (tester) async {
-      stubCubitState(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.uploading));
-      await tester.pumpWidget(buildSubject());
+      testWidgets(
+        'the moment uploadStatus transitions to ready, flushOne is called then NextTaskRequested is dispatched — '
+        'automatically, with no user interaction',
+        (tester) async {
+          stubCubitState(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
 
-      cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
-      await tester.pump();
-      await tester.pump();
+          cubitStateController.add(
+            const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready),
+          );
+          await tester.pump();
+          await tester.pump();
 
-      // Same uploadStatus emitted again (e.g. an unrelated recordingPhase
-      // no-op re-emission) — listenWhen only fires on the not-ready->ready
-      // transition, so this must not trigger a second advance.
-      cubitStateController.add(const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready));
-      await tester.pump();
-      await tester.pump();
+          verify(() => syncEngine.flushOne('item-1')).called(1);
+          verify(() => bloc.add(const NextTaskRequested())).called(1);
+        },
+      );
 
-      // Verified once, at the end, counting the cumulative call count across
-      // both emissions — mocktail's `verify` marks matched invocations as
-      // consumed, so calling `verify(...).called(1)` a second time for the
-      // same interaction would spuriously fail even if production code
-      // never double-advanced.
-      verify(() => syncEngine.flushOne('item-1')).called(1);
-      verify(() => bloc.add(const NextTaskRequested())).called(1);
-    });
-  });
+      testWidgets(
+        'a later unrelated rebuild while already ready never advances a second time',
+        (tester) async {
+          stubCubitState(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          // Same uploadStatus emitted again (e.g. an unrelated recordingPhase
+          // no-op re-emission) — listenWhen only fires on the not-ready->ready
+          // transition, so this must not trigger a second advance.
+          cubitStateController.add(
+            const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          // Verified once, at the end, counting the cumulative call count across
+          // both emissions — mocktail's `verify` marks matched invocations as
+          // consumed, so calling `verify(...).called(1)` a second time for the
+          // same interaction would spuriously fail even if production code
+          // never double-advanced.
+          verify(() => syncEngine.flushOne('item-1')).called(1);
+          verify(() => bloc.add(const NextTaskRequested())).called(1);
+        },
+      );
+    },
+  );
 }

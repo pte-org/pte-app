@@ -20,7 +20,10 @@ TaskView _task() {
     taskType: 'FILL_IN_THE_BLANKS_DRAG_AND_DROP',
     title: 'title',
     promptText: 'A {{0}} start.',
-    options: const [TaskOption(text: 'quick', orderIndex: '0'), TaskOption(text: 'slow', orderIndex: '1')],
+    options: const [
+      TaskOption(text: 'quick', orderIndex: '0'),
+      TaskOption(text: 'slow', orderIndex: '1'),
+    ],
     prepSeconds: 0,
     responseSeconds: 60,
   );
@@ -52,101 +55,147 @@ void main() {
   Widget buildSubject() {
     return MaterialApp(
       home: Scaffold(
-        body: BlocProvider<FillBlanksDragDropCubit>.value(value: cubit, child: FillBlanksDragDropBody(task: _task())),
+        body: BlocProvider<FillBlanksDragDropCubit>.value(
+          value: cubit,
+          child: FillBlanksDragDropBody(task: _task()),
+        ),
       ),
     );
   }
 
-  testWidgets('renders the gap placeholder and both bank chips before any drag', (tester) async {
-    await tester.pumpWidget(buildSubject());
+  testWidgets(
+    'renders the gap placeholder and both bank chips before any drag',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
 
-    expect(find.text('_____'), findsOneWidget);
-    expect(find.text('quick'), findsOneWidget);
-    expect(find.text('slow'), findsOneWidget);
-  });
+      expect(find.byKey(const ValueKey('dragBlank-0')), findsOneWidget);
+      expect(find.text('quick'), findsOneWidget);
+      expect(find.text('slow'), findsOneWidget);
+    },
+  );
 
-  testWidgets('dragging a bank chip into the gap fills it and removes the chip from the bank', (tester) async {
-    await tester.pumpWidget(buildSubject());
+  testWidgets(
+    'dragging a bank chip into the gap fills it and removes the chip from the bank',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
 
-    final chipCenter = tester.getCenter(find.text('quick'));
-    final gapCenter = tester.getCenter(find.text('_____'));
-
-    final gesture = await tester.startGesture(chipCenter);
-    await tester.pump();
-    await gesture.moveTo(gapCenter);
-    await tester.pump();
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(cubit.state.gapAssignments, {0: const TaskOption(text: 'quick', orderIndex: '0')});
-    expect(find.text('_____'), findsNothing);
-    // "quick" now renders once, inside the gap — not also still in the bank.
-    expect(find.text('quick'), findsOneWidget);
-  });
-
-  testWidgets('dragging a filled gap word back onto the bank clears the gap and restores the chip', (tester) async {
-    await cubit.assignToGap(0, const TaskOption(text: 'quick', orderIndex: '0'));
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
-
-    final gapWordCenter = tester.getCenter(find.text('quick'));
-    final bankAreaCenter = tester.getCenter(find.text('slow'));
-
-    final gesture = await tester.startGesture(gapWordCenter);
-    await tester.pump();
-    await gesture.moveTo(bankAreaCenter);
-    await tester.pump();
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(cubit.state.gapAssignments, isEmpty);
-    expect(find.text('_____'), findsOneWidget);
-    expect(find.text('quick'), findsOneWidget);
-    expect(find.text('slow'), findsOneWidget);
-  });
-
-  testWidgets('word-bank chip order is stable across a place/undo cycle (Step 10)', (tester) async {
-    await tester.pumpWidget(buildSubject());
-
-    // Initial bank order: quick, then slow.
-    final initialOrder = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).toList();
-    expect(initialOrder.indexOf('quick') < initialOrder.indexOf('slow'), isTrue);
-
-    await cubit.assignToGap(0, const TaskOption(text: 'quick', orderIndex: '0'));
-    await tester.pump();
-    await cubit.clearGap(0);
-    await tester.pump();
-
-    final afterUndoOrder = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).toList();
-    // "quick" must reappear before "slow" — matching task.options' original
-    // order, not appended to the end after being placed/undone.
-    expect(afterUndoOrder.indexOf('quick') < afterUndoOrder.indexOf('slow'), isTrue);
-  });
-
-  testWidgets('gap highlights while a compatible chip is dragged over it, per DragTarget candidateData', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
-
-    Color? decorationColor() {
-      final container = tester.widget<Container>(
-        find.ancestor(of: find.text('_____'), matching: find.byType(Container)).first,
+      final chipCenter = tester.getCenter(find.text('quick'));
+      final gapCenter = tester.getCenter(
+        find.byKey(const ValueKey('dragBlank-0')),
       );
-      return (container.decoration as BoxDecoration?)?.color;
-    }
 
-    expect(decorationColor(), isNot(AppColors.dragTargetHoverBackground));
+      final gesture = await tester.startGesture(chipCenter);
+      await tester.pump();
+      await gesture.moveTo(gapCenter);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
 
-    final chipCenter = tester.getCenter(find.text('quick'));
-    final gapCenter = tester.getCenter(find.text('_____'));
-    final gesture = await tester.startGesture(chipCenter);
-    await tester.pump();
-    await gesture.moveTo(gapCenter);
-    await tester.pump();
+      expect(cubit.state.gapAssignments, {
+        0: const TaskOption(text: 'quick', orderIndex: '0'),
+      });
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('dragBlank-0')),
+          matching: find.text('quick'),
+        ),
+        findsOneWidget,
+      );
+      // "quick" now renders once, inside the gap — not also still in the bank.
+      expect(find.text('quick'), findsOneWidget);
+    },
+  );
 
-    expect(decorationColor(), AppColors.dragTargetHoverBackground);
+  testWidgets(
+    'dragging a filled gap word back onto the bank clears the gap and restores the chip',
+    (tester) async {
+      await cubit.assignToGap(
+        0,
+        const TaskOption(text: 'quick', orderIndex: '0'),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
 
-    await gesture.up();
-    await tester.pumpAndSettle();
-  });
+      final gapWordCenter = tester.getCenter(find.text('quick'));
+      final bankAreaCenter = tester.getCenter(find.text('slow'));
+
+      final gesture = await tester.startGesture(gapWordCenter);
+      await tester.pump();
+      await gesture.moveTo(bankAreaCenter);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.gapAssignments, isEmpty);
+      expect(find.byKey(const ValueKey('dragBlank-0')), findsOneWidget);
+      expect(find.text('quick'), findsOneWidget);
+      expect(find.text('slow'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'word-bank chip order is stable across a place/undo cycle (Step 10)',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+
+      // Initial bank order: quick, then slow.
+      final initialOrder = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data)
+          .toList();
+      expect(
+        initialOrder.indexOf('quick') < initialOrder.indexOf('slow'),
+        isTrue,
+      );
+
+      await cubit.assignToGap(
+        0,
+        const TaskOption(text: 'quick', orderIndex: '0'),
+      );
+      await tester.pump();
+      await cubit.clearGap(0);
+      await tester.pump();
+
+      final afterUndoOrder = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data)
+          .toList();
+      // "quick" must reappear before "slow" — matching task.options' original
+      // order, not appended to the end after being placed/undone.
+      expect(
+        afterUndoOrder.indexOf('quick') < afterUndoOrder.indexOf('slow'),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'gap highlights while a compatible chip is dragged over it, per DragTarget candidateData',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+
+      Color? decorationColor() {
+        final container = tester.widget<Container>(
+          find.byKey(const ValueKey('dragBlank-0')),
+        );
+        return container.color;
+      }
+
+      expect(decorationColor(), isNot(AppColors.interactiveSelected));
+
+      final chipCenter = tester.getCenter(find.text('quick'));
+      final gapCenter = tester.getCenter(
+        find.byKey(const ValueKey('dragBlank-0')),
+      );
+      final gesture = await tester.startGesture(chipCenter);
+      await tester.pump();
+      await gesture.moveTo(gapCenter);
+      await tester.pump();
+
+      expect(decorationColor(), AppColors.interactiveSelected);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    },
+  );
 }

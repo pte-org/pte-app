@@ -61,7 +61,9 @@ void setupExamAttemptModule() {
     () => HeartbeatService(apiClient: getIt<ApiClient>()),
   );
 
-  getIt.registerLazySingleton<AudioRecorderService>(() => AudioRecorderServiceImpl());
+  getIt.registerLazySingleton<AudioRecorderService>(
+    () => AudioRecorderServiceImpl(),
+  );
 
   // Not a singleton: each listening screen's cubit needs its own player
   // instance (one `close()` per task, not shared across tasks) — phase-01

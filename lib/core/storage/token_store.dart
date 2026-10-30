@@ -12,9 +12,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// to work — add an `AuthCheckRequested`-style bootstrap event if a later
 /// phase needs it.
 class TokenStore {
-  TokenStore({required FlutterSecureStorage secureStorage, DateTime Function()? now})
-      : _secureStorage = secureStorage,
-        _now = now ?? DateTime.now;
+  TokenStore({
+    required FlutterSecureStorage secureStorage,
+    DateTime Function()? now,
+  }) : _secureStorage = secureStorage,
+       _now = now ?? DateTime.now;
 
   final FlutterSecureStorage _secureStorage;
   final DateTime Function() _now;
@@ -41,7 +43,8 @@ class TokenStore {
 
   String? get accessToken => _accessToken;
 
-  Future<String?> readRefreshToken() => _secureStorage.read(key: refreshTokenKey);
+  Future<String?> readRefreshToken() =>
+      _secureStorage.read(key: refreshTokenKey);
 
   Future<void> clear() async {
     await _secureStorage.delete(key: refreshTokenKey);

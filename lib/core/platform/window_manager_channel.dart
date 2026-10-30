@@ -69,8 +69,8 @@ class WindowManagerChannel {
   /// Stream of fullscreen violation events.
   /// Emits event type string when user attempts to escape fullscreen.
   Stream<String> get violations {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .map((event) => event as String);
+    return _eventChannel.receiveBroadcastStream().map(
+      (event) => event as String,
+    );
   }
 }

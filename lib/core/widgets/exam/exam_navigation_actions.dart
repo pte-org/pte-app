@@ -16,6 +16,7 @@ class ExamNavigationActions extends StatelessWidget {
     this.nextLabel = ExamChromeConfig.nextLabel,
     this.nextLoading = false,
     this.nextAction,
+    this.showPrevious = false,
   });
 
   final VoidCallback? onPrevious;
@@ -23,17 +24,19 @@ class ExamNavigationActions extends StatelessWidget {
   final String nextLabel;
   final bool nextLoading;
   final Widget? nextAction;
+  final bool showPrevious;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SecondaryButton(
-          label: ExamChromeConfig.previousLabel,
-          onPressed: onPrevious,
-        ),
-        const SizedBox(width: AppDimensions.spacingSm),
+        if (showPrevious)
+          SecondaryButton(
+            label: ExamChromeConfig.previousLabel,
+            onPressed: onPrevious,
+          ),
+        if (showPrevious) const SizedBox(width: AppDimensions.spacingSm),
         nextAction ??
             PrimaryButton(
               label: nextLabel,

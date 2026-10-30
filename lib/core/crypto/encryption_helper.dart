@@ -36,7 +36,9 @@ class EncryptionHelper {
     final derBytes = base64Decode(base64SubjectPublicKeyInfo);
     final topLevelSeq = ASN1Parser(derBytes).nextObject() as ASN1Sequence;
     final publicKeyBitString = topLevelSeq.elements![1] as ASN1BitString;
-    final publicKeyAsn = ASN1Parser(Uint8List.fromList(publicKeyBitString.stringValues!));
+    final publicKeyAsn = ASN1Parser(
+      Uint8List.fromList(publicKeyBitString.stringValues!),
+    );
     final publicKeySeq = publicKeyAsn.nextObject() as ASN1Sequence;
     final modulus = (publicKeySeq.elements![0] as ASN1Integer).integer!;
     final exponent = (publicKeySeq.elements![1] as ASN1Integer).integer!;
@@ -49,11 +51,25 @@ class EncryptionHelper {
     final iv = random.nextBytes(_gcmIvLengthBytes);
 
     final gcm = GCMBlockCipher(AESEngine())
-      ..init(true, AEADParameters(KeyParameter(aesKey), _gcmTagLengthBits, iv, Uint8List(0)));
+      ..init(
+        true,
+        AEADParameters(
+          KeyParameter(aesKey),
+          _gcmTagLengthBits,
+          iv,
+          Uint8List(0),
+        ),
+      );
     final ciphertext = gcm.process(Uint8List.fromList(utf8.encode(plaintext)));
 
     final oaep = OAEPEncoding.withSHA256(RSAEngine())
-      ..init(true, ParametersWithRandom(PublicKeyParameter<RSAPublicKey>(publicKey), random));
+      ..init(
+        true,
+        ParametersWithRandom(
+          PublicKeyParameter<RSAPublicKey>(publicKey),
+          random,
+        ),
+      );
     final wrappedKey = oaep.process(aesKey);
 
     return EncryptedPayload(
@@ -68,7 +84,9 @@ class EncryptionHelper {
   /// library, per call so no seed material is ever reused across encryptions.
   SecureRandom _seededRandom() {
     final seedSource = Random.secure();
-    final seed = Uint8List.fromList(List<int>.generate(32, (_) => seedSource.nextInt(256)));
+    final seed = Uint8List.fromList(
+      List<int>.generate(32, (_) => seedSource.nextInt(256)),
+    );
     return FortunaRandom()..seed(KeyParameter(seed));
   }
 }

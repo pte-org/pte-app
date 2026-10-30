@@ -36,7 +36,9 @@ class RateLimitBackoff {
   }
 
   Duration _nextInterval() {
-    final next = _lastInterval == Duration.zero ? _baseInterval : _lastInterval * 2;
+    final next = _lastInterval == Duration.zero
+        ? _baseInterval
+        : _lastInterval * 2;
     _lastInterval = next > _maxInterval ? _maxInterval : next;
     return _lastInterval;
   }

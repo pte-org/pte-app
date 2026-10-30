@@ -40,10 +40,7 @@ class ForbiddenApp {
 /// `assets/config/forbidden_apps.json` asset and returns a parsed
 /// instance.
 class ForbiddenAppsConfig {
-  const ForbiddenAppsConfig({
-    required this.windows,
-    required this.macos,
-  });
+  const ForbiddenAppsConfig({required this.windows, required this.macos});
 
   /// Windows-side entries. Only populated for desktop-Windows builds —
   /// server-validated at [load] time so a mis-deployed asset still

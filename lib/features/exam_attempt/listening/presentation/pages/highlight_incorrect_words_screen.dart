@@ -14,6 +14,7 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highl
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/word_selection_list.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// `StatelessWidget` + `BlocProvider` — no `TextEditingController`, same
 /// reasoning as Phase 3's screens (phase-04 Design Constraints). Words are
@@ -62,16 +63,20 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
                         TaskTypeMeta.forTaskType(task.taskType)?.title ??
                         task.title,
                     subtitle: task.section,
-                    instruction:
-                        TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
-                        'Select the words that differ from the recording.',
+                    instruction: resolveTaskInstruction(
+                      apiInstruction: task.taskTypeInstruction,
+                      meta: TaskTypeMeta.forTaskType(task.taskType),
+                    ),
                     stimulus: AudioListeningStatusCard(
-                      statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
                       progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(
                       child: WordSelectionList(
                         words: words,
+                        transcript: task.promptText,
                         selectedIndices: state.selectedWordIndices,
                         onToggle: (wordIndex) => context
                             .read<HighlightIncorrectWordsCubit>()

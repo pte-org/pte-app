@@ -16,7 +16,8 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/fill_blanks_dropdown_screen.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_dropdown_body.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
@@ -55,9 +56,19 @@ void main() {
     ).thenAnswer((_) async {});
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
 
-    const snapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 30), currentOrderIndex: 1);
-    when(() => bloc.state).thenReturn(AttemptInProgress('attempt-1', _taskWithout(null), snapshot));
-    whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: bloc.state);
+    const snapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 30),
+      currentOrderIndex: 1,
+    );
+    when(
+      () => bloc.state,
+    ).thenReturn(AttemptInProgress('attempt-1', _taskWithout(null), snapshot));
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: bloc.state,
+    );
   });
 
   Widget buildSubject(TaskView task) {
@@ -74,38 +85,49 @@ void main() {
     );
   }
 
-  testWidgets('blankGroups == null renders StatusBanner fallback, not the interactive body or a crash', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject(_taskWithout(null)));
+  testWidgets(
+    'blankGroups == null renders StatusBanner fallback, not the interactive body or a crash',
+    (tester) async {
+      await tester.pumpWidget(buildSubject(_taskWithout(null)));
 
-    expect(find.byType(StatusBanner), findsOneWidget);
-    expect(find.byType(FillBlanksDropdownBody), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(StatusBanner), findsOneWidget);
+      expect(find.byType(FillBlanksDropdownBody), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('blankGroups == [] (empty) also renders the fallback, not a blank interactive body', (tester) async {
-    await tester.pumpWidget(buildSubject(_taskWithout(const [])));
+  testWidgets(
+    'blankGroups == [] (empty) also renders the fallback, not a blank interactive body',
+    (tester) async {
+      await tester.pumpWidget(buildSubject(_taskWithout(const [])));
 
-    expect(find.byType(StatusBanner), findsOneWidget);
-    expect(find.byType(FillBlanksDropdownBody), findsNothing);
-  });
+      expect(find.byType(StatusBanner), findsOneWidget);
+      expect(find.byType(FillBlanksDropdownBody), findsNothing);
+    },
+  );
 
-  testWidgets('the advance button is still present in the fallback state — the student is never stuck', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject(_taskWithout(null)));
+  testWidgets(
+    'the advance button is still present in the fallback state — the student is never stuck',
+    (tester) async {
+      await tester.pumpWidget(buildSubject(_taskWithout(null)));
 
-    expect(find.byType(ElevatedButton), findsOneWidget);
-  });
+      expect(find.byType(ElevatedButton), findsOneWidget);
+    },
+  );
 
-  testWidgets('blankGroups populated renders the interactive body, not the fallback', (tester) async {
-    final task = _taskWithout(const [
-      BlankGroup(blankIndex: 0, options: [TaskOption(text: 'sunny', orderIndex: '0')]),
-    ]);
-    await tester.pumpWidget(buildSubject(task));
+  testWidgets(
+    'blankGroups populated renders the interactive body, not the fallback',
+    (tester) async {
+      final task = _taskWithout(const [
+        BlankGroup(
+          blankIndex: 0,
+          options: [TaskOption(text: 'sunny', orderIndex: '0')],
+        ),
+      ]);
+      await tester.pumpWidget(buildSubject(task));
 
-    expect(find.byType(FillBlanksDropdownBody), findsOneWidget);
-    expect(find.byType(StatusBanner), findsNothing);
-  });
+      expect(find.byType(FillBlanksDropdownBody), findsOneWidget);
+      expect(find.byType(StatusBanner), findsNothing);
+    },
+  );
 }

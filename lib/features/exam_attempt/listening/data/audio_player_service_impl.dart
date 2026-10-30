@@ -12,7 +12,12 @@ import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_serv
 /// real network URL, added for Speaking's audio-prompt playback
 /// (plans/phat-speaking-audio-prompt-e2e) — both share the same underlying
 /// `AudioPlayer` instance since a screen only ever plays one or the other.
-class AudioPlayerServiceImpl implements AudioPlayerService {
+class AudioPlayerServiceImpl
+    implements
+        AudioPlayerService,
+        PreviewPlaybackControls,
+        PreviewPlaybackReplayControls,
+        PlaybackFailureSource {
   AudioPlayerServiceImpl({AudioPlayer? player, VolumeService? volumeService})
     : _player = player ?? AudioPlayer(),
       _volumeService = volumeService {
@@ -29,6 +34,21 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
   }
 
   final AudioPlayer _player;
+  final _playbackFailures = StreamController<Object>.broadcast();
+  bool _closed = false;
+
+  @override
+  Stream<Object> get playbackFailures => _playbackFailures.stream;
+
+  void _startPlayback() {
+    if (_closed) return;
+    unawaited(
+      _player.play().catchError((Object error, StackTrace stack) {
+        if (!_closed) _playbackFailures.add(error);
+      }),
+    );
+  }
+
   final VolumeService? _volumeService;
   late final StreamSubscription<PlayerState> _stateSubscription;
   final StreamController<bool> _hasFinishedPlayingController =
@@ -46,13 +66,31 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
     } else {
       await _player.setAsset(source);
     }
-    await _player.play();
+    _startPlayback();
   }
 
   @override
   Future<void> playUrl(String url) async {
     await _player.setUrl(url);
-    await _player.play();
+    _startPlayback();
+  }
+
+  @override
+  Future<void> pausePlayback() => _player.pause();
+
+  @override
+  Future<void> resumePlayback() async {
+    _startPlayback();
+  }
+
+  @override
+  Future<void> stopPlayback() => _player.stop();
+
+  @override
+  Future<void> replayPlayback() async {
+    if (_closed) return;
+    await _player.seek(Duration.zero);
+    _startPlayback();
   }
 
   @override
@@ -66,9 +104,11 @@ class AudioPlayerServiceImpl implements AudioPlayerService {
 
   @override
   Future<void> close() async {
+    _closed = true;
     _volumeService?.removeListener(_syncVolume);
     await _stateSubscription.cancel();
     await _hasFinishedPlayingController.close();
     await _player.dispose();
+    await _playbackFailures.close();
   }
 }

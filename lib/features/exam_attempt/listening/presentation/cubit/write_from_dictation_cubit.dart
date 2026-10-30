@@ -85,7 +85,10 @@ class WriteFromDictationCubit extends TaskAnswerCubit<WriteFromDictationState> {
     final duration = _lastDuration;
     final progress = (duration == null || duration <= Duration.zero)
         ? 0.0
-        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(
+            0.0,
+            1.0,
+          );
     emit(state.copyWith(progress: progress));
   }
 

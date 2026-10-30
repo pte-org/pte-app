@@ -1,5 +1,4 @@
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/features/exam_attempt/domain/answer_payload_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/cubit/task_answer_cubit.dart';
@@ -16,48 +15,39 @@ class ReOrderParagraphsCubit extends TaskAnswerCubit<ReOrderParagraphsState> {
     required List<TaskOption> initialOrder,
     String? initialPayload,
   }) : _outboxDao = outboxDao,
+       paragraphs = List.unmodifiable(initialOrder),
        // Seeded directly from the server-delivered (shuffled) order — never
        // re-sorted by orderIndex, or the task becomes trivial.
        super(
          ReOrderParagraphsState(
-           currentOrder: reorderedOptionsFromAnswerPayload(
-             defaultOrder: initialOrder,
-             payload: initialPayload,
-           ),
+           currentOrder: _restore(initialOrder, initialPayload),
          ),
        );
 
   final AnswerOutboxDao _outboxDao;
+  final List<TaskOption> paragraphs;
   final String attemptPublicId;
   final String pinnedItemPublicId;
 
-  /// [newIndex] must already be adjusted for the removed item at
-  /// [oldIndex] (i.e. the item's actual final resting index) — the caller
-  /// (`ReOrderParagraphsList`'s `ReorderableListView.onReorder` handler) is
-  /// responsible for that adjustment, since `onReorder` itself reports
-  /// `newIndex` as the pre-removal insertion point.
-  Future<void> reorder(int oldIndex, int newIndex) async {
-    final updated = List<TaskOption>.of(state.currentOrder);
-    final moved = updated.removeAt(oldIndex);
-    updated.insert(newIndex, moved);
+  static List<TaskOption> _restore(List<TaskOption> options, String? payload) {
+    final byId = {for (final option in options) option.orderIndex: option};
+    final seen = <String>{};
+    return [
+      for (final id in (payload ?? '').split(','))
+        if (byId.containsKey(id) && seen.add(id)) byId[id]!,
+    ];
+  }
 
+  Future<void> setTargetOrder(List<String> ids) async {
+    final updated = _restore(paragraphs, ids.join(','));
     emit(ReOrderParagraphsState(currentOrder: updated));
-    await _outboxDao.upsertAnswer(
-      attemptPublicId: attemptPublicId,
-      pinnedItemPublicId: pinnedItemPublicId,
-      payload: updated.map((option) => option.orderIndex).join(','),
-    );
+    await flushPendingEdit();
   }
 
   @override
   Future<void> flushPendingEdit() async {
-    // Every reorder already writes immediately, but if the student never
-    // touches this task at all (skips straight to Next), no outbox row
-    // exists yet — write the current state (the server-shuffled order,
-    // unchanged) unconditionally so `SyncEngine.flushOne` always has a row
-    // to submit, matching real PTE's "leave it as shown, it's just scored
-    // wrong" rather than leaving the advance button stuck with nothing to
-    // flush.
+    // Include an empty Target so advancing an untouched task submits a blank
+    // answer rather than silently using the shuffled Source as the response.
     await _outboxDao.upsertAnswer(
       attemptPublicId: attemptPublicId,
       pinnedItemPublicId: pinnedItemPublicId,

@@ -12,7 +12,6 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/pages/mc_reading_single_screen.dart';
-import 'package:pte_app/core/widgets/components/subheader_banner.dart';
 
 class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
     implements ExamAttemptBloc {}
@@ -85,16 +84,12 @@ void main() {
     );
   }
 
-  testWidgets('renders the banner with the MC_READING_SINGLE label', (
+  testWidgets('renders the task label above the reading content', (
     tester,
   ) async {
     await tester.pumpWidget(buildSubject());
 
-    expect(find.byType(SubheaderBanner), findsOneWidget);
-    expect(
-      find.text('Reading: Multiple Choice, Single Answer'),
-      findsOneWidget,
-    );
+    expect(find.text('Multiple Choice, Single Answer'), findsOneWidget);
   });
 
   testWidgets('renders passage text when promptText is non-null', (

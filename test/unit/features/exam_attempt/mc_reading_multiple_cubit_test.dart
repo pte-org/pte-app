@@ -44,107 +44,129 @@ void main() {
       await cubit.close();
     });
 
-    test('toggling in reverse order ("3" then "0" then "2") still writes "0,2,3", not insertion order', () async {
-      final cubit = McReadingMultipleCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-      );
-
-      await cubit.toggleOption('3');
-      await cubit.toggleOption('0');
-      await cubit.toggleOption('2');
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+    test(
+      'toggling in reverse order ("3" then "0" then "2") still writes "0,2,3", not insertion order',
+      () async {
+        final cubit = McReadingMultipleCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured.last, '0,2,3');
+        );
 
-      await cubit.close();
-    });
+        await cubit.toggleOption('3');
+        await cubit.toggleOption('0');
+        await cubit.toggleOption('2');
 
-    test('untoggling a selected option removes it from the sorted payload', () async {
-      final cubit = McReadingMultipleCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-      );
+        final captured = verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: captureAny(named: 'payload'),
+          ),
+        ).captured;
+        expect(captured.last, '0,2,3');
 
-      await cubit.toggleOption('0');
-      await cubit.toggleOption('2');
-      await cubit.toggleOption('3');
-      await cubit.toggleOption('2');
+        await cubit.close();
+      },
+    );
 
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+    test(
+      'untoggling a selected option removes it from the sorted payload',
+      () async {
+        final cubit = McReadingMultipleCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured.last, '0,3');
+        );
 
-      await cubit.close();
-    });
+        await cubit.toggleOption('0');
+        await cubit.toggleOption('2');
+        await cubit.toggleOption('3');
+        await cubit.toggleOption('2');
 
-    test('untoggling every selected option writes an empty-string payload, not an omitted write', () async {
-      final cubit = McReadingMultipleCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-      );
+        final captured = verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: captureAny(named: 'payload'),
+          ),
+        ).captured;
+        expect(captured.last, '0,3');
 
-      await cubit.toggleOption('0');
-      await cubit.toggleOption('0');
+        await cubit.close();
+      },
+    );
 
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+    test(
+      'untoggling every selected option writes an empty-string payload, not an omitted write',
+      () async {
+        final cubit = McReadingMultipleCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured, hasLength(2));
-      expect(captured.last, '');
+        );
 
-      await cubit.close();
-    });
+        await cubit.toggleOption('0');
+        await cubit.toggleOption('0');
 
-    test('emits state with the toggled orderIndex present in selectedOrderIndexes', () async {
-      final cubit = McReadingMultipleCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-      );
+        final captured = verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: captureAny(named: 'payload'),
+          ),
+        ).captured;
+        expect(captured, hasLength(2));
+        expect(captured.last, '');
 
-      await cubit.toggleOption('1');
+        await cubit.close();
+      },
+    );
 
-      expect(cubit.state.selectedOrderIndexes, {'1'});
+    test(
+      'emits state with the toggled orderIndex present in selectedOrderIndexes',
+      () async {
+        final cubit = McReadingMultipleCubit(
+          outboxDao: outboxDao,
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'item-1',
+        );
 
-      await cubit.close();
-    });
+        await cubit.toggleOption('1');
+
+        expect(cubit.state.selectedOrderIndexes, {'1'});
+
+        await cubit.close();
+      },
+    );
   });
 
-  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
-      'must still leave a submittable row)', () {
-    test('with no prior toggle, writes an empty-payload row so skipping without answering still submits', () async {
-      final cubit = McReadingMultipleCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
+  group(
+    'flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
+    'must still leave a submittable row)',
+    () {
+      test(
+        'with no prior toggle, writes an empty-payload row so skipping without answering still submits',
+        () async {
+          final cubit = McReadingMultipleCubit(
+            outboxDao: outboxDao,
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+          );
+
+          await cubit.flushPendingEdit();
+
+          verify(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: 'attempt-1',
+              pinnedItemPublicId: 'item-1',
+              payload: '',
+            ),
+          ).called(1);
+
+          await cubit.close();
+        },
       );
-
-      await cubit.flushPendingEdit();
-
-      verify(
-        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-1', pinnedItemPublicId: 'item-1', payload: ''),
-      ).called(1);
-
-      await cubit.close();
-    });
-  });
+    },
+  );
 }

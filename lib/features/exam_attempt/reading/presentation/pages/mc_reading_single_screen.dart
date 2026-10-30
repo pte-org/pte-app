@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/constants/task_type_meta.dart';
-import 'package:pte_app/core/widgets/templates/single_select_template.dart';
+import '../widgets/reading_choice_task_frame.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/mc_reading_single_cubit.dart';
@@ -44,12 +44,10 @@ class McReadingSingleScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: SingleSelectTemplate(
+          body: ReadingChoiceTaskFrame(
             title: TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
-            subtitle: task.section,
             instruction: 'Select the correct response.',
-            readingLayout: true,
-            stimulus: SingleChildScrollView(child: Text(task.promptText ?? '')),
+            promptText: task.promptText,
             response: McOptionList(options: task.options ?? const []),
           ),
           bottomAction: TaskAdvanceButton(

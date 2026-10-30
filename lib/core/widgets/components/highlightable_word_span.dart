@@ -20,14 +20,15 @@ class HighlightableWordSpan extends StatelessWidget {
     return Semantics(
       selected: highlighted,
       button: true,
+      onTap: onTap,
       child: InkWell(
-        onTap: onTap,
+        onDoubleTap: onTap,
         child: Text(
           word,
-          style: AppTypography.bodyPassage.copyWith(
+          style: AppTypography.examAnswer.copyWith(
             color: AppColors.textPrimary,
             backgroundColor: highlighted
-                ? AppColors.interactiveHighlight
+                ? AppColors.transcriptWordHighlight
                 : Colors.transparent,
           ),
         ),

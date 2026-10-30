@@ -23,18 +23,29 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 /// generalization mechanism. Bound by `AutoRecordCubit`/`AutoRecordState`
 /// through one shared binding used by every auto-record speaking screen
 /// (Read Aloud, Repeat Sentence, Describe Image).
-class AutoAdvanceOnUploadReady<C extends StateStreamable<S>, S extends UploadTrackingState>
+class AutoAdvanceOnUploadReady<
+  C extends StateStreamable<S>,
+  S extends UploadTrackingState
+>
     extends StatefulWidget {
-  const AutoAdvanceOnUploadReady({super.key, required this.pinnedItemPublicId, required this.syncEngine});
+  const AutoAdvanceOnUploadReady({
+    super.key,
+    required this.pinnedItemPublicId,
+    required this.syncEngine,
+  });
 
   final String pinnedItemPublicId;
   final SyncEngine syncEngine;
 
   @override
-  State<AutoAdvanceOnUploadReady<C, S>> createState() => _AutoAdvanceOnUploadReadyState<C, S>();
+  State<AutoAdvanceOnUploadReady<C, S>> createState() =>
+      _AutoAdvanceOnUploadReadyState<C, S>();
 }
 
-class _AutoAdvanceOnUploadReadyState<C extends StateStreamable<S>, S extends UploadTrackingState>
+class _AutoAdvanceOnUploadReadyState<
+  C extends StateStreamable<S>,
+  S extends UploadTrackingState
+>
     extends State<AutoAdvanceOnUploadReady<C, S>> {
   bool _isAdvancing = false;
 

@@ -17,8 +17,14 @@ Future<bool> showConfirmDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(cancelLabel)),
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: Text(confirmLabel)),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(cancelLabel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(confirmLabel),
+        ),
       ],
     ),
   );

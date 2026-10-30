@@ -8,7 +8,8 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 /// a fake that captures the [Duration] and lets the test manually invoke
 /// the callback instead of waiting real time — same pattern
 /// `ProactiveRefreshScheduler`'s `TimerFactory` convention.
-typedef TimerScheduler = Timer Function(Duration duration, void Function() callback);
+typedef TimerScheduler =
+    Timer Function(Duration duration, void Function() callback);
 
 const Duration _localTickInterval = Duration(seconds: 1);
 
@@ -33,12 +34,15 @@ const Duration _localTickInterval = Duration(seconds: 1);
 /// clock-tampering concern FR-09 addressed, and is judged acceptable given
 /// the same tradeoff.
 class TimerService {
-  TimerService({TimerScheduler? scheduler}) : _scheduler = scheduler ?? Timer.new;
+  TimerService({TimerScheduler? scheduler})
+    : _scheduler = scheduler ?? Timer.new;
 
   final TimerScheduler _scheduler;
 
-  final StreamController<TimerSnapshot> _ticksController = StreamController<TimerSnapshot>.broadcast();
-  final StreamController<void> _taskAdvancedController = StreamController<void>.broadcast();
+  final StreamController<TimerSnapshot> _ticksController =
+      StreamController<TimerSnapshot>.broadcast();
+  final StreamController<void> _taskAdvancedController =
+      StreamController<void>.broadcast();
 
   TimerPhase _phase = TimerPhase.prep;
   DateTime? _prepDeadline;
@@ -72,17 +76,24 @@ class TimerService {
 
   TimerSnapshot get currentSnapshot {
     final now = DateTime.now();
-    final deadline = _phase == TimerPhase.prep ? _prepDeadline : _responseDeadline;
+    final deadline = _phase == TimerPhase.prep
+        ? _prepDeadline
+        : _responseDeadline;
     final examDeadline = _examDeadline;
     return TimerSnapshot(
       phase: _phase,
-      remaining: deadline == null ? Duration.zero : _nonNegative(deadline.difference(now)),
+      remaining: deadline == null
+          ? Duration.zero
+          : _nonNegative(deadline.difference(now)),
       currentOrderIndex: _currentOrderIndex,
-      examRemaining: examDeadline == null ? Duration.zero : _nonNegative(examDeadline.difference(now)),
+      examRemaining: examDeadline == null
+          ? Duration.zero
+          : _nonNegative(examDeadline.difference(now)),
     );
   }
 
-  static Duration _nonNegative(Duration duration) => duration.isNegative ? Duration.zero : duration;
+  static Duration _nonNegative(Duration duration) =>
+      duration.isNegative ? Duration.zero : duration;
 
   /// Bootstraps the countdown from a freshly-fetched [TaskView] — computes
   /// local wall-clock deadlines from [TaskView.prepSeconds]/[TaskView.responseSeconds]
@@ -97,7 +108,9 @@ class TimerService {
     _currentOrderIndex = task.orderIndex;
     _phase = task.prepSeconds > 0 ? TimerPhase.prep : TimerPhase.response;
     _prepDeadline = now.add(Duration(seconds: task.prepSeconds));
-    _responseDeadline = now.add(Duration(seconds: task.prepSeconds + task.responseSeconds));
+    _responseDeadline = now.add(
+      Duration(seconds: task.prepSeconds + task.responseSeconds),
+    );
     _examDeadline ??= task.examEndTime;
     _ticksController.add(currentSnapshot);
   }
@@ -142,11 +155,14 @@ class TimerService {
     if (_phase == TimerPhase.response) return;
     final deadline = _prepDeadline;
     if (deadline == null) return;
-    _phaseTransitionTimer = _scheduler(_nonNegative(deadline.difference(DateTime.now())), () {
-      if (generation != _generation) return;
-      _phase = TimerPhase.response;
-      _ticksController.add(currentSnapshot);
-    });
+    _phaseTransitionTimer = _scheduler(
+      _nonNegative(deadline.difference(DateTime.now())),
+      () {
+        if (generation != _generation) return;
+        _phase = TimerPhase.response;
+        _ticksController.add(currentSnapshot);
+      },
+    );
   }
 
   /// Cancels both timers without closing the streams — safe to call between

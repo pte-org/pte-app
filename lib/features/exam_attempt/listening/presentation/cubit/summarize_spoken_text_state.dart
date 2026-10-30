@@ -1,7 +1,13 @@
 import 'package:equatable/equatable.dart';
 
 class SummarizeSpokenTextState extends Equatable {
-  const SummarizeSpokenTextState({this.draftText = '', this.wordCount = 0, this.hasFinishedPlaying = false, this.playbackFailed = false, this.progress = 0.0});
+  const SummarizeSpokenTextState({
+    this.draftText = '',
+    this.wordCount = 0,
+    this.hasFinishedPlaying = false,
+    this.playbackFailed = false,
+    this.progress = 0.0,
+  });
 
   final String draftText;
   final int wordCount;
@@ -12,7 +18,13 @@ class SummarizeSpokenTextState extends Equatable {
   final bool playbackFailed;
   final double progress;
 
-  SummarizeSpokenTextState copyWith({String? draftText, int? wordCount, bool? hasFinishedPlaying, bool? playbackFailed, double? progress}) {
+  SummarizeSpokenTextState copyWith({
+    String? draftText,
+    int? wordCount,
+    bool? hasFinishedPlaying,
+    bool? playbackFailed,
+    double? progress,
+  }) {
     return SummarizeSpokenTextState(
       draftText: draftText ?? this.draftText,
       wordCount: wordCount ?? this.wordCount,
@@ -23,5 +35,11 @@ class SummarizeSpokenTextState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [draftText, wordCount, hasFinishedPlaying, playbackFailed, progress];
+  List<Object?> get props => [
+    draftText,
+    wordCount,
+    hasFinishedPlaying,
+    playbackFailed,
+    progress,
+  ];
 }

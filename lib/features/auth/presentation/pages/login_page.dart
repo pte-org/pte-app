@@ -7,6 +7,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/network/friendly_error_message.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/components/exam_status_block.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -19,12 +20,10 @@ class LoginPage extends StatefulWidget {
   });
 
   /// Keeps exam entry context outside the authentication API. The app uses
-  /// this value only after a successful student sign-in.
+  /// this value only after a successful sign-in.
   final ValueChanged<String>? onSessionIdProvided;
 
-  /// Host and proctor accounts can use their workspaces without an exam
-  /// session. Student accounts are required to provide the session before
-  /// entering the exam flow.
+  /// Both students and hosts supply an exam code before entering the exam.
   final bool requireSessionId;
 
   @override
@@ -49,29 +48,23 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.loginCanvas,
-      body: Column(
-        children: [
-          const _LoginHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.spacingMd,
-                vertical: AppDimensions.spacingXl,
-              ),
-              child: Center(
-                child: _LoginCard(
-                  formKey: _formKey,
-                  emailField: _buildEmailField(),
-                  passwordField: _buildPasswordField(),
-                  sessionIdField: _buildSessionIdField(),
-                  failureMessage: _buildFailureMessage(),
-                  submitButton: _buildSubmitButton(),
-                ),
-              ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.spacingMd,
+            vertical: AppDimensions.spacingXl,
+          ),
+          child: Center(
+            child: _LoginCard(
+              formKey: _formKey,
+              emailField: _buildEmailField(),
+              passwordField: _buildPasswordField(),
+              sessionIdField: _buildSessionIdField(),
+              failureMessage: _buildFailureMessage(),
+              submitButton: _buildSubmitButton(),
             ),
           ),
-          const _LoginFooter(),
-        ],
+        ),
       ),
     );
   }
@@ -195,7 +188,19 @@ class _LoginPageState extends State<LoginPage> {
       builder: (context, errorState) {
         return errorState == null
             ? const SizedBox.shrink()
-            : Text(friendlyErrorMessage(errorState.error));
+            : Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppDimensions.spacingSm,
+                ),
+                child: Semantics(
+                  liveRegion: true,
+                  child: ExamStatusBlock(
+                    title: AppStrings.loginFailureTitle,
+                    message: friendlyErrorMessage(errorState.error),
+                    kind: ExamStatusKind.error,
+                  ),
+                ),
+              );
       },
     );
   }
@@ -310,120 +315,10 @@ class _LoginCard extends StatelessWidget {
                 failureMessage,
                 const SizedBox(height: 10),
                 SizedBox(height: 31, child: submitButton),
-                const SizedBox(height: 14),
-                const Divider(height: 1, color: AppColors.loginHeaderBorder),
-                const SizedBox(height: 12),
-                const Text(
-                  AppStrings.loginHelp,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 10,
-                    height: 1.45,
-                    color: AppColors.loginMutedText,
-                  ),
-                ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LoginHeader extends StatelessWidget {
-  const _LoginHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 45,
-      padding: const EdgeInsets.symmetric(horizontal: 27),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.loginHeaderBorder)),
-      ),
-      child: Row(
-        children: [
-          const Text(
-            AppStrings.loginBrand,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.loginText,
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 18,
-            margin: const EdgeInsets.symmetric(horizontal: 10),
-            color: AppColors.loginHeaderBorder,
-          ),
-          const Text(
-            AppStrings.loginProduct,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              color: AppColors.loginMutedText,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            AppStrings.loginHeaderSystem,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 10,
-              color: AppColors.loginMutedText,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoginFooter extends StatelessWidget {
-  const _LoginFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 43,
-      padding: const EdgeInsets.symmetric(horizontal: 27),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.loginHeaderBorder)),
-      ),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              AppStrings.loginFooterEnvironment,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 10,
-                color: AppColors.loginText,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppDimensions.spacingMd),
-          const Expanded(
-            child: Text(
-              AppStrings.loginFooterCopyright,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 10,
-                color: AppColors.loginMutedText,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

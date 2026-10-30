@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pte_app/core/widgets/components/choice_list.dart';
+import 'package:pte_app/core/widgets/components/choice_row.dart';
 
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 
@@ -20,16 +22,15 @@ class ListeningMultipleOptionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final option in options)
-          CheckboxListTile(
-            title: Text(option.text),
-            value: selectedOrderIndexes.contains(option.orderIndex),
-            onChanged: (_) => onToggle(option.orderIndex),
-          ),
-      ],
+    return ChoiceList(
+      plain: true,
+      labels: [for (final option in options) option.text],
+      selectedIndices: {
+        for (var i = 0; i < options.length; i++)
+          if (selectedOrderIndexes.contains(options[i].orderIndex)) i,
+      },
+      mode: ChoiceSelectionMode.multiple,
+      onTap: (index) => onToggle(options[index].orderIndex),
     );
   }
 }

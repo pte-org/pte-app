@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_typography.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
 
 class ExamTextarea extends StatelessWidget {
   const ExamTextarea({
@@ -34,24 +35,36 @@ class ExamTextarea extends StatelessWidget {
       expands: expands,
       enabled: enabled,
       onChanged: onChanged,
+      textAlign: TextAlign.left,
+      textAlignVertical: TextAlignVertical.top,
+      textDirection: TextDirection.ltr,
+      keyboardType: TextInputType.multiline,
+      textInputAction: TextInputAction.newline,
       style: AppTypography.bodyPassage.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         filled: true,
         fillColor: AppColors.surface,
         errorText: errorText,
         labelText: labelText,
-        contentPadding: const EdgeInsets.all(12),
+        alignLabelWithHint: true,
+        contentPadding: const EdgeInsets.all(AppDimensions.spacingMd),
         border: const OutlineInputBorder(
           borderSide: BorderSide(color: AppColors.border),
-          borderRadius: BorderRadius.all(Radius.circular(3)),
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppDimensions.examBodyRadius),
+          ),
         ),
         enabledBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: AppColors.border),
-          borderRadius: BorderRadius.all(Radius.circular(3)),
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppDimensions.examBodyRadius),
+          ),
         ),
         focusedBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
-          borderRadius: BorderRadius.all(Radius.circular(3)),
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppDimensions.examBodyRadius),
+          ),
         ),
       ),
     );

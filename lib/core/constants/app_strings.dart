@@ -11,16 +11,14 @@ class AppStrings {
 
   static const String appTitle = 'PTE Student';
 
-  static const String loginBrand = 'Pearson';
-  static const String loginProduct = 'PTE Academic';
-  static const String loginTitle = 'Candidate Sign-In';
+  static const String loginBrand = 'PTE Exam';
+  static const String loginTitle = 'Sign in to your exam';
   static const String loginUsernameLabel = 'Login username';
   static const String loginPasswordLabel = 'Login password';
   static const String loginSessionIdLabel = 'Exam code (optional)';
   static const String loginSessionIdRequiredLabel = 'Exam code';
   static const String loginSessionIdHint =
-      'Enter the exam code provided by your exam host. Students must provide '
-      'one before they can open an exam.';
+      'Enter the exam code provided by your exam host to open the exam.';
   static const String loginSessionIdRequiredHint =
       'Enter the exam code provided by your exam host to continue.';
   static const String loginSessionIdRequired =
@@ -31,14 +29,7 @@ class AppStrings {
   static const String loginPasswordRequired = 'Login password is required';
   static const String loginFailure =
       'Sign-in failed. Check your credentials and try again.';
-  static const String loginHeaderSystem = 'Test Delivery System';
-  static const String loginFooterEnvironment =
-      'Secure Test Environment - Workstation #08';
-  static const String loginFooterCopyright =
-      'Pearson VUE © All rights reserved';
-  static const String loginHelp =
-      'Your username and password are on the sheet provided by the Test '
-      'Administrator. If you need assistance, please raise your hand.';
+  static const String loginFailureTitle = 'Sign-in failed';
 
   static const String logout = 'Log out';
   static const String examAccessDeniedTitle = 'This app is for exam candidates';
@@ -51,11 +42,45 @@ class AppStrings {
   static const String examPhaseResponseLabel = 'Response';
   static const String examTaskCounterOf = ' / ';
 
+  // Shared PTE audio-panel chrome.
+  static const String audioRecorderTitle = 'Audio Recorder';
+  static const String audioPlayerTitle = 'Audio Player';
+  static const String audioPlayTooltip = 'Play audio';
+  static const String audioReplayTooltip = 'Replay audio';
+  static const String audioPauseTooltip = 'Pause audio';
+  static const String audioStopTooltip = 'Stop recording';
+  static const String recordedAnswerTitle = 'Recorded Answer';
+  static const String audioStatusLabel = 'Status:';
+  static const String audioCompletedLabel = 'Completed';
+  static const String audioCurrentStatusLabel = 'Current Status:';
+  static const String audioRecordReadyTooltip =
+      'Recording starts automatically';
+  static const String audioStopPlaybackTooltip = 'Stop audio';
+  static const String audioVolumeTooltip = 'Volume';
+  static const String audioMuteTooltip = 'Mute';
+  static const String audioUnmuteTooltip = 'Unmute';
+  static String audioVolumePercent(double volume) =>
+      '${(volume * 100).round()}%';
+  static const String audioTimeSeparator = ' / ';
+  static const String audioBeginningInPrefix = 'Beginning in ';
+  static const String audioSecondsSuffix = ' seconds';
+  static const String dialogConfirmLabel = 'OK';
+
   static const String taskAdvanceButtonLabel = 'Next';
   static const String taskAdvanceUnansweredNote =
       'Leaving this blank and clicking Next will be scored as incorrect.';
   static const String writeEssayTextFieldLabel = 'Your response';
   static const String wordCountSuffix = ' words';
+  static String writingWordCounter(int count, int? maximum) => maximum == null
+      ? '$count$wordCountSuffix'
+      : '$count / $maximum Word Limit';
+  static String writingWordRequirement(int minimum, int? maximum) =>
+      maximum == null
+      ? 'Write at least $minimum words.'
+      : minimum > 0
+      ? 'Write at least $minimum words, but no more than $maximum.'
+      : 'Write no more than $maximum words.';
+  static const String unlimitedWordsLabel = '—';
   static const String wordCountBoundsOpen = ' (';
   static const String wordCountMinLabel = 'min ';
   static const String wordCountMaxLabel = 'max ';
@@ -92,7 +117,7 @@ class AppStrings {
   static const String reportInsufficientDataLabel = 'Insufficient data';
 
   static const String readingHeaderTitleMcSingle =
-      'Reading: Multiple Choice, Single Answer';
+      'Multiple Choice, Single Answer';
   static const String readingHeaderTitleMcMultiple =
       'Reading: Multiple Choice, Multiple Answers';
   static const String readingHeaderTitleReorderParagraphs =
@@ -131,6 +156,10 @@ class AppStrings {
       'to each individual question — once it starts, you cannot go back to '
       'a previous question after moving on.';
   static const String readingInstructionsButtonLabel = 'Next';
+
+  /// Last-resort instruction when neither the API nor TaskTypeMeta has one.
+  static const String defaultTaskInstruction =
+      'Follow the instructions for this task.';
 
   static const String sectionCompletedTimeUpTitle = 'Time is up';
   static const String sectionCompletedTimeUpMessage =

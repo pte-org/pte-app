@@ -7,7 +7,8 @@ import 'package:pte_app/core/storage/tables/answer_outbox_table.dart';
 part 'answer_outbox_dao.g.dart';
 
 @DriftAccessor(tables: [AnswerOutboxTable])
-class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxDaoMixin {
+class AnswerOutboxDao extends DatabaseAccessor<AppDatabase>
+    with _$AnswerOutboxDaoMixin {
   AnswerOutboxDao(super.db);
 
   /// Idempotent upsert keyed on `(attemptPublicId, pinnedItemPublicId)`.
@@ -37,7 +38,9 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
   /// All rows for an attempt, any status — needed by Phase 3's resume
   /// reconciliation.
   Future<List<AnswerOutbox>> queryByAttempt(String attemptPublicId) {
-    return (select(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).get();
+    return (select(
+      answerOutboxTable,
+    )..where((t) => t.attemptPublicId.equals(attemptPublicId))).get();
   }
 
   /// Counts tasks that have a non-empty local answer payload. An empty
@@ -49,36 +52,59 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
   }
 
   Future<List<AnswerOutbox>> queryPendingByAttempt(String attemptPublicId) {
-    return (select(answerOutboxTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.status.equals(AnswerSyncStatus.pending.name),
-          ))
+    return (select(answerOutboxTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.status.equals(AnswerSyncStatus.pending.name),
+        ))
         .get();
   }
 
   /// A single row by its composite key, or `null` if none exists. Used by
   /// `SyncEngine.flushOne` to target exactly the requested task without a
   /// full per-attempt fetch.
-  Future<AnswerOutbox?> getAnswer(String attemptPublicId, String pinnedItemPublicId) {
-    return (select(answerOutboxTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+  Future<AnswerOutbox?> getAnswer(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+  ) {
+    return (select(answerOutboxTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .getSingleOrNull();
   }
 
   Future<void> markSynced(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.synced);
+      _updateStatus(
+        attemptPublicId,
+        pinnedItemPublicId,
+        AnswerSyncStatus.synced,
+      );
 
   /// Returns a row to retry-pending after a transient failure.
   Future<void> markPending(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.pending);
+      _updateStatus(
+        attemptPublicId,
+        pinnedItemPublicId,
+        AnswerSyncStatus.pending,
+      );
 
-  Future<void> markTerminalRejected(String attemptPublicId, String pinnedItemPublicId, String reason) =>
-      _updateStatus(attemptPublicId, pinnedItemPublicId, AnswerSyncStatus.terminalRejected, lastSyncError: reason);
+  Future<void> markTerminalRejected(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    String reason,
+  ) => _updateStatus(
+    attemptPublicId,
+    pinnedItemPublicId,
+    AnswerSyncStatus.terminalRejected,
+    lastSyncError: reason,
+  );
 
   Future<void> deleteByAttempt(String attemptPublicId) {
-    return (delete(answerOutboxTable)..where((t) => t.attemptPublicId.equals(attemptPublicId))).go();
+    return (delete(
+      answerOutboxTable,
+    )..where((t) => t.attemptPublicId.equals(attemptPublicId))).go();
   }
 
   /// Forces a WAL checkpoint. Called after each flush batch — under
@@ -94,14 +120,17 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase> with _$AnswerOutboxD
     AnswerSyncStatus status, {
     String? lastSyncError,
   }) {
-    return (update(answerOutboxTable)
-          ..where(
-            (t) => t.attemptPublicId.equals(attemptPublicId) & t.pinnedItemPublicId.equals(pinnedItemPublicId),
-          ))
+    return (update(answerOutboxTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId),
+        ))
         .write(
           AnswerOutboxTableCompanion(
             status: Value(status.name),
-            lastSyncError: lastSyncError == null ? const Value.absent() : Value(lastSyncError),
+            lastSyncError: lastSyncError == null
+                ? const Value.absent()
+                : Value(lastSyncError),
             updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
           ),
         );

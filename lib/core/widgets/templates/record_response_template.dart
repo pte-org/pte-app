@@ -11,7 +11,7 @@ class RecordResponseTemplate extends StatelessWidget {
     required this.stimulus,
     required this.response,
     this.metadata = const [],
-    this.layout = ExamTemplateLayout.split,
+    this.layout = ExamTemplateLayout.centeredMedia,
   });
 
   final String title;

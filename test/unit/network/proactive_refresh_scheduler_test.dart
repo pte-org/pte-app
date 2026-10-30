@@ -20,8 +20,12 @@ void main() {
 
   setUp(() {
     final secureStorage = _FakeSecureStorage();
-    when(() => secureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
-        .thenAnswer((_) async {});
+    when(
+      () => secureStorage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
     fakeNow = DateTime(2026, 1, 1, 0, 0, 0);
     tokenStore = TokenStore(secureStorage: secureStorage, now: () => fakeNow);
     capturedDelay = null;
@@ -32,46 +36,67 @@ void main() {
   Timer fakeTimerFactory(Duration delay, void Function() callback) {
     capturedDelay = delay;
     capturedCallback = callback;
-    return Timer(const Duration(days: 999), () {}); // never fires for real in this test
+    return Timer(
+      const Duration(days: 999),
+      () {},
+    ); // never fires for real in this test
   }
 
-  test('schedules a refresh before the 900s boundary, verified without waiting real time', () async {
-    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
-    // Override the store's real-clock expiry with a deterministic one via
-    // the scheduler's injectable `now`, computed relative to fakeNow.
-    final scheduler = ProactiveRefreshScheduler(
-      tokenStore: tokenStore,
-      onRefreshDue: () async => refreshDueCalls++,
-      now: () => fakeNow,
-      createTimer: fakeTimerFactory,
-      safetyMargin: const Duration(seconds: 60),
-    );
+  test(
+    'schedules a refresh before the 900s boundary, verified without waiting real time',
+    () async {
+      await tokenStore.saveTokens(
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresInSeconds: 900,
+      );
+      // Override the store's real-clock expiry with a deterministic one via
+      // the scheduler's injectable `now`, computed relative to fakeNow.
+      final scheduler = ProactiveRefreshScheduler(
+        tokenStore: tokenStore,
+        onRefreshDue: () async => refreshDueCalls++,
+        now: () => fakeNow,
+        createTimer: fakeTimerFactory,
+        safetyMargin: const Duration(seconds: 60),
+      );
 
-    scheduler.scheduleFromTokenStore();
+      scheduler.scheduleFromTokenStore();
 
-    expect(capturedDelay, isNotNull);
-    expect(capturedDelay!.inSeconds, lessThan(900));
-    expect(capturedDelay!.inSeconds, greaterThan(0));
-  });
+      expect(capturedDelay, isNotNull);
+      expect(capturedDelay!.inSeconds, lessThan(900));
+      expect(capturedDelay!.inSeconds, greaterThan(0));
+    },
+  );
 
-  test('invoking the scheduled callback triggers onRefreshDue exactly once', () async {
-    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
-    final scheduler = ProactiveRefreshScheduler(
-      tokenStore: tokenStore,
-      onRefreshDue: () async => refreshDueCalls++,
-      now: () => fakeNow,
-      createTimer: fakeTimerFactory,
-    );
+  test(
+    'invoking the scheduled callback triggers onRefreshDue exactly once',
+    () async {
+      await tokenStore.saveTokens(
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresInSeconds: 900,
+      );
+      final scheduler = ProactiveRefreshScheduler(
+        tokenStore: tokenStore,
+        onRefreshDue: () async => refreshDueCalls++,
+        now: () => fakeNow,
+        createTimer: fakeTimerFactory,
+      );
 
-    scheduler.scheduleFromTokenStore();
-    capturedCallback!();
-    await Future<void>.delayed(Duration.zero);
+      scheduler.scheduleFromTokenStore();
+      capturedCallback!();
+      await Future<void>.delayed(Duration.zero);
 
-    expect(refreshDueCalls, 1);
-  });
+      expect(refreshDueCalls, 1);
+    },
+  );
 
   test('cancel() cancels the pending timer', () async {
-    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
+    await tokenStore.saveTokens(
+      accessToken: 'a',
+      refreshToken: 'r',
+      expiresInSeconds: 900,
+    );
     const cancelled = false;
     final scheduler = ProactiveRefreshScheduler(
       tokenStore: tokenStore,
@@ -93,68 +118,82 @@ void main() {
     expect(cancelled, isFalse);
   });
 
-  test('a failed refresh re-arms a short retry instead of silently stranding the app', () async {
-    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
-    final scheduledDelays = <Duration>[];
-    final scheduledCallbacks = <void Function()>[];
-    var attempt = 0;
+  test(
+    'a failed refresh re-arms a short retry instead of silently stranding the app',
+    () async {
+      await tokenStore.saveTokens(
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresInSeconds: 900,
+      );
+      final scheduledDelays = <Duration>[];
+      final scheduledCallbacks = <void Function()>[];
+      var attempt = 0;
 
-    final scheduler = ProactiveRefreshScheduler(
-      tokenStore: tokenStore,
-      onRefreshDue: () async {
-        attempt++;
-        if (attempt == 1) throw Exception('network down');
-      },
-      now: () => fakeNow,
-      retryDelay: const Duration(seconds: 30),
-      createTimer: (delay, cb) {
-        scheduledDelays.add(delay);
-        scheduledCallbacks.add(cb);
-        return Timer(const Duration(days: 999), () {});
-      },
-    );
+      final scheduler = ProactiveRefreshScheduler(
+        tokenStore: tokenStore,
+        onRefreshDue: () async {
+          attempt++;
+          if (attempt == 1) throw Exception('network down');
+        },
+        now: () => fakeNow,
+        retryDelay: const Duration(seconds: 30),
+        createTimer: (delay, cb) {
+          scheduledDelays.add(delay);
+          scheduledCallbacks.add(cb);
+          return Timer(const Duration(days: 999), () {});
+        },
+      );
 
-    scheduler.scheduleFromTokenStore();
-    scheduledCallbacks.first(); // first attempt fails
-    await Future<void>.delayed(Duration.zero);
+      scheduler.scheduleFromTokenStore();
+      scheduledCallbacks.first(); // first attempt fails
+      await Future<void>.delayed(Duration.zero);
 
-    expect(attempt, 1);
-    expect(scheduledDelays.length, 2); // initial schedule + retry
-    expect(scheduledDelays.last, const Duration(seconds: 30));
+      expect(attempt, 1);
+      expect(scheduledDelays.length, 2); // initial schedule + retry
+      expect(scheduledDelays.last, const Duration(seconds: 30));
 
-    scheduledCallbacks.last(); // retry succeeds
-    await Future<void>.delayed(Duration.zero);
+      scheduledCallbacks.last(); // retry succeeds
+      await Future<void>.delayed(Duration.zero);
 
-    expect(attempt, 2);
-    // initial schedule + retry + re-armed next cycle after the retry succeeds
-    expect(scheduledDelays.length, 3);
-  });
+      expect(attempt, 2);
+      // initial schedule + retry + re-armed next cycle after the retry succeeds
+      expect(scheduledDelays.length, 3);
+    },
+  );
 
-  test('a successful refresh re-arms the next proactive cycle, not just a one-shot after login', () async {
-    await tokenStore.saveTokens(accessToken: 'a', refreshToken: 'r', expiresInSeconds: 900);
-    final scheduledCallbacks = <void Function()>[];
+  test(
+    'a successful refresh re-arms the next proactive cycle, not just a one-shot after login',
+    () async {
+      await tokenStore.saveTokens(
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresInSeconds: 900,
+      );
+      final scheduledCallbacks = <void Function()>[];
 
-    final scheduler = ProactiveRefreshScheduler(
-      tokenStore: tokenStore,
-      onRefreshDue: () async => refreshDueCalls++,
-      now: () => fakeNow,
-      createTimer: (delay, cb) {
-        scheduledCallbacks.add(cb);
-        return Timer(const Duration(days: 999), () {});
-      },
-    );
+      final scheduler = ProactiveRefreshScheduler(
+        tokenStore: tokenStore,
+        onRefreshDue: () async => refreshDueCalls++,
+        now: () => fakeNow,
+        createTimer: (delay, cb) {
+          scheduledCallbacks.add(cb);
+          return Timer(const Duration(days: 999), () {});
+        },
+      );
 
-    scheduler.scheduleFromTokenStore();
-    scheduledCallbacks.first(); // first proactive refresh fires and succeeds
-    await Future<void>.delayed(Duration.zero);
+      scheduler.scheduleFromTokenStore();
+      scheduledCallbacks.first(); // first proactive refresh fires and succeeds
+      await Future<void>.delayed(Duration.zero);
 
-    expect(refreshDueCalls, 1);
-    expect(scheduledCallbacks.length, 2); // re-armed for the next cycle
+      expect(refreshDueCalls, 1);
+      expect(scheduledCallbacks.length, 2); // re-armed for the next cycle
 
-    scheduledCallbacks.last(); // second proactive refresh fires and succeeds
-    await Future<void>.delayed(Duration.zero);
+      scheduledCallbacks.last(); // second proactive refresh fires and succeeds
+      await Future<void>.delayed(Duration.zero);
 
-    expect(refreshDueCalls, 2);
-    expect(scheduledCallbacks.length, 3); // re-armed again
-  });
+      expect(refreshDueCalls, 2);
+      expect(scheduledCallbacks.length, 3); // re-armed again
+    },
+  );
 }

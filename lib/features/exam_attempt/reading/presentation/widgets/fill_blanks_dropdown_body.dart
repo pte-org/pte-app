@@ -1,86 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/features/exam_attempt/domain/blank_prompt_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_cubit.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_blanks_dropdown_state.dart';
+import 'inline_blank_dropdown_passage.dart';
 
-/// Passage with inline per-gap dropdowns — each gap's items come strictly
-/// from its own `BlankGroup.options`, never a shared list. Requires
-/// `task.blankGroups` to be non-null/non-empty; the caller (the screen)
-/// renders the `StatusBanner` fallback instead when it isn't.
+/// Binds the common inline passage to the student's persisted answer state.
 class FillBlanksDropdownBody extends StatelessWidget {
   const FillBlanksDropdownBody({super.key, required this.task});
-
   final TaskView task;
 
   @override
-  Widget build(BuildContext context) {
-    final groupMap = <int, BlankGroup>{
-      for (final g in task.blankGroups!) g.blankIndex: g,
-    };
-    final segments = parseBlankPrompt(task.promptText ?? '');
-
-    return BlocBuilder<FillBlanksDropdownCubit, FillBlanksDropdownState>(
-      builder: (context, state) {
-        return Padding(
-          padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                for (final segment in segments)
-                  _spanFor(context, segment, groupMap, state),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  InlineSpan _spanFor(
+  Widget build(
     BuildContext context,
-    PromptSegment segment,
-    Map<int, BlankGroup> groupMap,
-    FillBlanksDropdownState state,
-  ) {
-    if (segment is PromptTextSegment) {
-      return TextSpan(text: segment.text);
-    }
-    final gapIndex = (segment as PromptGapSegment).gapIndex;
-    final group = groupMap[gapIndex];
-    if (group == null) return const TextSpan(text: '');
-    final selected = gapIndex < state.selectedOrderIndexes.length
-        ? state.selectedOrderIndexes[gapIndex]
-        : null;
-    return WidgetSpan(
-      alignment: PlaceholderAlignment.middle,
-      child: Semantics(
-        label: selected == null
-            ? 'Gap ${gapIndex + 1}, empty'
-            : 'Gap ${gapIndex + 1}, filled with '
-                  '\'${group.options.firstWhere((o) => o.orderIndex == selected, orElse: () => group.options.first).text}\'',
-        child: DropdownButton<String>(
-          value: selected,
-          items: [
+  ) => BlocBuilder<FillBlanksDropdownCubit, FillBlanksDropdownState>(
+    builder: (context, state) => InlineBlankDropdownPassage(
+      promptText: task.promptText ?? '',
+      optionsByGap: {
+        for (final group in task.blankGroups ?? const <BlankGroup>[])
+          group.blankIndex: [
             for (final option in group.options)
-              DropdownMenuItem(
-                value: option.orderIndex,
-                child: Text(option.text),
-              ),
+              InlineBlankChoice(value: option.orderIndex, text: option.text),
           ],
-          onChanged: (value) {
-            if (value != null) {
-              context.read<FillBlanksDropdownCubit>().selectOption(
-                gapIndex,
-                value,
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
+      },
+      values: {
+        for (var index = 0; index < state.selectedOrderIndexes.length; index++)
+          if (state.selectedOrderIndexes[index] != null)
+            index: state.selectedOrderIndexes[index]!,
+      },
+      onChanged: context.read<FillBlanksDropdownCubit>().selectOption,
+    ),
+  );
 }

@@ -8,7 +8,8 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/storage/storage_module.dart';
 import 'package:pte_app/features/auth/auth_module.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
-import 'package:pte_app/features/report/report_module.dart';
+import 'package:pte_app/features/exam_preview/data/preview_audio_session.dart';
+import 'package:pte_app/features/exam_preview/exam_preview_module.dart';
 
 Future<void> main() async {
   // just_audio has no native Windows backend of its own — bridge it to
@@ -33,7 +34,8 @@ Future<void> main() async {
   // path.
   await getIt<LockdownService>().initialize();
   setupExamAttemptModule();
-  setupReportModule();
+  setupExamPreviewModule();
+  await PreviewAudioSession.cleanupOrphans();
   runApp(const PteApp());
 }
 

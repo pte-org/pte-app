@@ -19,49 +19,55 @@ void main() {
     );
   }
 
-  testWidgets('timeExpired: true renders the "Time is up" wording, not the natural-completion wording', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject(timeExpired: true));
+  testWidgets(
+    'timeExpired: true renders the "Time is up" wording, not the natural-completion wording',
+    (tester) async {
+      await tester.pumpWidget(buildSubject(timeExpired: true));
 
-    expect(find.text(AppStrings.sectionCompletedTimeUpTitle), findsOneWidget);
-    expect(find.text(AppStrings.sectionCompletedNaturalTitle), findsNothing);
-  });
+      expect(find.text(AppStrings.sectionCompletedTimeUpTitle), findsOneWidget);
+      expect(find.text(AppStrings.sectionCompletedNaturalTitle), findsNothing);
+    },
+  );
 
-  testWidgets('timeExpired: false renders the natural-completion wording, not the "Time is up" wording', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject(timeExpired: false));
+  testWidgets(
+    'timeExpired: false renders the natural-completion wording, not the "Time is up" wording',
+    (tester) async {
+      await tester.pumpWidget(buildSubject(timeExpired: false));
 
-    expect(find.text(AppStrings.sectionCompletedNaturalTitle), findsOneWidget);
-    expect(find.text(AppStrings.sectionCompletedTimeUpTitle), findsNothing);
-  });
+      expect(
+        find.text(AppStrings.sectionCompletedNaturalTitle),
+        findsOneWidget,
+      );
+      expect(find.text(AppStrings.sectionCompletedTimeUpTitle), findsNothing);
+    },
+  );
 
-  testWidgets('with retries left, shows the remaining count and Try again calls onRetry', (
-    tester,
-  ) async {
-    var retryCount = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SectionCompletedScreen(
-          timeExpired: false,
-          attemptNumber: 1,
-          remainingRetries: 3,
-          canRetry: true,
-          onContinue: () {},
-          onRetry: () => retryCount++,
+  testWidgets(
+    'with retries left, shows the remaining count and Try again calls onRetry',
+    (tester) async {
+      var retryCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SectionCompletedScreen(
+            timeExpired: false,
+            attemptNumber: 1,
+            remainingRetries: 3,
+            canRetry: true,
+            onContinue: () {},
+            onRetry: () => retryCount++,
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text(AppStrings.examRetriesRemainingMessage), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+      expect(find.text(AppStrings.examRetriesRemainingMessage), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
 
-    await tester.tap(find.text(ExamAttemptStrings.attemptStartRetry));
-    await tester.pump();
+      await tester.tap(find.text(ExamAttemptStrings.attemptStartRetry));
+      await tester.pump();
 
-    expect(retryCount, 1);
-  });
+      expect(retryCount, 1);
+    },
+  );
 
   testWidgets('with no retries left, hides the attempt summary and Try again', (
     tester,
@@ -69,13 +75,18 @@ void main() {
     await tester.pumpWidget(buildSubject(timeExpired: false));
 
     expect(find.text(AppStrings.examAttemptNumberLabel), findsNothing);
-    expect(find.text(ExamAttemptStrings.retryLimitReachedMessage), findsNothing);
+    expect(
+      find.text(ExamAttemptStrings.retryLimitReachedMessage),
+      findsNothing,
+    );
     expect(find.text(ExamAttemptStrings.attemptStartRetry), findsNothing);
   });
 
   testWidgets('tapping Continue calls onContinue exactly once', (tester) async {
     var callCount = 0;
-    await tester.pumpWidget(buildSubject(timeExpired: false, onContinue: () => callCount++));
+    await tester.pumpWidget(
+      buildSubject(timeExpired: false, onContinue: () => callCount++),
+    );
 
     await tester.tap(find.text(AppStrings.sectionCompletedContinueButton));
     await tester.pump();

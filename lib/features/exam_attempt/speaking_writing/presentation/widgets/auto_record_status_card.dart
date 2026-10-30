@@ -31,6 +31,7 @@ class AutoRecordStatusCard extends StatelessWidget {
     required this.recordingState,
     required this.snapshot,
     this.inputLevels,
+    this.softAppearance = true,
   });
 
   final TaskView task;
@@ -39,23 +40,27 @@ class AutoRecordStatusCard extends StatelessWidget {
 
   /// Live mic levels (dBFS), drawn as a waveform only while recording.
   final Stream<double>? inputLevels;
+  final bool softAppearance;
 
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.unavailable) {
-      return const RecordedAnswerStatusCard(
+      return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
         progress: 0.0,
       );
     }
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
       return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: _uploadStatusLabel(),
         progress: 1.0,
       );
     }
     if (snapshot?.phase == TimerPhase.response) {
       return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: _countdownLabel(
           prefix: SpeakingWritingStrings.recordingInProgressPrefix,
           suffix: SpeakingWritingStrings.recordingInProgressSuffix,
@@ -73,6 +78,8 @@ class AutoRecordStatusCard extends StatelessWidget {
     final remaining =
         snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
     return RecordedAnswerStatusCard(
+      isPreparing: true,
+      softAppearance: softAppearance,
       statusLabel: _countdownLabel(
         prefix: SpeakingWritingStrings.recordingBeginningInPrefix,
         suffix: SpeakingWritingStrings.recordingBeginningInSuffix,

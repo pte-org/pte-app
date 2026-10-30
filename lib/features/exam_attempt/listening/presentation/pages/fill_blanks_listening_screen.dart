@@ -16,6 +16,7 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/fill_
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/fill_blanks_listening_text.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// StatefulWidget owning one `TextEditingController` per gap (the cubit
 /// owns none — phase-05 Design Constraints, extends phase-02's corrected
@@ -95,11 +96,14 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
                   TaskTypeMeta.forTaskType(widget.task.taskType)?.title ??
                   widget.task.title,
               subtitle: widget.task.section,
-              instruction:
-                  TaskTypeMeta.forTaskType(widget.task.taskType)?.instruction ??
-                  'Type the missing words as you listen.',
+              instruction: resolveTaskInstruction(
+                apiInstruction: widget.task.taskTypeInstruction,
+                meta: TaskTypeMeta.forTaskType(widget.task.taskType),
+              ),
               stimulus: AudioListeningStatusCard(
-                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                statusLabel: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio...',
                 progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: SingleChildScrollView(

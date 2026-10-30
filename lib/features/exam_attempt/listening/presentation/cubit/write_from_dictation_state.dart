@@ -1,7 +1,12 @@
 import 'package:equatable/equatable.dart';
 
 class WriteFromDictationState extends Equatable {
-  const WriteFromDictationState({this.draftText = '', this.wordCount = 0, this.hasFinishedPlaying = false, this.progress = 0.0});
+  const WriteFromDictationState({
+    this.draftText = '',
+    this.wordCount = 0,
+    this.hasFinishedPlaying = false,
+    this.progress = 0.0,
+  });
 
   final String draftText;
   final int wordCount;
@@ -12,7 +17,12 @@ class WriteFromDictationState extends Equatable {
   final bool hasFinishedPlaying;
   final double progress;
 
-  WriteFromDictationState copyWith({String? draftText, int? wordCount, bool? hasFinishedPlaying, double? progress}) {
+  WriteFromDictationState copyWith({
+    String? draftText,
+    int? wordCount,
+    bool? hasFinishedPlaying,
+    double? progress,
+  }) {
     return WriteFromDictationState(
       draftText: draftText ?? this.draftText,
       wordCount: wordCount ?? this.wordCount,
@@ -22,5 +32,10 @@ class WriteFromDictationState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [draftText, wordCount, hasFinishedPlaying, progress];
+  List<Object?> get props => [
+    draftText,
+    wordCount,
+    hasFinishedPlaying,
+    progress,
+  ];
 }

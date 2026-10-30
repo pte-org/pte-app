@@ -43,18 +43,26 @@ class _FakeAdapter implements HttpClientAdapter {
         'tokenType': 'Bearer',
         'expiresInSeconds': 900,
       });
-      return ResponseBody.fromString(body, 200, headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      });
+      return ResponseBody.fromString(
+        body,
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
     }
 
     if (options.path == '/protected') {
       protectedCallCount++;
       final authHeader = options.headers['Authorization'] as String?;
       if (authHeader == 'Bearer $currentValidToken') {
-        return ResponseBody.fromString(jsonEncode({'ok': true}), 200, headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-        });
+        return ResponseBody.fromString(
+          jsonEncode({'ok': true}),
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
       }
       return ResponseBody.fromString('{}', 401);
     }
@@ -77,42 +85,62 @@ void main() {
   setUp(() {
     adapter = _FakeAdapter();
     secureStorage = _FakeSecureStorage();
-    when(() => secureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
-        .thenAnswer((_) async {});
-    when(() => secureStorage.read(key: TokenStore.refreshTokenKey)).thenAnswer((_) async => 'stale-refresh-token');
+    when(
+      () => secureStorage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => secureStorage.read(key: TokenStore.refreshTokenKey),
+    ).thenAnswer((_) async => 'stale-refresh-token');
     tokenStore = TokenStore(secureStorage: secureStorage);
 
     refreshDio = Dio()..httpClientAdapter = adapter;
     dio = Dio()
       ..httpClientAdapter = adapter
-      ..interceptors.add(TokenRefreshInterceptor(
-        refresher: TokenRefresher(
-          refreshDio: refreshDio,
-          tokenStore: tokenStore,
-          refreshEndpoint: '/api/v1/auth/refresh',
+      ..interceptors.add(
+        TokenRefreshInterceptor(
+          refresher: TokenRefresher(
+            refreshDio: refreshDio,
+            tokenStore: tokenStore,
+            refreshEndpoint: '/api/v1/auth/refresh',
+          ),
         ),
-      ));
+      );
   });
 
-  test('a single 401 triggers exactly one refresh call and the retried request carries the new token', () async {
-    final response = await dio.get<Map<String, dynamic>>(
-      '/protected',
-      options: Options(headers: {'Authorization': 'Bearer expired-token'}),
-    );
+  test(
+    'a single 401 triggers exactly one refresh call and the retried request carries the new token',
+    () async {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/protected',
+        options: Options(headers: {'Authorization': 'Bearer expired-token'}),
+      );
 
-    expect(response.data, {'ok': true});
-    expect(adapter.refreshCallCount, 1);
-    expect(adapter.protectedCallCount, 2); // original (401) + retry (200)
-  });
+      expect(response.data, {'ok': true});
+      expect(adapter.refreshCallCount, 1);
+      expect(adapter.protectedCallCount, 2); // original (401) + retry (200)
+    },
+  );
 
-  test('two concurrent 401s share a single in-flight refresh (single-flight)', () async {
-    final results = await Future.wait([
-      dio.get<Map<String, dynamic>>('/protected', options: Options(headers: {'Authorization': 'Bearer expired-token'})),
-      dio.get<Map<String, dynamic>>('/protected', options: Options(headers: {'Authorization': 'Bearer expired-token'})),
-    ]);
+  test(
+    'two concurrent 401s share a single in-flight refresh (single-flight)',
+    () async {
+      final results = await Future.wait([
+        dio.get<Map<String, dynamic>>(
+          '/protected',
+          options: Options(headers: {'Authorization': 'Bearer expired-token'}),
+        ),
+        dio.get<Map<String, dynamic>>(
+          '/protected',
+          options: Options(headers: {'Authorization': 'Bearer expired-token'}),
+        ),
+      ]);
 
-    expect(results[0].data, {'ok': true});
-    expect(results[1].data, {'ok': true});
-    expect(adapter.refreshCallCount, 1);
-  });
+      expect(results[0].data, {'ok': true});
+      expect(results[1].data, {'ok': true});
+      expect(adapter.refreshCallCount, 1);
+    },
+  );
 }

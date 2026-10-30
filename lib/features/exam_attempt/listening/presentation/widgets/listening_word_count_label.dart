@@ -10,7 +10,12 @@ import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dar
 /// extracts it. Guidance-only — never blocks submission (same as
 /// `WordCountLabel`).
 class ListeningWordCountLabel extends StatelessWidget {
-  const ListeningWordCountLabel({super.key, required this.wordCount, this.minWordCount, this.maxWordCount});
+  const ListeningWordCountLabel({
+    super.key,
+    required this.wordCount,
+    this.minWordCount,
+    this.maxWordCount,
+  });
 
   final int wordCount;
   final int? minWordCount;
@@ -18,13 +23,17 @@ class ListeningWordCountLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('$wordCount${ExamAttemptStrings.wordCountSuffix}${_boundsLabel()}');
+    return Text(
+      '$wordCount${ExamAttemptStrings.wordCountSuffix}${_boundsLabel()}',
+    );
   }
 
   String _boundsLabel() {
     final parts = [
-      if (minWordCount != null) '${ExamAttemptStrings.wordCountMinLabel}$minWordCount',
-      if (maxWordCount != null) '${ExamAttemptStrings.wordCountMaxLabel}$maxWordCount',
+      if (minWordCount != null)
+        '${ExamAttemptStrings.wordCountMinLabel}$minWordCount',
+      if (maxWordCount != null)
+        '${ExamAttemptStrings.wordCountMaxLabel}$maxWordCount',
     ];
     if (parts.isEmpty) return '';
     return '${ExamAttemptStrings.wordCountBoundsOpen}${parts.join(ExamAttemptStrings.wordCountBoundsSeparator)}${ExamAttemptStrings.wordCountBoundsClose}';

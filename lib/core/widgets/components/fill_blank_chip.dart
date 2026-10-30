@@ -36,7 +36,7 @@ class FillBlankChip extends StatelessWidget {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(3)),
         ),
-        labelStyle: AppTypography.bodyRegular.copyWith(
+        labelStyle: AppTypography.examAnswer.copyWith(
           color: enabled ? AppColors.textPrimary : AppColors.textMuted,
         ),
         padding: const EdgeInsets.symmetric(

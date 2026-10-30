@@ -23,8 +23,8 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `RepeatSentenceScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
-/// same fully-automatic advance, same [AudioPromptRecordBody]-shared 2-card
-/// layout) — only the sub-stage timing and instruction text differ, and
+/// same fully-automatic advance, same [AudioPromptRecordBody]-shared single
+/// panel layout) — only the sub-stage timing and instruction text differ, and
 /// unlike Retell Lecture's, this screen's instruction text is a fixed
 /// string (no interpolated variables), same style as Repeat Sentence's.
 class AnswerShortQuestionScreen extends StatefulWidget {
@@ -105,7 +105,8 @@ class _AnswerShortQuestionScreenState extends State<AnswerShortQuestionScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _AnswerShortQuestionBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,

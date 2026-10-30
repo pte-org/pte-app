@@ -15,7 +15,10 @@ class WriteEssayState extends Equatable {
   final int wordCount;
 
   WriteEssayState copyWith({String? draftText, int? wordCount}) {
-    return WriteEssayState(draftText: draftText ?? this.draftText, wordCount: wordCount ?? this.wordCount);
+    return WriteEssayState(
+      draftText: draftText ?? this.draftText,
+      wordCount: wordCount ?? this.wordCount,
+    );
   }
 
   @override

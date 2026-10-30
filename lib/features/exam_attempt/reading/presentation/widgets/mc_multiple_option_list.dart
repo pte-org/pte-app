@@ -21,6 +21,7 @@ class McMultipleOptionList extends StatelessWidget {
     return BlocBuilder<McReadingMultipleCubit, McReadingMultipleState>(
       builder: (context, state) {
         return ChoiceList(
+          plain: true,
           labels: [for (final option in options) option.text],
           selectedIndices: {
             for (var index = 0; index < options.length; index++)
