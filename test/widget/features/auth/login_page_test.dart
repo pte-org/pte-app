@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/constants/app_colors.dart';
+import 'package:pte_app/core/widgets/components/exam_status_block.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/core/network/friendly_error_message.dart';
 import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
@@ -75,6 +77,31 @@ void main() {
       );
     },
   );
+
+  for (final width in [375.0, 1280.0]) {
+    testWidgets('focused exam sign-in layout fits at $width', (tester) async {
+      tester.view.physicalSize = Size(width, 720);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(buildSubject());
+      expect(find.text('PTE Exam'), findsOneWidget);
+      expect(find.text('Sign in to your exam'), findsOneWidget);
+      expect(find.textContaining('Pearson'), findsNothing);
+      expect(find.text('Test Delivery System'), findsNothing);
+      expect(find.textContaining('Workstation'), findsNothing);
+      expect(
+        find.textContaining('Your username and password are on the sheet'),
+        findsNothing,
+      );
+      expect(find.byType(TextFormField), findsNWidgets(3));
+      final card = tester.getRect(find.byType(Card));
+      expect(card.center.dx, closeTo(width / 2, 1));
+      expect(card.left, greaterThanOrEqualTo(0));
+      expect(card.right, lessThanOrEqualTo(width));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('valid credentials are trimmed and submitted through AuthBloc', (
     tester,
@@ -165,6 +192,20 @@ void main() {
 
       expect(find.byType(LoginPage), findsOneWidget);
       expect(find.text(friendlyErrorMessage(error)), findsOneWidget);
+      expect(find.text(AppStrings.loginFailureTitle), findsOneWidget);
+      expect(
+        tester.widget<ExamStatusBlock>(find.byType(ExamStatusBlock)).kind,
+        ExamStatusKind.error,
+      );
+      expect(
+        tester
+            .widget<Text>(find.text(friendlyErrorMessage(error)))
+            .style
+            ?.color,
+        AppColors.errorDark,
+      );
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(tester.takeException(), isNull);
       expect(find.byType(TextFormField), findsNWidgets(3));
     },
   );
