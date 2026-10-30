@@ -394,8 +394,11 @@ class TaskTypeMeta {
     TaskTypeMeta(
       taskType: TaskTypeCodes.fillInTheBlanksDragAndDrop,
       section: 'READING',
-      title: 'Reading: Fill in the Blanks',
-      instruction: 'Drag the words into the correct blanks.',
+      title: 'Fill in the Blanks (Drag and Drop)',
+      instruction:
+          'In the text below some words are missing. Drag words from '
+          'the box below to the appropriate place in the text. To undo an '
+          'answer choice, drag the word back to the box below the text.',
       family: TaskTemplateFamily.fillBlanks,
       scoringMode: 'reading',
       designReference: '23-reading-fill-in-the-blanks',
@@ -403,7 +406,7 @@ class TaskTypeMeta {
     TaskTypeMeta(
       taskType: TaskTypeCodes.mcReadingSingle,
       section: 'READING',
-      title: 'Reading: Multiple Choice, Single Answer',
+      title: 'Multiple Choice, Single Answer',
       instruction: 'Select the correct response.',
       family: TaskTemplateFamily.singleSelect,
       scoringMode: 'reading',
@@ -412,8 +415,10 @@ class TaskTypeMeta {
     TaskTypeMeta(
       taskType: TaskTypeCodes.mcListeningMultiple,
       section: 'LISTENING',
-      title: 'Multiple-Choice, Multiple Answer',
-      instruction: 'Select all the correct responses.',
+      title: 'Multiple Choice, Multiple Answers',
+      instruction:
+          'Listen to the recording and answer the question by selecting '
+          'the correct responses. You will need to select more than one response.',
       family: TaskTemplateFamily.multiSelect,
       scoringMode: 'listening',
       designReference: '27-multiple-choice-multiple-answer-listening',
@@ -421,8 +426,9 @@ class TaskTypeMeta {
     TaskTypeMeta(
       taskType: TaskTypeCodes.fillInTheBlanksTypeIn,
       section: 'LISTENING',
-      title: 'Listening: Fill in the Blanks',
-      instruction: 'Type the missing words as you listen.',
+      title: 'Fill in the Blanks (Type In)',
+      instruction:
+          'You will hear a recording. Type the missing words in each blank.',
       family: TaskTemplateFamily.fillBlanks,
       scoringMode: 'listening',
       designReference: '28-fill-in-the-blanks-listening',
@@ -458,7 +464,10 @@ class TaskTypeMeta {
       taskType: TaskTypeCodes.highlightIncorrectWords,
       section: 'LISTENING',
       title: 'Highlight Incorrect Words',
-      instruction: 'Select the words that differ from the recording.',
+      instruction:
+          'You will hear a recording. Below is a transcript of the '
+          'recording. Some words in the transcript differ from what the '
+          'speaker(s) said. Double-click the words that are different.',
       family: TaskTemplateFamily.tokenToggle,
       scoringMode: 'listening',
       designReference: '32-highlight-incorrect-words-listening',
