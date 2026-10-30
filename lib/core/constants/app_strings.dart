@@ -132,6 +132,10 @@ class AppStrings {
       'a previous question after moving on.';
   static const String readingInstructionsButtonLabel = 'Next';
 
+  /// Last-resort instruction when neither the API nor TaskTypeMeta has one.
+  static const String defaultTaskInstruction =
+      'Follow the instructions for this task.';
+
   static const String sectionCompletedTimeUpTitle = 'Time is up';
   static const String sectionCompletedTimeUpMessage =
       'The time allowed for this exam has ended. Your answers so far have been saved.';
