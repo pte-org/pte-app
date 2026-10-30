@@ -15,9 +15,15 @@ void setupStorageModule() {
   final getIt = GetIt.instance;
 
   getIt.registerLazySingleton<AppDatabase>(() => AppDatabase());
-  getIt.registerLazySingleton<AnswerOutboxDao>(() => getIt<AppDatabase>().answerOutboxDao);
-  getIt.registerLazySingleton<PendingMediaUploadDao>(() => getIt<AppDatabase>().pendingMediaUploadDao);
-  getIt.registerLazySingleton<LocalViolationDao>(() => getIt<AppDatabase>().localViolationDao);
+  getIt.registerLazySingleton<AnswerOutboxDao>(
+    () => getIt<AppDatabase>().answerOutboxDao,
+  );
+  getIt.registerLazySingleton<PendingMediaUploadDao>(
+    () => getIt<AppDatabase>().pendingMediaUploadDao,
+  );
+  getIt.registerLazySingleton<LocalViolationDao>(
+    () => getIt<AppDatabase>().localViolationDao,
+  );
   getIt.registerLazySingleton<NetworkCanary>(() => NetworkCanary());
 
   getIt.registerLazySingleton<SyncEngine>(

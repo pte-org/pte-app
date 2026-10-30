@@ -12,4 +12,10 @@
 ///   retried from here, never by re-uploading.
 /// - [ready]: `complete` succeeded. The coordinator hands this row to
 ///   `AnswerOutboxDao.upsertAnswer` and removes the row.
-enum PendingMediaUploadStatus { recorded, uploading, uploaded, completing, ready }
+enum PendingMediaUploadStatus {
+  recorded,
+  uploading,
+  uploaded,
+  completing,
+  ready,
+}
