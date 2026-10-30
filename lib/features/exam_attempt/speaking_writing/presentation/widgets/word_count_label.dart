@@ -21,15 +21,19 @@ class WordCountLabel extends StatelessWidget {
     return BlocSelector<WriteEssayCubit, WriteEssayState, int>(
       selector: (state) => state.wordCount,
       builder: (context, wordCount) {
-        return Text('$wordCount${ExamAttemptStrings.wordCountSuffix}${_boundsLabel()}');
+        return Text(
+          '$wordCount${ExamAttemptStrings.wordCountSuffix}${_boundsLabel()}',
+        );
       },
     );
   }
 
   String _boundsLabel() {
     final parts = [
-      if (minWordCount != null) '${ExamAttemptStrings.wordCountMinLabel}$minWordCount',
-      if (maxWordCount != null) '${ExamAttemptStrings.wordCountMaxLabel}$maxWordCount',
+      if (minWordCount != null)
+        '${ExamAttemptStrings.wordCountMinLabel}$minWordCount',
+      if (maxWordCount != null)
+        '${ExamAttemptStrings.wordCountMaxLabel}$maxWordCount',
     ];
     if (parts.isEmpty) return '';
     return '${ExamAttemptStrings.wordCountBoundsOpen}${parts.join(ExamAttemptStrings.wordCountBoundsSeparator)}${ExamAttemptStrings.wordCountBoundsClose}';

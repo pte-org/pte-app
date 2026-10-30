@@ -10,7 +10,10 @@ export 'recording_phase.dart';
 /// Sentence, Describe Image) — a single state shape for [AutoRecordCubit],
 /// since none of these tasks' recording mechanics differ.
 class AutoRecordState extends Equatable implements UploadTrackingState {
-  const AutoRecordState({this.recordingPhase = RecordingPhase.idle, this.uploadStatus});
+  const AutoRecordState({
+    this.recordingPhase = RecordingPhase.idle,
+    this.uploadStatus,
+  });
 
   final RecordingPhase recordingPhase;
 
@@ -19,7 +22,10 @@ class AutoRecordState extends Equatable implements UploadTrackingState {
   @override
   final PendingMediaUploadStatus? uploadStatus;
 
-  AutoRecordState copyWith({RecordingPhase? recordingPhase, PendingMediaUploadStatus? uploadStatus}) {
+  AutoRecordState copyWith({
+    RecordingPhase? recordingPhase,
+    PendingMediaUploadStatus? uploadStatus,
+  }) {
     return AutoRecordState(
       recordingPhase: recordingPhase ?? this.recordingPhase,
       uploadStatus: uploadStatus ?? this.uploadStatus,

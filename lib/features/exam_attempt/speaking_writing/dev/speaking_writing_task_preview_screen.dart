@@ -106,15 +106,9 @@ class _SpeakingWritingTaskPreviewScreenState
       body: ListView(
         children: [
           for (final task in SpeakingWritingTaskFixtures.all)
-            ListTile(
-              title: Text(task.taskType),
-              onTap: () => _select(task),
-            ),
+            ListTile(title: Text(task.taskType), onTap: () => _select(task)),
           for (final task in WritingTaskFixtures.all)
-            ListTile(
-              title: Text(task.taskType),
-              onTap: () => _select(task),
-            ),
+            ListTile(title: Text(task.taskType), onTap: () => _select(task)),
         ],
       ),
     );

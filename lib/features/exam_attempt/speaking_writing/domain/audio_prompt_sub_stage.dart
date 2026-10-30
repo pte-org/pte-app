@@ -32,6 +32,9 @@ bool isAudioPlayingSubStage(
 }) {
   final elapsed = elapsedPrepSeconds(task, snapshot);
   if (elapsed < preListenSeconds) return false;
-  final preRecordStart = (task.prepSeconds - preRecordSeconds).clamp(0, task.prepSeconds);
+  final preRecordStart = (task.prepSeconds - preRecordSeconds).clamp(
+    0,
+    task.prepSeconds,
+  );
   return elapsed < preRecordStart;
 }
