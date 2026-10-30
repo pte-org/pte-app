@@ -4,6 +4,7 @@ import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/widgets/exam/stimulus_spec.dart';
 
 import '../../domain/entities/preview_snapshot.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 class PreviewTaskUiModel {
   const PreviewTaskUiModel({
@@ -29,8 +30,11 @@ class PreviewTaskUiModel {
             item.taskTypeCode ??
             ExamPreviewStrings.taskTitle;
 
-  String get instruction =>
-      meta?.instruction ?? ExamPreviewStrings.defaultInstruction;
+  String get instruction => resolveTaskInstruction(
+    apiInstruction: item.taskTypeInstruction,
+    meta: meta,
+    fallback: ExamPreviewStrings.defaultInstruction,
+  );
 
   String get taskType =>
       item.taskTypeCode ?? item.taskType ?? 'UNKNOWN_TASK_TYPE';
