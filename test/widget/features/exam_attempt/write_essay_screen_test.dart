@@ -14,7 +14,8 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_eve
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/write_essay_screen.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
 
@@ -53,9 +54,19 @@ void main() {
     ).thenAnswer((_) async {});
     when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
 
-    const snapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 30), currentOrderIndex: 1);
-    when(() => bloc.state).thenReturn(AttemptInProgress('attempt-1', _essayTask(), snapshot));
-    whenListen(bloc, const Stream<ExamAttemptState>.empty(), initialState: bloc.state);
+    const snapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 30),
+      currentOrderIndex: 1,
+    );
+    when(
+      () => bloc.state,
+    ).thenReturn(AttemptInProgress('attempt-1', _essayTask(), snapshot));
+    whenListen(
+      bloc,
+      const Stream<ExamAttemptState>.empty(),
+      initialState: bloc.state,
+    );
   });
 
   Widget buildSubject() {
@@ -73,44 +84,51 @@ void main() {
   }
 
   group('WriteEssayScreen — TextEditingController lifecycle (Step 10)', () {
-    testWidgets('renders a TextField bound to a controller and disposes cleanly on teardown', (tester) async {
-      await tester.pumpWidget(buildSubject());
+    testWidgets(
+      'renders a TextField bound to a controller and disposes cleanly on teardown',
+      (tester) async {
+        await tester.pumpWidget(buildSubject());
 
-      expect(find.byType(TextField), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
 
-      // Tear the screen (and therefore its State, controller, and cubit)
-      // out of the tree entirely.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
+        // Tear the screen (and therefore its State, controller, and cubit)
+        // out of the tree entirely.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-    });
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-    testWidgets('typing updates the word-count label live without throwing after teardown', (tester) async {
-      await tester.pumpWidget(buildSubject());
+    testWidgets(
+      'typing updates the word-count label live without throwing after teardown',
+      (tester) async {
+        await tester.pumpWidget(buildSubject());
 
-      await tester.enterText(find.byType(TextField), 'hello world');
-      await tester.pump();
+        await tester.enterText(find.byType(TextField), 'hello world');
+        await tester.pump();
 
-      expect(find.textContaining('2 words'), findsOneWidget);
+        expect(find.textContaining('2 words'), findsOneWidget);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-    });
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-    testWidgets('no FlutterError about a disposed-but-still-attached controller is thrown after replacing the tree', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject());
-      await tester.enterText(find.byType(TextField), 'draft');
-      await tester.pump();
+    testWidgets(
+      'no FlutterError about a disposed-but-still-attached controller is thrown after replacing the tree',
+      (tester) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.enterText(find.byType(TextField), 'draft');
+        await tester.pump();
 
-      await tester.pumpWidget(Container());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(Container());
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-    });
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
