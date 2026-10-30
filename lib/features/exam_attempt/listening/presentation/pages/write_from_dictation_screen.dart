@@ -86,7 +86,9 @@ class _WriteFromDictationScreenState extends State<WriteFromDictationScreen> {
               subtitle: widget.task.section,
               instruction: ListeningStrings.writeFromDictationPrompt,
               stimulus: AudioListeningStatusCard(
-                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                statusLabel: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio...',
                 progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: Column(

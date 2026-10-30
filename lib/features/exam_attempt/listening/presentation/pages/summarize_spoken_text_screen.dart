@@ -85,7 +85,9 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
               subtitle: widget.task.section,
               instruction: ListeningStrings.summarizeSpokenTextPrompt,
               stimulus: AudioListeningStatusCard(
-                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                statusLabel: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio...',
                 progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: Column(
@@ -113,17 +115,22 @@ class _SummarizeSpokenTextScreenState extends State<SummarizeSpokenTextScreen> {
         ),
         // Next unlocks once the audio has played to the end (or failed to
         // play at all, so a broken file cannot trap the student).
-        bottomAction: BlocSelector<SummarizeSpokenTextCubit,
-            SummarizeSpokenTextState, bool>(
-          selector: (state) => state.hasFinishedPlaying || state.playbackFailed,
-          builder: (context, audioDone) => TaskAdvanceButton(
-            cubit: _cubit,
-            pinnedItemPublicId: widget.task.pinnedItemPublicId,
-            syncEngine: widget.syncEngine,
-            forwardOnlyNext: true,
-            forwardOnlyNextEnabled: audioDone,
-          ),
-        ),
+        bottomAction:
+            BlocSelector<
+              SummarizeSpokenTextCubit,
+              SummarizeSpokenTextState,
+              bool
+            >(
+              selector: (state) =>
+                  state.hasFinishedPlaying || state.playbackFailed,
+              builder: (context, audioDone) => TaskAdvanceButton(
+                cubit: _cubit,
+                pinnedItemPublicId: widget.task.pinnedItemPublicId,
+                syncEngine: widget.syncEngine,
+                forwardOnlyNext: true,
+                forwardOnlyNextEnabled: audioDone,
+              ),
+            ),
       ),
     );
   }
