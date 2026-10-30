@@ -17,7 +17,7 @@ class ProcessManagerChannel {
     try {
       final List<dynamic> result =
           await _platform.invokeMethod<List<dynamic>>('getRunningProcesses') ??
-              [];
+          [];
       return result.cast<String>();
     } on PlatformException catch (e) {
       throw ProcessManagementException(
@@ -30,10 +30,10 @@ class ProcessManagerChannel {
   /// Returns true if process was found and terminated.
   Future<bool> terminateProcess(String processName) async {
     try {
-      final bool result = await _platform.invokeMethod<bool>(
-            'terminateProcess',
-            {'name': processName},
-          ) ??
+      final bool result =
+          await _platform.invokeMethod<bool>('terminateProcess', {
+            'name': processName,
+          }) ??
           false;
       return result;
     } on PlatformException catch (e) {
@@ -45,8 +45,8 @@ class ProcessManagerChannel {
 
   /// Stream of process violation events (forbidden app detected).
   Stream<String> get violations {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .map((event) => event as String);
+    return _eventChannel.receiveBroadcastStream().map(
+      (event) => event as String,
+    );
   }
 }
