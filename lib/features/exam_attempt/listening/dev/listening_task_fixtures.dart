@@ -51,7 +51,10 @@ class ListeningTaskFixtures {
     taskType: 'MC_LISTENING_SINGLE',
     audioPromptRef: 'assets/audio/listening_sample_mc_single.wav',
     options: const [
-      TaskOption(text: 'The company relocated its headquarters.', orderIndex: '0'),
+      TaskOption(
+        text: 'The company relocated its headquarters.',
+        orderIndex: '0',
+      ),
       TaskOption(text: 'The company hired more staff.', orderIndex: '1'),
       TaskOption(text: 'The company reduced its prices.', orderIndex: '2'),
     ],
@@ -81,18 +84,22 @@ class ListeningTaskFixtures {
 
   static TaskView get highlightCorrectSummary => _base(
     taskType: 'HIGHLIGHT_CORRECT_SUMMARY',
-    audioPromptRef: 'assets/audio/listening_sample_highlight_correct_summary.wav',
+    audioPromptRef:
+        'assets/audio/listening_sample_highlight_correct_summary.wav',
     options: const [
       TaskOption(
-        text: 'The lecture argues that urban green spaces reduce city temperatures and improve air quality.',
+        text:
+            'The lecture argues that urban green spaces reduce city temperatures and improve air quality.',
         orderIndex: '0',
       ),
       TaskOption(
-        text: 'The lecture argues that public transport is the most effective way to reduce emissions.',
+        text:
+            'The lecture argues that public transport is the most effective way to reduce emissions.',
         orderIndex: '1',
       ),
       TaskOption(
-        text: 'The lecture argues that recycling programs have failed to reduce landfill waste.',
+        text:
+            'The lecture argues that recycling programs have failed to reduce landfill waste.',
         orderIndex: '2',
       ),
     ],
@@ -100,7 +107,8 @@ class ListeningTaskFixtures {
 
   static TaskView get highlightIncorrectWords => _base(
     taskType: 'HIGHLIGHT_INCORRECT_WORDS',
-    audioPromptRef: 'assets/audio/listening_sample_highlight_incorrect_words.wav',
+    audioPromptRef:
+        'assets/audio/listening_sample_highlight_incorrect_words.wav',
     promptText:
         'For some people, this presentation may seem far fetched, but ending poverty is both ethically '
         'necessary and actually feasible.',

@@ -44,10 +44,12 @@ class ListeningTaskPreviewScreen extends StatefulWidget {
   final ExamAttemptBloc examAttemptBloc;
 
   @override
-  State<ListeningTaskPreviewScreen> createState() => _ListeningTaskPreviewScreenState();
+  State<ListeningTaskPreviewScreen> createState() =>
+      _ListeningTaskPreviewScreenState();
 }
 
-class _ListeningTaskPreviewScreenState extends State<ListeningTaskPreviewScreen> {
+class _ListeningTaskPreviewScreenState
+    extends State<ListeningTaskPreviewScreen> {
   TaskView? _selected;
 
   @override
@@ -70,16 +72,23 @@ class _ListeningTaskPreviewScreenState extends State<ListeningTaskPreviewScreen>
               audioPromptRepository: widget.audioPromptRepository,
             ),
           ),
-          DevPreviewBackButton(onPressed: () => setState(() => _selected = null)),
+          DevPreviewBackButton(
+            onPressed: () => setState(() => _selected = null),
+          ),
         ],
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text(ListeningStrings.devListeningPreviewTitle)),
+      appBar: AppBar(
+        title: const Text(ListeningStrings.devListeningPreviewTitle),
+      ),
       body: ListView(
         children: [
           for (final task in ListeningTaskFixtures.all)
-            ListTile(title: Text(task.taskType), onTap: () => setState(() => _selected = task)),
+            ListTile(
+              title: Text(task.taskType),
+              onTap: () => setState(() => _selected = task),
+            ),
         ],
       ),
     );
