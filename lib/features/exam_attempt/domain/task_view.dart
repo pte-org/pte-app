@@ -80,6 +80,7 @@ class TaskView {
     this.taskTypeCode,
     this.runtime,
     this.taskTypeDisplayName,
+    this.taskTypeInstruction,
     this.canNavigatePrevious = false,
     this.canNavigateNext = false,
   });
@@ -99,6 +100,10 @@ class TaskView {
   /// an older response and the app must use the alias-aware legacy registry.
   final TaskRuntimeProfile? runtime;
   final String? taskTypeDisplayName;
+
+  /// Admin-editable instruction read live by the server; null on older
+  /// responses, where screens fall back to [TaskTypeMeta.instruction].
+  final String? taskTypeInstruction;
   final bool canNavigatePrevious;
   final bool canNavigateNext;
 
@@ -168,6 +173,7 @@ class TaskView {
     String? taskTypeCode,
     TaskRuntimeProfile? runtime,
     String? taskTypeDisplayName,
+    String? taskTypeInstruction,
     bool? canNavigatePrevious,
     bool? canNavigateNext,
     String? title,
@@ -195,6 +201,7 @@ class TaskView {
       taskTypeCode: taskTypeCode ?? this.taskTypeCode,
       runtime: runtime ?? this.runtime,
       taskTypeDisplayName: taskTypeDisplayName ?? this.taskTypeDisplayName,
+      taskTypeInstruction: taskTypeInstruction ?? this.taskTypeInstruction,
       canNavigatePrevious: canNavigatePrevious ?? this.canNavigatePrevious,
       canNavigateNext: canNavigateNext ?? this.canNavigateNext,
       title: title ?? this.title,
@@ -225,6 +232,7 @@ class TaskView {
       taskTypeCode: json['taskTypeCode'] as String?,
       runtime: _readRuntime(json['runtime']),
       taskTypeDisplayName: json['taskTypeDisplayName'] as String?,
+      taskTypeInstruction: json['taskTypeInstruction'] as String?,
       canNavigatePrevious: json['canNavigatePrevious'] as bool? ?? false,
       canNavigateNext: json['canNavigateNext'] as bool? ?? false,
       title: json['title'] as String,
