@@ -134,7 +134,9 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   }
 
   void _handleStateChange(ExamAttemptState state) {
-    if (_isExpired(state) && state is AttemptInProgress && _shouldAutoAdvanceOnExpiration(state)) {
+    if (_isExpired(state) &&
+        state is AttemptInProgress &&
+        _shouldAutoAdvanceOnExpiration(state)) {
       _advanceOnExpiration();
       return;
     }
@@ -171,7 +173,8 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
           final canNavigate =
               state.submissionStatus == AttemptSubmissionStatus.ready;
           return ExamNavigationActions(
-            onPrevious: canNavigate && !_isNavigating && task.canNavigatePrevious
+            onPrevious:
+                canNavigate && !_isNavigating && task.canNavigatePrevious
                 ? () => _navigate(task, TaskNavigationDirection.previous)
                 : null,
             onNext: _isNavigating || !canNavigate
@@ -181,10 +184,12 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
                 : widget.forwardOnlyNext && widget.forwardOnlyNextEnabled
                 ? () => _submitAndAdvance(AdvanceReason.manual)
                 : null,
-            nextLabel: state.submissionStatus == AttemptSubmissionStatus.submitting
+            nextLabel:
+                state.submissionStatus == AttemptSubmissionStatus.submitting
                 ? ExamAttemptStrings.forceSubmitSubmittingLabel
                 : ExamAttemptStrings.taskAdvanceButtonLabel,
-            nextLoading: _isNavigating ||
+            nextLoading:
+                _isNavigating ||
                 state.submissionStatus == AttemptSubmissionStatus.submitting,
           );
         },
