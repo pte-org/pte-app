@@ -2,6 +2,7 @@ import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/widgets/exam/stimulus_spec.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/model/exam_task_ui_model.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// Converts the existing runtime task shape to design-system presentation data.
 /// No API model or answer serialization is changed by this adapter.
@@ -86,7 +87,10 @@ class TaskViewUiAdapter {
                 : meta.title)
           : task.title,
       section: task.section,
-      instruction: meta.instruction,
+      instruction: resolveTaskInstruction(
+        apiInstruction: task.taskTypeInstruction,
+        meta: meta,
+      ),
       stimulus: StimulusSpec(parts: parts),
       options: [
         for (final option in task.options ?? const <TaskOption>[])
