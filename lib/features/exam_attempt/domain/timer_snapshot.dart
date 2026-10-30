@@ -27,5 +27,10 @@ class TimerSnapshot extends Equatable {
   final Duration examRemaining;
 
   @override
-  List<Object?> get props => [phase, remaining, currentOrderIndex, examRemaining];
+  List<Object?> get props => [
+    phase,
+    remaining,
+    currentOrderIndex,
+    examRemaining,
+  ];
 }
