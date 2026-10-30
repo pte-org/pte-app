@@ -245,10 +245,9 @@ class _AppAuthGateState extends State<AppAuthGate> {
 /// captured from login.
 /// [AttemptInProgress] shows the live task via
 /// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
-/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
-/// then hands off to [ReportScreen], with a back button (wired through
-/// `ReportScreen.onBack`, not a floating overlay — see that class's own
-/// doc) to reset [ExamAttemptBloc] and return to login for another session.
+/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen], whose
+/// continue action resets [ExamAttemptBloc] and returns to login. The app
+/// never shows a score: students receive results by email once published.
 class StudentExamGate extends StatefulWidget {
   const StudentExamGate({super.key, required this.initialSessionId});
 
