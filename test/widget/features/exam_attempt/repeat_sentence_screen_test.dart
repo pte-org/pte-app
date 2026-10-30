@@ -22,19 +22,23 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/repeat_sentence_screen.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 
-class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
+class _MockPendingMediaUploadDao extends Mock
+    implements PendingMediaUploadDao {}
 
-class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+class _MockMediaUploadCoordinator extends Mock
+    implements MediaUploadCoordinator {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
-class _MockAudioPromptRepository extends Mock implements AudioPromptRepository {}
+class _MockAudioPromptRepository extends Mock
+    implements AudioPromptRepository {}
 
 /// `RepeatSentenceScreen` constructs its own `AutoRecordCubit`
 /// internally using the real `resolveRecordingFilePath`, which calls
@@ -92,16 +96,28 @@ void main() {
     audioPromptRepository = _MockAudioPromptRepository();
     stateController = StreamController<ExamAttemptState>.broadcast();
 
-    when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+    when(
+      () => mediaDao.watchRow(any(), any()),
+    ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    when(
+      () => recorder.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
     // AudioPromptCubit subscribes to these in its constructor (every
     // screen build) and calls playAudio/playUrl/close whenever a
     // snapshot's elapsed time enters the mocked "Playing" sub-stage —
     // all 4 stubbed here so every existing test (most of which sweep
     // through that sub-stage) doesn't hit mocktail's MissingStubError.
-    when(() => audioPlayerService.position).thenAnswer((_) => const Stream<Duration>.empty());
-    when(() => audioPlayerService.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.position,
+    ).thenAnswer((_) => const Stream<Duration>.empty());
+    when(
+      () => audioPlayerService.duration,
+    ).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.hasFinishedPlaying,
+    ).thenAnswer((_) => const Stream<bool>.empty());
     when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
     when(() => audioPlayerService.close()).thenAnswer((_) async {});
     when(
@@ -138,64 +154,93 @@ void main() {
     whenListen(bloc, stateController.stream, initialState: initial);
   }
 
-  testWidgets('renders the fixed instruction text (no passage — audio-only task)', (tester) async {
-    const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 12), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot));
-
-    await tester.pumpWidget(buildSubject());
-
-    expect(
-      find.text(
-        'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
-        'sentence only once.',
-      ),
-      findsOneWidget,
-    );
-  });
-
-  group('the two cards always render simultaneously, each on its own independent sub-stage countdown', () {
-    testWidgets('elapsed 0s (start of pre-listen prep): Listening shows "Beginning in 3", Record is blank', (
-      tester,
-    ) async {
-      const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 12), currentOrderIndex: 1);
-      stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot));
+  testWidgets(
+    'renders the fixed instruction text (no passage — audio-only task)',
+    (tester) async {
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 12),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot),
+      );
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text('Beginning in 3 seconds'), findsOneWidget);
-      expect(find.text('Volume'), findsOneWidget); // proves the Listening card rendered
-      expect(find.text('Recorded Answer'), findsOneWidget); // the Record card is always present too
-      verifyNever(() => recorder.start(any()));
-    });
+      expect(
+        find.text(
+          'You will hear a sentence. Please repeat the sentence exactly as you hear it. You will hear the '
+          'sentence only once.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
-    testWidgets('elapsed 5s (mid audio playback): Listening shows "Playing 4 seconds left", Record still blank', (
-      tester,
-    ) async {
-      // prepSeconds 12 - elapsed 5 = remaining 7.
-      const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 7), currentOrderIndex: 1);
-      stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot));
-
-      await tester.pumpWidget(buildSubject());
-
-      expect(find.text('Playing 4 seconds left'), findsOneWidget);
-      // The Record card's bold status Text is empty in this sub-stage — its
-      // "Current Status:" label is still present (card always rendered),
-      // but no "Beginning in…"/"Recording" text should exist yet.
-      expect(find.textContaining('Beginning in'), findsNothing);
-      verifyNever(() => recorder.start(any()));
-    });
-
+  group('the shared panel switches from playback to recording across sub-stages', () {
     testWidgets(
-      'elapsed 11s (mid pre-record prep, listening finished): Listening frozen at "Playing 0", Record shows '
-      '"Beginning in 1"',
+      'elapsed 0s (start of pre-listen prep): Listening shows "Beginning in 3", Record is blank',
       (tester) async {
-        // prepSeconds 12 - elapsed 11 = remaining 1.
-        const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
-        stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot));
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 12),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot),
+        );
 
         await tester.pumpWidget(buildSubject());
 
-        expect(find.text('Playing 0 seconds left'), findsOneWidget);
+        expect(find.text('Beginning in 3 seconds'), findsOneWidget);
+        expect(find.text('Audio Player'), findsOneWidget);
+        expect(find.text('Audio Recorder'), findsNothing);
+        verifyNever(() => recorder.start(any()));
+      },
+    );
+
+    testWidgets(
+      'elapsed 5s (mid audio playback): Listening shows "Playing 4 seconds left", Record still blank',
+      (tester) async {
+        // prepSeconds 12 - elapsed 5 = remaining 7.
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 7),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.text('Playing 4 seconds left'), findsOneWidget);
+        // The shared panel remains in playback mode, but no
+        // "Beginning in…"/"Recording" text should exist yet.
+        expect(find.textContaining('Beginning in'), findsNothing);
+        verifyNever(() => recorder.start(any()));
+      },
+    );
+
+    testWidgets(
+      'elapsed 11s (mid pre-record prep): the shared panel shows "Beginning in 1"',
+      (tester) async {
+        // prepSeconds 12 - elapsed 11 = remaining 1.
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 1),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _repeatSentenceTask(), snapshot),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.text('Playing 0 seconds left'), findsNothing);
+        expect(find.text('Audio Player'), findsNothing);
+        expect(find.text('Audio Recorder'), findsOneWidget);
         expect(find.text('Beginning in 1 seconds'), findsOneWidget);
         verifyNever(() => recorder.start(any()));
       },
@@ -203,22 +248,35 @@ void main() {
   });
 
   testWidgets(
-    'a new response-phase snapshot on the bloc stream auto-starts recording; Listening stays frozen, Record shows '
-    '"Recording"',
+    'a new response-phase snapshot keeps the shared panel in recording mode',
     (tester) async {
-      const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
-      stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), prep));
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), prep),
+      );
 
       await tester.pumpWidget(buildSubject());
       expect(find.text('Beginning in 1 seconds'), findsOneWidget);
 
-      const response = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 15), currentOrderIndex: 1);
-      stateController.add(AttemptInProgress('attempt-1', _repeatSentenceTask(), response));
+      const response = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration(seconds: 15),
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), response),
+      );
       await tester.pump();
       await tester.pump();
 
       verify(() => recorder.start(any())).called(1);
-      expect(find.text('Playing 0 seconds left'), findsOneWidget);
+      expect(find.text('Playing 0 seconds left'), findsNothing);
+      expect(find.text('Audio Player'), findsNothing);
+      expect(find.text('Audio Recorder'), findsOneWidget);
       expect(find.text('Recording 15 seconds left'), findsOneWidget);
     },
   );
@@ -227,27 +285,51 @@ void main() {
     'full prep -> response -> recorded transition: once the response countdown reaches zero the recorder '
     'stops and the upload-status card replaces the "Recording" card',
     (tester) async {
-      when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
-      when(() => mediaDao.upsertRecorded(
-            attemptPublicId: any(named: 'attemptPublicId'),
-            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-            localFilePath: any(named: 'localFilePath'),
-          )).thenAnswer((_) async {});
-      when(() => coordinator.attemptUpload(any(), any())).thenAnswer((_) async {});
+      when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+      when(
+        () => mediaDao.upsertRecorded(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          localFilePath: any(named: 'localFilePath'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => coordinator.attemptUpload(any(), any()),
+      ).thenAnswer((_) async {});
 
-      const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
-      stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), prep));
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), prep),
+      );
 
       await tester.pumpWidget(buildSubject());
 
-      const response = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 15), currentOrderIndex: 1);
-      stateController.add(AttemptInProgress('attempt-1', _repeatSentenceTask(), response));
+      const response = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration(seconds: 15),
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), response),
+      );
       await tester.pump();
       await tester.pump();
       verify(() => recorder.start(any())).called(1);
 
-      const expired = TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1);
-      stateController.add(AttemptInProgress('attempt-1', _repeatSentenceTask(), expired));
+      const expired = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration.zero,
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), expired),
+      );
       await tester.pump();
       await tester.pump();
       await tester.pump();
@@ -262,7 +344,8 @@ void main() {
       // is reached), which is expected, not a leftover recording label.
       expect(find.text('Still uploading…'), findsOneWidget);
       expect(find.text('Recording 15 seconds left'), findsNothing);
-      expect(find.text('Playing 0 seconds left'), findsOneWidget);
+      expect(find.text('Playing 0 seconds left'), findsNothing);
+      expect(find.byKey(const ValueKey('pteAudioPanel')), findsOneWidget);
     },
   );
 
@@ -270,8 +353,14 @@ void main() {
     'a snapshot for a different task (pinnedItemPublicId mismatch) is never forwarded — recorder.start is never '
     'called for it',
     (tester) async {
-      const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
-      stubBlocState(AttemptInProgress('attempt-1', _repeatSentenceTask(), prep));
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _repeatSentenceTask(), prep),
+      );
 
       await tester.pumpWidget(buildSubject());
 
@@ -281,7 +370,11 @@ void main() {
         currentOrderIndex: 2,
       );
       stateController.add(
-        AttemptInProgress('attempt-1', _repeatSentenceTask(pinnedItemPublicId: 'item-2'), otherTaskResponse),
+        AttemptInProgress(
+          'attempt-1',
+          _repeatSentenceTask(pinnedItemPublicId: 'item-2'),
+          otherTaskResponse,
+        ),
       );
       await tester.pump();
       await tester.pump();

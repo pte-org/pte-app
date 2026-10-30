@@ -36,7 +36,7 @@ class WindowManagerChannel {
   }
 
   /// Installs or removes the app-level exam exit gate. The native runner
-  /// keeps this state independently from fullscreen so Practice/NONE can use
+  /// keeps this state independently from fullscreen so `NONE` lockdown can use
   /// the submit-before-exit rule without being forced into fullscreen.
   Future<void> setExitGuardActive(bool active) async {
     try {
@@ -69,8 +69,8 @@ class WindowManagerChannel {
   /// Stream of fullscreen violation events.
   /// Emits event type string when user attempts to escape fullscreen.
   Stream<String> get violations {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .map((event) => event as String);
+    return _eventChannel.receiveBroadcastStream().map(
+      (event) => event as String,
+    );
   }
 }

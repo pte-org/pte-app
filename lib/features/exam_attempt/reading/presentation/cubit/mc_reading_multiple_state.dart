@@ -9,7 +9,9 @@ class McReadingMultipleState extends Equatable {
   final Set<String> selectedOrderIndexes;
 
   McReadingMultipleState copyWith({Set<String>? selectedOrderIndexes}) {
-    return McReadingMultipleState(selectedOrderIndexes: selectedOrderIndexes ?? this.selectedOrderIndexes);
+    return McReadingMultipleState(
+      selectedOrderIndexes: selectedOrderIndexes ?? this.selectedOrderIndexes,
+    );
   }
 
   @override

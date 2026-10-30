@@ -27,6 +27,17 @@ String examAttemptFriendlyErrorMessage(Object error) {
         ExamAttemptStrings.forceSubmitMediaPendingMessage,
     };
   }
+  if (error is ForbiddenException) {
+    return switch (error.message) {
+      ExamAttemptStrings.sessionNotStartedCode =>
+        ExamAttemptStrings.sessionNotStartedMessage,
+      ExamAttemptStrings.sessionClosedCode =>
+        ExamAttemptStrings.sessionClosedMessage,
+      ExamAttemptStrings.notEntitledCode =>
+        ExamAttemptStrings.notEntitledMessage,
+      _ => friendlyErrorMessage(error),
+    };
+  }
   if (error is ConflictException) {
     return switch (error.message) {
       ExamAttemptStrings.examRequiresAppUpdateCode =>

@@ -14,7 +14,8 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_eve
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_app_bar.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 TaskView _task({String title = 'Task A'}) {
   return TaskView(
@@ -92,30 +93,43 @@ void main() {
       // TimerSnapshot instance/value — mirrors what ExamAttemptBloc emits
       // when e.g. NextTaskRequested resolves but the timer hasn't ticked
       // yet in between.
-      stateController.add(AttemptInProgress('attempt-1', _task(title: 'Task B'), snapshotA));
+      stateController.add(
+        AttemptInProgress('attempt-1', _task(title: 'Task B'), snapshotA),
+      );
       await tester.pump();
 
       final afterUnrelatedText = countdownTextWidget(tester);
-      expect(identical(beforeText, afterUnrelatedText), isTrue,
-          reason: 'BlocSelector must not rebuild the countdown widget for a state change '
-              'that leaves the TimerSnapshot slice unchanged');
+      expect(
+        identical(beforeText, afterUnrelatedText),
+        isTrue,
+        reason:
+            'BlocSelector must not rebuild the countdown widget for a state change '
+            'that leaves the TimerSnapshot slice unchanged',
+      );
       expect(afterUnrelatedText.data, '00:30');
     },
   );
 
-  testWidgets('an actual TimerSnapshot change does rebuild the countdown widget', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    final beforeText = countdownTextWidget(tester);
+  testWidgets(
+    'an actual TimerSnapshot change does rebuild the countdown widget',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+      final beforeText = countdownTextWidget(tester);
 
-    stateController.add(AttemptInProgress('attempt-1', _task(), snapshotB));
-    await tester.pump();
+      stateController.add(AttemptInProgress('attempt-1', _task(), snapshotB));
+      await tester.pump();
 
-    final afterText = countdownTextWidget(tester);
-    expect(identical(beforeText, afterText), isFalse,
-        reason: 'BlocSelector must rebuild the countdown widget when the TimerSnapshot slice changes');
-    // snapshotB's remaining is 12 seconds.
-    expect(afterText.data, '00:12');
-  });
+      final afterText = countdownTextWidget(tester);
+      expect(
+        identical(beforeText, afterText),
+        isFalse,
+        reason:
+            'BlocSelector must rebuild the countdown widget when the TimerSnapshot slice changes',
+      );
+      // snapshotB's remaining is 12 seconds.
+      expect(afterText.data, '00:12');
+    },
+  );
 
   testWidgets(
     'finish action opens an incomplete-submit confirmation and dispatches the terminal event',
@@ -143,24 +157,23 @@ void main() {
     },
   );
 
-  testWidgets('finish action is disabled while terminal submission is in flight', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
-    stateController.add(
-      AttemptInProgress(
-        'attempt-1',
-        _task(),
-        snapshotA,
-        submissionStatus: AttemptSubmissionStatus.submitting,
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'finish action is disabled while terminal submission is in flight',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+      stateController.add(
+        AttemptInProgress(
+          'attempt-1',
+          _task(),
+          snapshotA,
+          submissionStatus: AttemptSubmissionStatus.submitting,
+        ),
+      );
+      await tester.pump();
 
-    final button = tester.widget<TextButton>(
-      find.byType(TextButton).last,
-    );
-    expect(button.onPressed, isNull);
-    expect(find.byTooltip('Submitting…'), findsOneWidget);
-  });
+      final button = tester.widget<TextButton>(find.byType(TextButton).last);
+      expect(button.onPressed, isNull);
+      expect(find.byTooltip('Submitting…'), findsOneWidget);
+    },
+  );
 }

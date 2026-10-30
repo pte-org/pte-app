@@ -13,7 +13,8 @@ import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_serv
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_playback_state.dart';
 
-class _MockAudioPromptRepository extends Mock implements AudioPromptRepository {}
+class _MockAudioPromptRepository extends Mock
+    implements AudioPromptRepository {}
 
 class _MockAudioPlayerService extends Mock implements AudioPlayerService {}
 
@@ -34,23 +35,36 @@ TaskView _task({String? audioPromptRef = 'media-1'}) {
 }
 
 // elapsed = prepSeconds(12) - remaining(7) = 5 — inside the [3, 9) "Playing" window.
-const _playingSnapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 7), currentOrderIndex: 1);
+const _playingSnapshot = TimerSnapshot(
+  phase: TimerPhase.prep,
+  remaining: Duration(seconds: 7),
+  currentOrderIndex: 1,
+);
 // elapsed = 12 - 10 = 2 — still "Beginning in" (pre-listen), before Playing starts.
-const _beginningInSnapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 10), currentOrderIndex: 1);
+const _beginningInSnapshot = TimerSnapshot(
+  phase: TimerPhase.prep,
+  remaining: Duration(seconds: 10),
+  currentOrderIndex: 1,
+);
 
 void main() {
   late _MockAudioPromptRepository repository;
   late _MockAudioPlayerService player;
   late StreamController<Duration> positionController;
   late StreamController<Duration?> durationController;
+  late StreamController<bool> finishedController;
 
   setUp(() {
     repository = _MockAudioPromptRepository();
     player = _MockAudioPlayerService();
     positionController = StreamController<Duration>.broadcast();
     durationController = StreamController<Duration?>.broadcast();
+    finishedController = StreamController<bool>.broadcast();
     when(() => player.position).thenAnswer((_) => positionController.stream);
     when(() => player.duration).thenAnswer((_) => durationController.stream);
+    when(
+      () => player.hasFinishedPlaying,
+    ).thenAnswer((_) => finishedController.stream);
     when(() => player.playUrl(any())).thenAnswer((_) async {});
     when(() => player.close()).thenAnswer((_) async {});
   });
@@ -58,6 +72,7 @@ void main() {
   tearDown(() {
     positionController.close();
     durationController.close();
+    finishedController.close();
   });
 
   AudioPromptCubit buildCubit({TaskView? task}) => AudioPromptCubit(
@@ -117,6 +132,33 @@ void main() {
     );
 
     blocTest<AudioPromptCubit, AudioPromptPlaybackState>(
+      'moves to completed when the player reports the prompt audio has finished',
+      setUp: () => when(
+        () => repository.playAudio(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          playRequestId: any(named: 'playRequestId'),
+        ),
+      ).thenAnswer((_) async => 'https://example.com/audio.mp3'),
+      build: buildCubit,
+      act: (cubit) async {
+        cubit.onTimerSnapshot(_playingSnapshot);
+        await untilCalled(() => player.playUrl(any()));
+        await Future<void>.delayed(Duration.zero);
+        finishedController.add(true);
+      },
+      wait: const Duration(milliseconds: 1),
+      expect: () => [
+        const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.loading),
+        const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.playing),
+        const AudioPromptPlaybackState(
+          phase: AudioPromptPlaybackPhase.completed,
+          progress: 1.0,
+        ),
+      ],
+    );
+
+    blocTest<AudioPromptCubit, AudioPromptPlaybackState>(
       'a task with no audioPromptRef never calls playAudio even when the Playing sub-stage is reached',
       build: () => buildCubit(task: _task(audioPromptRef: null)),
       act: (cubit) => cubit.onTimerSnapshot(_playingSnapshot),
@@ -146,7 +188,13 @@ void main() {
       build: buildCubit,
       act: (cubit) {
         cubit.onTimerSnapshot(_playingSnapshot);
-        cubit.onTimerSnapshot(const TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 6), currentOrderIndex: 1));
+        cubit.onTimerSnapshot(
+          const TimerSnapshot(
+            phase: TimerPhase.prep,
+            remaining: Duration(seconds: 6),
+            currentOrderIndex: 1,
+          ),
+        );
       },
       wait: const Duration(milliseconds: 1),
       verify: (_) {
@@ -177,7 +225,9 @@ void main() {
       expect: () => [
         const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.loading),
         predicate<AudioPromptPlaybackState>(
-          (state) => state.phase == AudioPromptPlaybackPhase.error && state.errorMessage != null,
+          (state) =>
+              state.phase == AudioPromptPlaybackPhase.error &&
+              state.errorMessage != null,
         ),
       ],
       verify: (_) => verifyNever(() => player.playUrl(any())),
@@ -198,7 +248,9 @@ void main() {
       expect: () => [
         const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.loading),
         predicate<AudioPromptPlaybackState>(
-          (state) => state.phase == AudioPromptPlaybackPhase.error && state.errorMessage != null,
+          (state) =>
+              state.phase == AudioPromptPlaybackPhase.error &&
+              state.errorMessage != null,
         ),
       ],
       verify: (_) => verifyNever(() => player.playUrl(any())),
@@ -220,7 +272,9 @@ void main() {
       expect: () => [
         const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.loading),
         predicate<AudioPromptPlaybackState>(
-          (state) => state.phase == AudioPromptPlaybackPhase.error && state.errorMessage != null,
+          (state) =>
+              state.phase == AudioPromptPlaybackPhase.error &&
+              state.errorMessage != null,
         ),
       ],
     );
@@ -270,7 +324,10 @@ void main() {
       expect: () => [
         const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.loading),
         const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.playing),
-        const AudioPromptPlaybackState(phase: AudioPromptPlaybackPhase.playing, progress: 0.5),
+        const AudioPromptPlaybackState(
+          phase: AudioPromptPlaybackPhase.playing,
+          progress: 0.5,
+        ),
       ],
     );
   });

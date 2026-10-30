@@ -16,13 +16,10 @@ void main() {
     await tester.tap(find.byType(ListTile).first);
     await tester.pump();
     expect(tester.takeException(), isNull);
-    expect(find.text('Save & Exit'), findsOneWidget);
     expect(find.text('Item 1 of 23'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pump();
     expect(find.text('Item 2 of 23'), findsOneWidget);
-    await tester.tap(find.text('Save & Exit'));
-    await tester.pump();
     expect(tester.takeException(), isNull);
   });
 

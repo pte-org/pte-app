@@ -23,6 +23,7 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widg
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/task_image_display.dart';
 import 'package:pte_app/core/widgets/templates/record_response_template.dart';
+import 'package:pte_app/core/widgets/templates/exam_template_frame.dart';
 
 /// Renders inside the shared exam shell as its injected content region —
 /// builds no top/bottom chrome of its own. Structurally mirrors
@@ -86,7 +87,8 @@ class _DescribeImageScreenState extends State<DescribeImageScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _DescribeImageBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,
@@ -114,6 +116,7 @@ class _DescribeImageBody extends StatelessWidget {
         return BlocBuilder<AutoRecordCubit, AutoRecordState>(
           builder: (context, state) {
             return RecordResponseTemplate(
+              layout: ExamTemplateLayout.split,
               title:
                   TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
               subtitle: task.section,
@@ -128,6 +131,7 @@ class _DescribeImageBody extends StatelessWidget {
                 task: task,
                 recordingState: state,
                 snapshot: snapshot,
+                inputLevels: context.read<AutoRecordCubit>().inputLevels,
               ),
             );
           },

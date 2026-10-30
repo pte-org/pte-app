@@ -353,7 +353,7 @@ void main() {
     'a SessionResolutionException results in AttemptError, never a crash or hang',
     setUp: () {
       when(() => sessionEntryRepository.resolveSessionPublicId('')).thenThrow(
-        const SessionResolutionException('Session ID cannot be empty.'),
+        const SessionResolutionException('Exam code cannot be empty.'),
       );
     },
     build: buildBloc,

@@ -121,8 +121,8 @@ class LockdownService {
 
   /// True while the native runner refuses app-level close/minimize actions
   /// for the current attempt. This is intentionally separate from
-  /// [isActive], because Practice can enable the submit-before-exit gate
-  /// without enabling anti-cheat fullscreen.
+  /// [isActive], because `NONE` lockdown still enables the submit-before-exit
+  /// gate without enabling anti-cheat fullscreen.
   bool get isAttemptExitGuardActive => _attemptExitGuardActive;
 
   /// True only after the server-acknowledged terminal submission path grants

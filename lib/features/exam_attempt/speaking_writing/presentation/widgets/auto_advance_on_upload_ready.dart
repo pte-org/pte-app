@@ -7,7 +7,6 @@ import 'package:pte_app/core/storage/pending_media_upload_status.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
-import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/upload_tracking_state.dart';
 
 /// Auto-advances once the recording finishes uploading — real PTE speaking
@@ -24,27 +23,34 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 /// generalization mechanism. Bound by `AutoRecordCubit`/`AutoRecordState`
 /// through one shared binding used by every auto-record speaking screen
 /// (Read Aloud, Repeat Sentence, Describe Image).
-class AutoAdvanceOnUploadReady<C extends StateStreamable<S>, S extends UploadTrackingState>
+class AutoAdvanceOnUploadReady<
+  C extends StateStreamable<S>,
+  S extends UploadTrackingState
+>
     extends StatefulWidget {
-  const AutoAdvanceOnUploadReady({super.key, required this.pinnedItemPublicId, required this.syncEngine});
+  const AutoAdvanceOnUploadReady({
+    super.key,
+    required this.pinnedItemPublicId,
+    required this.syncEngine,
+  });
 
   final String pinnedItemPublicId;
   final SyncEngine syncEngine;
 
   @override
-  State<AutoAdvanceOnUploadReady<C, S>> createState() => _AutoAdvanceOnUploadReadyState<C, S>();
+  State<AutoAdvanceOnUploadReady<C, S>> createState() =>
+      _AutoAdvanceOnUploadReadyState<C, S>();
 }
 
-class _AutoAdvanceOnUploadReadyState<C extends StateStreamable<S>, S extends UploadTrackingState>
+class _AutoAdvanceOnUploadReadyState<
+  C extends StateStreamable<S>,
+  S extends UploadTrackingState
+>
     extends State<AutoAdvanceOnUploadReady<C, S>> {
   bool _isAdvancing = false;
 
   Future<void> _advance() async {
     if (_isAdvancing) return;
-    // Practice mode: upload finishes but the student stays on screen — they
-    // control their own pace (re-record, re-listen, then tap Next manually).
-    final examState = context.read<ExamAttemptBloc>().state;
-    if (examState is AttemptInProgress && examState.isPractice) return;
     setState(() => _isAdvancing = true);
     await widget.syncEngine.flushOne(widget.pinnedItemPublicId);
     if (!mounted) return;

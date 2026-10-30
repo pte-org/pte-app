@@ -5,16 +5,31 @@ import 'package:pte_app/core/network/friendly_error_message.dart';
 
 void main() {
   group('friendlyErrorMessage', () {
-    test('ALREADY_ATTEMPTED conflict gets a specific, non-technical sentence', () {
-      const error = ConflictException('ALREADY_ATTEMPTED');
-      expect(friendlyErrorMessage(error), contains("already used this session ID"));
-      expect(friendlyErrorMessage(error), isNot(contains('ConflictException')));
-    });
+    test(
+      'ALREADY_ATTEMPTED conflict gets a specific, non-technical sentence',
+      () {
+        const error = ConflictException('ALREADY_ATTEMPTED');
+        expect(
+          friendlyErrorMessage(error),
+          contains("already used this exam code"),
+        );
+        expect(
+          friendlyErrorMessage(error),
+          isNot(contains('ConflictException')),
+        );
+      },
+    );
 
-    test('a generic ConflictException falls back to a generic conflict sentence', () {
-      const error = ConflictException('SOME_OTHER_CODE');
-      expect(friendlyErrorMessage(error), 'That action conflicts with the current state. Please try again.');
-    });
+    test(
+      'a generic ConflictException falls back to a generic conflict sentence',
+      () {
+        const error = ConflictException('SOME_OTHER_CODE');
+        expect(
+          friendlyErrorMessage(error),
+          'That action conflicts with the current state. Please try again.',
+        );
+      },
+    );
 
     test('NotCurrentTaskException gets its own sentence', () {
       const error = NotCurrentTaskException('NOT_CURRENT_TASK');
@@ -28,7 +43,10 @@ void main() {
 
     test('NetworkException prompts a connectivity check', () {
       const error = NetworkException('connection refused');
-      expect(friendlyErrorMessage(error), contains("Couldn't reach the server"));
+      expect(
+        friendlyErrorMessage(error),
+        contains("Couldn't reach the server"),
+      );
     });
 
     test('a non-ApiException falls back to its own toString, unchanged', () {

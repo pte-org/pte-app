@@ -22,7 +22,7 @@ final class AttemptStarting extends ExamAttemptState {
 }
 
 /// The server requires the student's pre-exam microphone/sound check before
-/// the attempt can be created. The UI uses the carried session ID to retry
+/// the attempt can be created. The UI uses the carried session UUID to retry
 /// the same request after both checks are confirmed.
 final class DeviceCheckRequired extends ExamAttemptState {
   const DeviceCheckRequired(this.sessionPublicId);
@@ -58,11 +58,9 @@ final class AttemptInProgress extends ExamAttemptState {
 
   final Exception? submissionError;
 
-  /// Wire value from server — `"PRACTICE"` or `"OFFICIAL_EXAM"`. Null only
-  /// for legacy attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
+  /// Wire value from server — `"OFFICIAL_EXAM"`. Null only for legacy
+  /// attempts. Consumers treat null as `"OFFICIAL_EXAM"`.
   final String? examMode;
-
-  bool get isPractice => examMode == 'PRACTICE';
 
   TaskView get task => allTasks[currentIndex];
 
@@ -114,7 +112,7 @@ final class AttemptCompleted extends ExamAttemptState {
 }
 
 /// Carries either a Phase 1 [ApiException] (attempt-lifecycle call
-/// failed) or this feature's `SessionResolutionException` (session ID
+/// failed) or this feature's `SessionResolutionException` (exam code
 /// couldn't be resolved) — both reach the same error state, per phase-03
 /// Design Constraints ("the same error state any other repository
 /// failure produces").

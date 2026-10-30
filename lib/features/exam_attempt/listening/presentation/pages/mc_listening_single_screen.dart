@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
+import '../../domain/listening_choice_prompt.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/choice_list.dart';
@@ -27,7 +31,6 @@ class McListeningSingleScreen extends StatelessWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -36,7 +39,6 @@ class McListeningSingleScreen extends StatelessWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -48,13 +50,13 @@ class McListeningSingleScreen extends StatelessWidget {
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioUrl ?? '',
         initialPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
           body: BlocBuilder<McListeningSingleCubit, McListeningSingleState>(
             builder: (context, state) {
+              final question = listeningChoiceQuestion(task.promptText);
               final options = task.options ?? const [];
               final selected = {
                 for (var index = 0; index < options.length; index++)
@@ -62,39 +64,24 @@ class McListeningSingleScreen extends StatelessWidget {
                     index,
               };
               return SingleSelectTemplate(
-                title: task.title,
+                title:
+                    TaskTypeMeta.forTaskType(task.taskType)?.title ??
+                    task.title,
                 subtitle: task.section,
                 instruction: 'Select the correct response.',
                 stimulus: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    AudioListeningStatusCard(
-                      statusLabel: !state.hasStartedPlaying
-                          ? 'Tap to listen'
-                          : state.hasFinishedPlaying
-                              ? 'Audio finished'
-                              : 'Playing audio...',
-                      progress: !state.hasStartedPlaying
-                          ? 0.0
-                          : state.hasFinishedPlaying
-                              ? 1.0
-                              : state.progress,
-                    ),
-                    if (isPractice) ...[
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          if (!state.hasStartedPlaying) {
-                            context.read<McListeningSingleCubit>().startPlayback();
-                          } else {
-                            context.read<McListeningSingleCubit>().replayAudio();
-                          }
-                        },
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                      ),
+                    if (question.isNotEmpty) ...[
+                      Text(question, style: AppTypography.examAnswer),
+                      const SizedBox(height: AppDimensions.spacingMd),
                     ],
+                    AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
+                    ),
                   ],
                 ),
                 response: SingleChildScrollView(

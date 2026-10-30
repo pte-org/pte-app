@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
+import '../../domain/listening_choice_prompt.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/templates/multi_select_template.dart';
@@ -13,6 +16,7 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/mc_li
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/listening_multiple_option_list.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// Same `StatelessWidget` + `BlocProvider` shape as
 /// `McListeningSingleScreen` (phase-03 Design Constraints).
@@ -25,7 +29,6 @@ class McListeningMultipleScreen extends StatelessWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -34,7 +37,6 @@ class McListeningMultipleScreen extends StatelessWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -46,51 +48,35 @@ class McListeningMultipleScreen extends StatelessWidget {
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioUrl ?? '',
         initialPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
           body: BlocBuilder<McListeningMultipleCubit, McListeningMultipleState>(
             builder: (context, state) {
+              final question = listeningChoiceQuestion(task.promptText);
               return MultiSelectTemplate(
                 title:
                     TaskTypeMeta.forTaskType(task.taskType)?.title ??
                     task.title,
                 subtitle: task.section,
-                instruction:
-                    TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
-                    'Select all the correct responses.',
+                instruction: resolveTaskInstruction(
+                  apiInstruction: task.taskTypeInstruction,
+                  meta: TaskTypeMeta.forTaskType(task.taskType),
+                ),
                 stimulus: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    AudioListeningStatusCard(
-                      statusLabel: !state.hasStartedPlaying
-                          ? 'Tap to listen'
-                          : state.hasFinishedPlaying
-                              ? 'Audio finished'
-                              : 'Playing audio...',
-                      progress: !state.hasStartedPlaying
-                          ? 0.0
-                          : state.hasFinishedPlaying
-                              ? 1.0
-                              : state.progress,
-                    ),
-                    if (isPractice) ...[
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          if (!state.hasStartedPlaying) {
-                            context.read<McListeningMultipleCubit>().startPlayback();
-                          } else {
-                            context.read<McListeningMultipleCubit>().replayAudio();
-                          }
-                        },
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                      ),
+                    if (question.isNotEmpty) ...[
+                      Text(question, style: AppTypography.examAnswer),
+                      const SizedBox(height: AppDimensions.spacingMd),
                     ],
+                    AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
+                    ),
                   ],
                 ),
                 response: ListeningMultipleOptionList(

@@ -28,7 +28,9 @@ List<PromptSegment> parseBlankPrompt(String promptText) {
   var cursor = 0;
   for (final match in _gapMarkerPattern.allMatches(promptText)) {
     if (match.start > cursor) {
-      segments.add(PromptTextSegment(promptText.substring(cursor, match.start)));
+      segments.add(
+        PromptTextSegment(promptText.substring(cursor, match.start)),
+      );
     }
     segments.add(PromptGapSegment(int.parse(match.group(1)!)));
     cursor = match.end;

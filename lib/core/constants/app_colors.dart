@@ -45,6 +45,18 @@ class AppColors {
   static const Color interactiveHighlight = Color(0xFFF4F5F7);
   static const Color interactiveSelected = Color(0xFFEBF3FC);
   static const Color interactiveFocus = Color(0xFF0B5FAE);
+  static const Color transcriptWordHighlight = Color(0xFFFFEB75);
+
+  // PTE audio-panel tokens — match the neutral recorder/player surface while
+  // keeping the values centralized with the rest of the exam UI.
+  static const Color audioPanelSurface = Color(0xFFF7F7F7);
+  static const Color audioPanelBorder = Color(0xFFC6CBD1);
+  static const Color audioPanelDivider = Color(0xFFD5D8DC);
+  static const Color audioPanelStatus = Color(0xFF9B625F);
+  static const Color audioPanelTrack = Color(0xFFD6D8DB);
+  static const Color audioPanelProgress = Color(0xFF686A6D);
+  static const Color audioPanelMeter = Color(0xFF78C64A);
+  static const Color audioPanelControl = Color(0xFF202326);
 
   // Pearson candidate sign-in screen tokens.
   static const Color loginCanvas = Color(0xFFF4F5F7);

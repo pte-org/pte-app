@@ -15,9 +15,11 @@ import 'package:pte_app/features/device_check/domain/device_check_audio_player.d
 /// because `just_audio_media_kit` (the Windows backend) does not support
 /// `setAsset()` — only `setFilePath` and `setUrl` work reliably via libmpv.
 class DeviceCheckAudioPlayerImpl implements DeviceCheckAudioPlayer {
-  DeviceCheckAudioPlayerImpl({AudioPlayer? player, VolumeService? volumeService})
-    : _player = player ?? AudioPlayer(),
-      _volumeService = volumeService {
+  DeviceCheckAudioPlayerImpl({
+    AudioPlayer? player,
+    VolumeService? volumeService,
+  }) : _player = player ?? AudioPlayer(),
+       _volumeService = volumeService {
     _stateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _hasFinishedPlayingController.add(true);

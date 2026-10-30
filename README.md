@@ -7,7 +7,31 @@ never lost**, even offline, even if the app is killed mid-exam.
 
 > Flutter only. The web frontend (`pte-web`, Next.js) and backend
 > (`pte-api`, Spring Boot) are separate repos — this app shares no code
-> or generated types with either.
+
+## Host exam preview
+
+An authenticated `HOST_ADMIN` can use this app to preview an existing exam
+snapshot without changing the exam lifecycle. The host flow is intentionally
+read-only:
+
+- Enter the exam code on the same sign-in form used by students. The app resolves
+  that code within the host's organization and opens the existing snapshot
+  directly in the shared candidate exam shell; no preview-list screen is shown.
+- Every preview item has a local `Next` action, including speaking and audio
+  tasks, so a host can review the complete exam flow.
+- Answers stay in memory only. Preview does not create or start an attempt,
+  write the student answer outbox, upload recordings, score responses, consume
+  exam/media quota, or mutate session status.
+- Preview recordings use an isolated temporary directory and are removed on
+  stop, exit, and next-launch orphan cleanup. They are never placed in the
+  student's answer or media directories.
+- Host preview privileges are server-enforced by role and tenant. There is no
+  pre-login toggle and no global security bypass. Student login continues to
+  use the normal exam guards and lockdown behavior.
+
+If one account has both `HOST_ADMIN` and `STUDENT` roles, login opens the
+explicit host-preview context. Logging out and authenticating as a student is
+required to enter the normal student exam flow.
 
 ## Setup
 
@@ -30,20 +54,36 @@ never lost**, even offline, even if the app is killed mid-exam.
   dart format lib/ test/ --check
   ```
 
+## Build-time Configuration (dart-define)
+
+AppConfig uses compile-time dart-define variables to configure API paths and timeouts.
+Pass these via `--dart-define` flag when building or running:
+
+```bash
+flutter run --dart-define=PTE_API_BASE_URL=http://localhost:8080 \
+            --dart-define=PTE_EXAM_ATTEMPTS_PATH=/api/v1/attempts \
+            --dart-define=PTE_SESSION_CODE_RESOLVE_PATH=/api/v1/student/exam-sessions/resolve
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PTE_API_BASE_URL` | `http://localhost:8080` | Gateway base URL (no `/api` suffix; full paths passed by call sites) |
+| `PTE_EXAM_ATTEMPTS_PATH` | `/api/v1/attempts` | Exam attempt lifecycle and audio endpoints |
+| `PTE_SESSION_CODE_RESOLVE_PATH` | `/api/v1/student/exam-sessions/resolve` | Endpoint to resolve exam code to session UUID |
+
+Timeouts are currently hardcoded (`connectTimeout`, `receiveTimeout`, `sendTimeout` all 10 seconds) — override in `lib/core/config/app_config.dart` if needed.
+
 ## Directory Structure
 
 ```
 pte-app/
 ├── lib/
-│   ├── main.dart              # Entry point — runApp(PteApp()). DI modules are NOT
-│   │                          # wired here yet; see "Wiring DI" below before adding the
-│   │                          # first real screen.
-│   ├── app.dart                # PteApp — MaterialApp shell. Still a placeholder Scaffold;
-│   │                            # swap `home:` for a router/first real page when ready.
+│   ├── main.dart              # Entry point — bootstraps core, auth, and feature modules.
+│   ├── app.dart                # PteApp — authenticated student and host-preview shell.
 │   ├── core/                    # Shared infrastructure. NOT a feature — no UI, no
 │   │                            # business rules, only services every feature can depend on.
-│   │   ├── config/               # AppConfig — API base URL, timeouts. One class, no env-var
-│   │   │                         # parsing yet (placeholder defaults).
+│   │   ├── config/               # AppConfig — compile-time dart-define configuration (gateway URL,
+│   │   │                         # exam attempts path, session code resolution path, timeouts).
 │   │   ├── network/                # Dio HTTP layer
 │   │   │   ├── dio_client.dart        # createDio()/createRefreshDio() — builds configured Dio instances
 │   │   │   ├── token_store.dart        # TokenStore interface + InMemoryTokenStore (NOT production-ready)
@@ -164,12 +204,11 @@ worked example to copy the pattern from.
 4. Write the Bloc's transition tests first, same hand-written-fake
    convention as `exam_attempt_bloc_test.dart`.
 
-## Wiring DI (not done yet — do this before the first real screen)
+## Wiring DI
 
-Every `core/` and `feature/` module currently exposes a
-`registerXModule(GetIt)` function, but **nothing calls them yet** —
-`main.dart` only does `runApp(const PteApp())`. Before wiring a real
-screen to live services, add a bootstrap step, in dependency order:
+Every `core/` and `feature/` module exposes a
+`registerXModule(GetIt)` function. `main.dart` performs this bootstrap in
+dependency order before running the app:
 
 ```dart
 final getIt = GetIt.instance;

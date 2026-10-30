@@ -8,7 +8,10 @@ void main() {
 
       expect(segments, hasLength(1));
       expect(segments.single, isA<PromptTextSegment>());
-      expect((segments.single as PromptTextSegment).text, 'Just a plain sentence.');
+      expect(
+        (segments.single as PromptTextSegment).text,
+        'Just a plain sentence.',
+      );
     });
 
     test('single marker splits into text-gap-text', () {
@@ -23,7 +26,10 @@ void main() {
     test('multiple markers preserve gap order and index', () {
       final segments = parseBlankPrompt('A {{0}} B {{1}} C');
 
-      final gapIndexes = segments.whereType<PromptGapSegment>().map((s) => s.gapIndex).toList();
+      final gapIndexes = segments
+          .whereType<PromptGapSegment>()
+          .map((s) => s.gapIndex)
+          .toList();
       expect(gapIndexes, [0, 1]);
       expect(segments, hasLength(5));
     });
@@ -49,14 +55,20 @@ void main() {
       expect(segments.single, isA<PromptGapSegment>());
     });
 
-    test('malformed marker (non-digit inside braces) degrades to literal text, never throws', () {
-      expect(() => parseBlankPrompt('bad {{abc}} marker'), returnsNormally);
-      final segments = parseBlankPrompt('bad {{abc}} marker');
+    test(
+      'malformed marker (non-digit inside braces) degrades to literal text, never throws',
+      () {
+        expect(() => parseBlankPrompt('bad {{abc}} marker'), returnsNormally);
+        final segments = parseBlankPrompt('bad {{abc}} marker');
 
-      expect(segments.whereType<PromptGapSegment>(), isEmpty);
-      expect(segments, hasLength(1));
-      expect((segments.single as PromptTextSegment).text, 'bad {{abc}} marker');
-    });
+        expect(segments.whereType<PromptGapSegment>(), isEmpty);
+        expect(segments, hasLength(1));
+        expect(
+          (segments.single as PromptTextSegment).text,
+          'bad {{abc}} marker',
+        );
+      },
+    );
 
     test('empty string returns a single empty text segment', () {
       final segments = parseBlankPrompt('');

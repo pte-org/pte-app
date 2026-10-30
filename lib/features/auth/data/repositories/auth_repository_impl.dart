@@ -4,15 +4,20 @@ import 'package:pte_app/features/auth/domain/jwt_claims.dart';
 import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl({required ApiClient apiClient, required TokenStore tokenStore})
-      : _apiClient = apiClient,
-        _tokenStore = tokenStore;
+  AuthRepositoryImpl({
+    required ApiClient apiClient,
+    required TokenStore tokenStore,
+  }) : _apiClient = apiClient,
+       _tokenStore = tokenStore;
 
   final ApiClient _apiClient;
   final TokenStore _tokenStore;
 
   @override
-  Future<JwtClaims> login({required String email, required String password}) async {
+  Future<JwtClaims> login({
+    required String email,
+    required String password,
+  }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/api/v1/auth/login',
       data: {'username': email, 'password': password},
@@ -32,7 +37,10 @@ class AuthRepositoryImpl implements AuthRepository {
     final refreshToken = await _tokenStore.readRefreshToken();
     try {
       if (refreshToken != null) {
-        await _apiClient.post<void>('/api/v1/auth/logout', data: {'refreshToken': refreshToken});
+        await _apiClient.post<void>(
+          '/api/v1/auth/logout',
+          data: {'refreshToken': refreshToken},
+        );
       }
     } catch (_) {
       // Best-effort server-side revoke — local state must still clear

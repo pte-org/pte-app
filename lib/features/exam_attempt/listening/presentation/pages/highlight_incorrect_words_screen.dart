@@ -14,6 +14,7 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/highl
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/word_selection_list.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// `StatelessWidget` + `BlocProvider` — no `TextEditingController`, same
 /// reasoning as Phase 3's screens (phase-04 Design Constraints). Words are
@@ -27,7 +28,6 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -36,7 +36,6 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,6 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
         pinnedItemPublicId: task.pinnedItemPublicId,
         audioSource: task.audioUrl ?? '',
         initialPayload: initialAnswerPayload,
-        isPractice: isPractice,
       ),
       child: Builder(
         builder: (innerContext) => ExamScaffold(
@@ -65,44 +63,20 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
                         TaskTypeMeta.forTaskType(task.taskType)?.title ??
                         task.title,
                     subtitle: task.section,
-                    instruction:
-                        TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
-                        'Select the words that differ from the recording.',
-                    stimulus: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AudioListeningStatusCard(
-                          statusLabel: !state.hasStartedPlaying
-                              ? 'Tap to listen'
-                              : state.hasFinishedPlaying
-                                  ? 'Audio finished'
-                                  : 'Playing audio...',
-                          progress: !state.hasStartedPlaying
-                              ? 0.0
-                              : state.hasFinishedPlaying
-                                  ? 1.0
-                                  : state.progress,
-                        ),
-                        if (isPractice) ...[
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              if (!state.hasStartedPlaying) {
-                                context.read<HighlightIncorrectWordsCubit>().startPlayback();
-                              } else {
-                                context.read<HighlightIncorrectWordsCubit>().replayAudio();
-                              }
-                            },
-                            icon: const Icon(Icons.play_circle_outline),
-                            label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                          ),
-                        ],
-                      ],
+                    instruction: resolveTaskInstruction(
+                      apiInstruction: task.taskTypeInstruction,
+                      meta: TaskTypeMeta.forTaskType(task.taskType),
+                    ),
+                    stimulus: AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(
                       child: WordSelectionList(
                         words: words,
+                        transcript: task.promptText,
                         selectedIndices: state.selectedWordIndices,
                         onToggle: (wordIndex) => context
                             .read<HighlightIncorrectWordsCubit>()

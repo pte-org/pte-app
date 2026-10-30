@@ -20,15 +20,12 @@ class SummarizeSpokenTextCubit
     required this.pinnedItemPublicId,
     required String audioSource,
     String? initialPayload,
-    bool isPractice = false,
   }) : _outboxDao = outboxDao,
        _audioPlayerService = audioPlayerService,
-       _audioSource = audioSource,
        super(
          SummarizeSpokenTextState(
            draftText: initialPayload ?? '',
            wordCount: countWords(initialPayload ?? ''),
-           hasStartedPlaying: !isPractice,
          ),
          answerChanged:
              (
@@ -41,12 +38,11 @@ class SummarizeSpokenTextCubit
     });
     _positionSubscription = _audioPlayerService.position.listen(_onPosition);
     _durationSubscription = _audioPlayerService.duration.listen(_onDuration);
-    if (!isPractice) unawaited(_audioPlayerService.play(_audioSource));
+    unawaited(_playAudio(audioSource));
   }
 
   final AnswerOutboxDao _outboxDao;
   final AudioPlayerService _audioPlayerService;
-  final String _audioSource;
   final String attemptPublicId;
   final String pinnedItemPublicId;
   late final StreamSubscription<bool> _finishedSubscription;
@@ -55,14 +51,12 @@ class SummarizeSpokenTextCubit
   Duration _lastPosition = Duration.zero;
   Duration? _lastDuration;
 
-  Future<void> startPlayback() async {
-    emit(state.copyWith(hasStartedPlaying: true));
-    unawaited(_audioPlayerService.play(_audioSource));
-  }
-
-  Future<void> replayAudio() async {
-    emit(state.copyWith(hasFinishedPlaying: false, progress: 0.0));
-    await _audioPlayerService.replay();
+  Future<void> _playAudio(String audioSource) async {
+    try {
+      await _audioPlayerService.play(audioSource);
+    } catch (_) {
+      if (!isClosed) emit(state.copyWith(playbackFailed: true));
+    }
   }
 
   void draftChanged(String text) {
@@ -100,7 +94,10 @@ class SummarizeSpokenTextCubit
     final duration = _lastDuration;
     final progress = (duration == null || duration <= Duration.zero)
         ? 0.0
-        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(
+            0.0,
+            1.0,
+          );
     emit(state.copyWith(progress: progress));
   }
 

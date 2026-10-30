@@ -21,13 +21,16 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_reco
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/pages/describe_image_screen.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/task_image_display.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 class _MockAudioRecorderService extends Mock implements AudioRecorderService {}
 
-class _MockPendingMediaUploadDao extends Mock implements PendingMediaUploadDao {}
+class _MockPendingMediaUploadDao extends Mock
+    implements PendingMediaUploadDao {}
 
-class _MockMediaUploadCoordinator extends Mock implements MediaUploadCoordinator {}
+class _MockMediaUploadCoordinator extends Mock
+    implements MediaUploadCoordinator {}
 
 class _MockSyncEngine extends Mock implements SyncEngine {}
 
@@ -43,7 +46,10 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '/tmp';
 }
 
-TaskView _describeImageTask({String pinnedItemPublicId = 'item-1', String? imageUrl = 'https://example.com/img.png'}) {
+TaskView _describeImageTask({
+  String pinnedItemPublicId = 'item-1',
+  String? imageUrl = 'https://example.com/img.png',
+}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
     orderIndex: 1,
@@ -79,9 +85,14 @@ void main() {
     syncEngine = _MockSyncEngine();
     stateController = StreamController<ExamAttemptState>.broadcast();
 
-    when(() => mediaDao.watchRow(any(), any())).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
+    when(
+      () => mediaDao.watchRow(any(), any()),
+    ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    when(
+      () => recorder.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
   });
 
   tearDown(() => stateController.close());
@@ -107,74 +118,125 @@ void main() {
     whenListen(bloc, stateController.stream, initialState: initial);
   }
 
-  testWidgets('renders the instruction text with both prepSeconds and responseSeconds interpolated', (tester) async {
-    const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 25), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), snapshot));
+  testWidgets(
+    'renders the instruction text with both prepSeconds and responseSeconds interpolated',
+    (tester) async {
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 25),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _describeImageTask(), snapshot),
+      );
 
-    await tester.pumpWidget(buildSubject());
+      await tester.pumpWidget(buildSubject());
 
-    expect(
-      find.text(
-        'Look at the image below. In 25 seconds, please speak into the microphone and describe in detail '
-        'what the image is showing. You will have 40 seconds to give your response.',
-      ),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.text(
+          'Look at the image below. In 25 seconds, please speak into the microphone and describe in detail '
+          'what the image is showing. You will have 40 seconds to give your response.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('prep phase shows a live "Beginning in…" countdown card, and never starts recording', (tester) async {
-    const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 10), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), snapshot));
+  testWidgets(
+    'prep phase shows a live "Beginning in…" countdown card, and never starts recording',
+    (tester) async {
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 10),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress('attempt-1', _describeImageTask(), snapshot),
+      );
 
-    await tester.pumpWidget(buildSubject());
+      await tester.pumpWidget(buildSubject());
 
-    expect(find.text('Beginning in 10 seconds'), findsOneWidget);
-    verifyNever(() => recorder.start(any()));
-  });
+      expect(find.text('Beginning in 10 seconds'), findsOneWidget);
+      verifyNever(() => recorder.start(any()));
+    },
+  );
 
-  testWidgets('a new response-phase snapshot on the bloc stream auto-starts recording and shows the "Recording" card', (
-    tester,
-  ) async {
-    const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), prep));
+  testWidgets(
+    'a new response-phase snapshot on the bloc stream auto-starts recording and shows the "Recording" card',
+    (tester) async {
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), prep));
 
-    await tester.pumpWidget(buildSubject());
-    expect(find.text('Beginning in 1 seconds'), findsOneWidget);
+      await tester.pumpWidget(buildSubject());
+      expect(find.text('Beginning in 1 seconds'), findsOneWidget);
 
-    const response = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 40), currentOrderIndex: 1);
-    stateController.add(AttemptInProgress('attempt-1', _describeImageTask(), response));
-    await tester.pump();
-    await tester.pump();
+      const response = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration(seconds: 40),
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _describeImageTask(), response),
+      );
+      await tester.pump();
+      await tester.pump();
 
-    verify(() => recorder.start(any())).called(1);
-    expect(find.text('Recording 40 seconds left'), findsOneWidget);
-  });
+      verify(() => recorder.start(any())).called(1);
+      expect(find.text('Recording 40 seconds left'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'full prep -> response -> recorded transition: once the response countdown reaches zero the recorder '
     'stops and the upload-status card replaces the "Recording" card',
     (tester) async {
-      when(() => recorder.stop()).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
-      when(() => mediaDao.upsertRecorded(
-            attemptPublicId: any(named: 'attemptPublicId'),
-            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-            localFilePath: any(named: 'localFilePath'),
-          )).thenAnswer((_) async {});
-      when(() => coordinator.attemptUpload(any(), any())).thenAnswer((_) async {});
+      when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+      when(
+        () => mediaDao.upsertRecorded(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          localFilePath: any(named: 'localFilePath'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => coordinator.attemptUpload(any(), any()),
+      ).thenAnswer((_) async {});
 
-      const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
       stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), prep));
 
       await tester.pumpWidget(buildSubject());
 
-      const response = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 40), currentOrderIndex: 1);
-      stateController.add(AttemptInProgress('attempt-1', _describeImageTask(), response));
+      const response = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration(seconds: 40),
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _describeImageTask(), response),
+      );
       await tester.pump();
       await tester.pump();
       verify(() => recorder.start(any())).called(1);
 
-      const expired = TimerSnapshot(phase: TimerPhase.response, remaining: Duration.zero, currentOrderIndex: 1);
-      stateController.add(AttemptInProgress('attempt-1', _describeImageTask(), expired));
+      const expired = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration.zero,
+        currentOrderIndex: 1,
+      );
+      stateController.add(
+        AttemptInProgress('attempt-1', _describeImageTask(), expired),
+      );
       await tester.pump();
       await tester.pump();
       await tester.pump();
@@ -189,7 +251,11 @@ void main() {
     'a snapshot for a different task (pinnedItemPublicId mismatch) is never forwarded — recorder.start is never '
     'called for it',
     (tester) async {
-      const prep = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 1), currentOrderIndex: 1);
+      const prep = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 1),
+        currentOrderIndex: 1,
+      );
       stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(), prep));
 
       await tester.pumpWidget(buildSubject());
@@ -200,7 +266,11 @@ void main() {
         currentOrderIndex: 2,
       );
       stateController.add(
-        AttemptInProgress('attempt-1', _describeImageTask(pinnedItemPublicId: 'item-2'), otherTaskResponse),
+        AttemptInProgress(
+          'attempt-1',
+          _describeImageTask(pinnedItemPublicId: 'item-2'),
+          otherTaskResponse,
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -209,30 +279,60 @@ void main() {
     },
   );
 
-  testWidgets('renders the image via TaskImageDisplay with the task\'s imageUrl', (tester) async {
-    const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 25), currentOrderIndex: 1);
-    stubBlocState(
-      AttemptInProgress(
-        'attempt-1',
-        _describeImageTask(imageUrl: 'https://example.com/food-pyramid.png'),
-        snapshot,
-      ),
-    );
+  testWidgets(
+    'renders the image via TaskImageDisplay with the task\'s imageUrl',
+    (tester) async {
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 25),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress(
+          'attempt-1',
+          _describeImageTask(imageUrl: 'https://example.com/food-pyramid.png'),
+          snapshot,
+        ),
+      );
 
-    await tester.pumpWidget(buildSubject(task: _describeImageTask(imageUrl: 'https://example.com/food-pyramid.png')));
+      await tester.pumpWidget(
+        buildSubject(
+          task: _describeImageTask(
+            imageUrl: 'https://example.com/food-pyramid.png',
+          ),
+        ),
+      );
 
-    final display = tester.widget<TaskImageDisplay>(find.byType(TaskImageDisplay));
-    expect(display.imageUrl, 'https://example.com/food-pyramid.png');
-  });
+      final display = tester.widget<TaskImageDisplay>(
+        find.byType(TaskImageDisplay),
+      );
+      expect(display.imageUrl, 'https://example.com/food-pyramid.png');
+    },
+  );
 
-  testWidgets('a null imageUrl renders the fallback message instead of throwing', (tester) async {
-    const snapshot = TimerSnapshot(phase: TimerPhase.prep, remaining: Duration(seconds: 25), currentOrderIndex: 1);
-    stubBlocState(AttemptInProgress('attempt-1', _describeImageTask(imageUrl: null), snapshot));
+  testWidgets(
+    'a null imageUrl renders the fallback message instead of throwing',
+    (tester) async {
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.prep,
+        remaining: Duration(seconds: 25),
+        currentOrderIndex: 1,
+      );
+      stubBlocState(
+        AttemptInProgress(
+          'attempt-1',
+          _describeImageTask(imageUrl: null),
+          snapshot,
+        ),
+      );
 
-    await tester.pumpWidget(buildSubject(task: _describeImageTask(imageUrl: null)));
+      await tester.pumpWidget(
+        buildSubject(task: _describeImageTask(imageUrl: null)),
+      );
 
-    expect(find.byType(TaskImageDisplay), findsNothing);
-    expect(find.text('No image available for this task.'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(TaskImageDisplay), findsNothing);
+      expect(find.text('No image available for this task.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

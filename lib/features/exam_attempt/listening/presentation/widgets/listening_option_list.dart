@@ -11,7 +11,12 @@ import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 /// `SELECT_MISSING_WORD`, and `HIGHLIGHT_CORRECT_SUMMARY` (phase-04
 /// reuses this as-is).
 class ListeningOptionList extends StatelessWidget {
-  const ListeningOptionList({super.key, required this.options, required this.selectedOrderIndex, required this.onChanged});
+  const ListeningOptionList({
+    super.key,
+    required this.options,
+    required this.selectedOrderIndex,
+    required this.onChanged,
+  });
 
   final List<TaskOption> options;
   final String? selectedOrderIndex;
@@ -26,7 +31,13 @@ class ListeningOptionList extends StatelessWidget {
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [for (final option in options) RadioListTile<String>(title: Text(option.text), value: option.orderIndex)],
+        children: [
+          for (final option in options)
+            RadioListTile<String>(
+              title: Text(option.text),
+              value: option.orderIndex,
+            ),
+        ],
       ),
     );
   }

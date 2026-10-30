@@ -12,6 +12,12 @@ class AppTypography {
     height: 28 / 20,
     fontWeight: FontWeight.w700,
   );
+  static const TextStyle examSectionTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 32,
+    height: 40 / 32,
+    fontWeight: FontWeight.w700,
+  );
   static const TextStyle headlineMd = TextStyle(
     fontFamily: fontFamily,
     fontSize: 18,
@@ -20,14 +26,39 @@ class AppTypography {
   );
   static const TextStyle instructionBold = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 16,
-    height: 24 / 16,
+    fontSize: 18,
+    height: 27 / 18,
     fontWeight: FontWeight.w700,
+  );
+  static const TextStyle audioPanelTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    height: 27 / 18,
+    fontWeight: FontWeight.w400,
+  );
+  static const TextStyle audioPanelStatus = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    height: 27 / 18,
+    fontWeight: FontWeight.w400,
+  );
+  static const TextStyle audioPanelTime = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    height: 20 / 14,
+    fontWeight: FontWeight.w400,
+    fontFeatures: [FontFeature.tabularFigures()],
   );
   static const TextStyle bodyPassage = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 16,
-    height: 25.6 / 16,
+    fontSize: 20,
+    height: 1.5,
+    fontWeight: FontWeight.w400,
+  );
+  static const TextStyle examAnswer = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    height: 1.5,
     fontWeight: FontWeight.w400,
   );
   static const TextStyle bodyRegular = TextStyle(

@@ -17,7 +17,11 @@ String _fakeJwt(Map<String, dynamic> claims) {
 
 void main() {
   test('decodes roles and tenant_id from a well-formed access token', () {
-    final jwt = _fakeJwt({'sub': 'user-1', 'roles': ['STUDENT'], 'tenant_id': 'tenant-1'});
+    final jwt = _fakeJwt({
+      'sub': 'user-1',
+      'roles': ['STUDENT'],
+      'tenant_id': 'tenant-1',
+    });
 
     final claims = decodeJwtClaims(jwt);
 
@@ -26,7 +30,10 @@ void main() {
   });
 
   test('tenant_id is null when the claim is absent (user has no tenant)', () {
-    final jwt = _fakeJwt({'sub': 'user-1', 'roles': ['PLATFORM_ADMIN']});
+    final jwt = _fakeJwt({
+      'sub': 'user-1',
+      'roles': ['PLATFORM_ADMIN'],
+    });
 
     final claims = decodeJwtClaims(jwt);
 
@@ -34,7 +41,10 @@ void main() {
     expect(claims.tenantId, isNull);
   });
 
-  test('throws FormatException on a malformed token (not 3 dot-separated segments)', () {
-    expect(() => decodeJwtClaims('not-a-jwt'), throwsFormatException);
-  });
+  test(
+    'throws FormatException on a malformed token (not 3 dot-separated segments)',
+    () {
+      expect(() => decodeJwtClaims('not-a-jwt'), throwsFormatException);
+    },
+  );
 }

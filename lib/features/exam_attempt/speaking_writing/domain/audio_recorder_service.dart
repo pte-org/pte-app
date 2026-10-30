@@ -10,10 +10,21 @@ abstract class AudioRecorderService {
   Future<String?> stop();
 
   Future<bool> isRecording();
+
+  /// Live microphone peak level in dBFS (`0` is full scale, more negative is
+  /// quieter), sampled while a recording is in progress. Emits nothing while
+  /// idle. Lets the exam UI show the candidate that their mic is picking up
+  /// sound.
+  Stream<double> get inputLevels;
 }
 
 /// Raised before entering the native recorder when the platform reports no
 /// usable input device or denies microphone access.
 final class AudioInputUnavailableException implements Exception {
   const AudioInputUnavailableException();
+}
+
+abstract interface class PreviewRecordingControls {
+  Future<void> pauseRecording();
+  Future<void> resumeRecording();
 }

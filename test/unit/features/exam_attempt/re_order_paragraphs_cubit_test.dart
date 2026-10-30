@@ -1,150 +1,84 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/re_order_paragraphs_cubit.dart';
 
-class _MockAnswerOutboxDao extends Mock implements AnswerOutboxDao {}
+class _Dao extends Mock implements AnswerOutboxDao {}
 
-// Deliberately shuffled so identity (orderIndex) and current list position
-// diverge from the very first frame — a naive implementation that
-// accidentally payloads list position instead of orderIndex would produce
-// "0,1,2,3" here, which every test below explicitly rules out.
-List<TaskOption> _shuffledParagraphs() {
-  return const [
-    TaskOption(text: 'Finally, the team published their findings.', orderIndex: '3'),
-    TaskOption(text: 'First, the researchers gathered samples.', orderIndex: '0'),
-    TaskOption(text: 'The samples were analyzed over months.', orderIndex: '1'),
-    TaskOption(text: 'Unexpected patterns emerged.', orderIndex: '2'),
-  ];
-}
-
+const options = [
+  TaskOption(text: 'B', orderIndex: '9'),
+  TaskOption(text: 'A', orderIndex: '4'),
+];
 void main() {
-  late _MockAnswerOutboxDao outboxDao;
-
+  late _Dao dao;
   setUp(() {
-    outboxDao = _MockAnswerOutboxDao();
+    dao = _Dao();
     when(
-      () => outboxDao.upsertAnswer(
+      () => dao.upsertAnswer(
         attemptPublicId: any(named: 'attemptPublicId'),
         pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
         payload: any(named: 'payload'),
       ),
     ).thenAnswer((_) async {});
   });
-
-  group('initial state — seeded from server-shuffled order, never re-sorted', () {
-    test('currentOrder matches the exact server-delivered order', () {
-      final cubit = ReOrderParagraphsCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        initialOrder: _shuffledParagraphs(),
-      );
-
-      expect(cubit.state.currentOrder.map((o) => o.orderIndex), ['3', '0', '1', '2']);
-
-      cubit.close();
-    });
-  });
-
-  group('reorder — payload is identity orderIndex sequence, not list position (Step 6)', () {
-    test('moving the first item to the end writes the new identity sequence', () async {
-      final cubit = ReOrderParagraphsCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        initialOrder: _shuffledParagraphs(),
-      );
-
-      // newIndex is already adjusted for the removed item (the widget's
-      // ReorderableListView.onReorder handler does that adjustment before
-      // calling this cubit — see ReOrderParagraphsList).
-      await cubit.reorder(0, 3);
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: 'attempt-1',
-          pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured.last, '0,1,2,3');
-      expect(cubit.state.currentOrder.map((o) => o.orderIndex), ['0', '1', '2', '3']);
-
-      await cubit.close();
-    });
-
-    test('multiple sequential reorders each independently produce the correct payload', () async {
-      final cubit = ReOrderParagraphsCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        initialOrder: _shuffledParagraphs(),
-      );
-
-      await cubit.reorder(0, 3); // '3','0','1','2' -> '0','1','2','3'
-      await cubit.reorder(0, 1); // '0','1','2','3' -> '1','0','2','3'
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: 'attempt-1',
-          pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured, hasLength(2));
-      expect(captured[0], '0,1,2,3');
-      expect(captured[1], '1,0,2,3');
-
-      await cubit.close();
-    });
-
-    test('a no-op reorder (item dropped back at its own position) still writes the unchanged identity sequence', () async {
-      final cubit = ReOrderParagraphsCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        initialOrder: _shuffledParagraphs(),
-      );
-
-      await cubit.reorder(0, 0);
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: 'attempt-1',
-          pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured.single, '3,0,1,2');
-
-      await cubit.close();
-    });
-  });
-
-  group('flushPendingEdit — writes current state unconditionally (no debounce to cancel, but a never-touched task '
-      'must still leave a submittable row)', () {
-    test('with no prior reorder, writes the untouched server-shuffled order as the payload', () async {
-      final cubit = ReOrderParagraphsCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        initialOrder: _shuffledParagraphs(),
-      );
-
+  ReOrderParagraphsCubit create([String? payload]) => ReOrderParagraphsCubit(
+    outboxDao: dao,
+    attemptPublicId: 'a',
+    pinnedItemPublicId: 'i',
+    initialOrder: options,
+    initialPayload: payload,
+  );
+  test(
+    'new task has empty Target and preserves shuffled Source identities',
+    () async {
+      final cubit = create();
+      expect(cubit.state.currentOrder, isEmpty);
+      expect(cubit.paragraphs.map((o) => o.orderIndex), ['9', '4']);
       await cubit.flushPendingEdit();
-
       verify(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: 'attempt-1',
-          pinnedItemPublicId: 'item-1',
-          payload: '3,0,1,2',
+        () => dao.upsertAnswer(
+          attemptPublicId: 'a',
+          pinnedItemPublicId: 'i',
+          payload: '',
         ),
       ).called(1);
-
       await cubit.close();
-    });
-  });
+    },
+  );
+  test(
+    'partial, full and emptied Target persist unchanged CSV identities',
+    () async {
+      final cubit = create();
+      for (final ids in [
+        ['4'],
+        ['4', '9'],
+        ['9', '4'],
+        <String>[],
+      ]) {
+        await cubit.setTargetOrder(ids);
+        expect(cubit.state.currentOrder.map((o) => o.orderIndex), ids);
+        verify(
+          () => dao.upsertAnswer(
+            attemptPublicId: 'a',
+            pinnedItemPublicId: 'i',
+            payload: ids.join(','),
+          ),
+        ).called(1);
+        final restored = create(ids.join(','));
+        expect(restored.state.currentOrder.map((o) => o.orderIndex), ids);
+        await restored.close();
+      }
+      await cubit.close();
+    },
+  );
+  test(
+    'invalid and duplicate saved IDs cannot duplicate or lose Source paragraphs',
+    () async {
+      final cubit = create('4,invalid,4');
+      expect(cubit.state.currentOrder.map((o) => o.orderIndex), ['4']);
+      expect(cubit.paragraphs, options);
+      await cubit.close();
+    },
+  );
 }

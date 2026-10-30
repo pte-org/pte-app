@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recording_level_waveform.dart';
 import 'package:pte_app/features/device_check/domain/device_check_audio_player.dart';
 import 'package:pte_app/features/device_check/presentation/pages/test_mic_and_sound_screen.dart';
 
@@ -45,6 +46,9 @@ void main() {
     when(() => player.close()).thenAnswer((_) async {});
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
+    when(
+      () => recorder.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
   });
 
   tearDown(() => playbackController.close());
@@ -94,6 +98,24 @@ void main() {
     },
   );
 
+  testWidgets('shows the live mic waveform only while recording', (
+    tester,
+  ) async {
+    when(
+      () => recorder.stop(),
+    ).thenAnswer((_) async => '/tmp/device_check_test.wav');
+    await tester.pumpWidget(buildSubject());
+    expect(find.byType(RecordingLevelWaveform), findsNothing);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Record'));
+    await tester.pump();
+    expect(find.byType(RecordingLevelWaveform), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
+    await tester.pump();
+    expect(find.byType(RecordingLevelWaveform), findsNothing);
+  });
+
   testWidgets(
     'tapping Stop calls recorder.stop and enables Play my recording',
     (tester) async {
@@ -131,9 +153,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
 
       verify(() => player.playFile('/tmp/device_check_test.wav')).called(1);
@@ -152,9 +177,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
       playbackController.add(true);
       await tester.pump();
@@ -215,9 +243,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
       playbackController.add(true);
       await tester.pump();

@@ -58,10 +58,27 @@ void main() {
 
       verify(
         () => recorder.start(
-          const RecordConfig(encoder: AudioEncoder.wav),
+          const RecordConfig(encoder: AudioEncoder.wav, autoGain: true),
           path: '/tmp/answer.wav',
         ),
       ).called(1);
+    },
+  );
+
+  test(
+    'inputLevels forwards the current dBFS level as one cached stream',
+    () async {
+      when(
+        () => recorder.onAmplitudeChanged(const Duration(milliseconds: 100)),
+      ).thenAnswer(
+        (_) => Stream.fromIterable([
+          Amplitude(current: -42.5, max: -10),
+          Amplitude(current: -12, max: -10),
+        ]),
+      );
+
+      expect(identical(service.inputLevels, service.inputLevels), isTrue);
+      expect(await service.inputLevels.toList(), [-42.5, -12.0]);
     },
   );
 }

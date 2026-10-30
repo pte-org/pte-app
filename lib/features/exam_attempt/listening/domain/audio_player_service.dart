@@ -35,8 +35,22 @@ abstract class AudioPlayerService {
   /// played" state.
   Stream<bool> get hasFinishedPlaying;
 
-  /// Seeks to the beginning and replays — practice mode only.
-  Future<void> replay();
-
   Future<void> close();
+}
+
+/// Controls available only to preview callers; candidate playback stays one-shot.
+abstract interface class PreviewPlaybackControls {
+  Future<void> pausePlayback();
+  Future<void> resumePlayback();
+  Future<void> stopPlayback();
+}
+
+/// Playback can fail after loading succeeds, including after a resume.
+abstract interface class PlaybackFailureSource {
+  Stream<Object> get playbackFailures;
+}
+
+/// Host-only replay of the loaded source; does not request a new signed URL.
+abstract interface class PreviewPlaybackReplayControls {
+  Future<void> replayPlayback();
 }

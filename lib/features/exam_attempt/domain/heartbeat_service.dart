@@ -7,7 +7,8 @@ import 'package:pte_app/core/network/api_client.dart';
 /// Matches [Timer.periodic]'s signature so a fake factory can be injected
 /// for deterministic tests (no real wall-clock waits) — same pattern
 /// `SyncEngine.PeriodicTimerFactory` uses.
-typedef PeriodicTimerFactory = Timer Function(Duration period, void Function(Timer timer) callback);
+typedef PeriodicTimerFactory =
+    Timer Function(Duration period, void Function(Timer timer) callback);
 
 const Duration _defaultInterval = Duration(seconds: 15);
 
@@ -64,7 +65,10 @@ class HeartbeatService {
     stop();
     _runningAttemptId = attemptPublicId;
     unawaited(_beat(attemptPublicId));
-    _timer = _createPeriodicTimer(_interval, (_) => unawaited(_beat(attemptPublicId)));
+    _timer = _createPeriodicTimer(
+      _interval,
+      (_) => unawaited(_beat(attemptPublicId)),
+    );
   }
 
   /// Never throws, never surfaces to the caller — a failed heartbeat is
@@ -74,7 +78,11 @@ class HeartbeatService {
     try {
       await _apiClient.sendHeartbeat(attemptPublicId);
     } catch (e, stackTrace) {
-      _logger.w('Heartbeat failed, retrying in $_interval', error: e, stackTrace: stackTrace);
+      _logger.w(
+        'Heartbeat failed, retrying in $_interval',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

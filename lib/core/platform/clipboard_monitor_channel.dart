@@ -9,8 +9,9 @@ class ClipboardMonitorChannel {
   const ClipboardMonitorChannel();
 
   static const _platform = MethodChannel('com.pte.lockdown/clipboard');
-  static const _eventChannel =
-      EventChannel('com.pte.lockdown/clipboard/events');
+  static const _eventChannel = EventChannel(
+    'com.pte.lockdown/clipboard/events',
+  );
 
   /// Block external clipboard paste operations.
   /// Internal app copy/paste still allowed.
@@ -44,8 +45,8 @@ class ClipboardMonitorChannel {
   /// blocking is active). Distinct from process violations because the
   /// clipboard channel is the only one that knows about copy/paste flows.
   Stream<String> get violations {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .map((event) => event as String);
+    return _eventChannel.receiveBroadcastStream().map(
+      (event) => event as String,
+    );
   }
 }

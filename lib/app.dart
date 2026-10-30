@@ -9,17 +9,23 @@ import 'core/audio/volume_service.dart';
 import 'core/constants/app_strings.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_dimensions.dart';
+import 'core/constants/app_theme.dart';
 import 'core/constants/app_typography.dart';
 import 'core/security/lockdown_service.dart';
+import 'core/security/violation_retry_coordinator.dart';
 import 'core/storage/dao/answer_outbox_dao.dart';
 import 'core/storage/dao/pending_media_upload_dao.dart';
 import 'core/sync/media_upload_coordinator.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/widgets/loading_view.dart';
 import 'core/widgets/primary_button.dart';
+import 'core/widgets/secondary_button.dart';
+import 'core/widgets/status_screen.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/auth/domain/exam_access_policy.dart';
+import 'features/auth/presentation/pages/exam_access_denied_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
 import 'features/device_check/constants/device_check_strings.dart';
@@ -38,13 +44,12 @@ import 'features/exam_attempt/presentation/widgets/task_type_dispatcher.dart';
 import 'features/exam_attempt/presentation/widgets/lockdown_activation_failure_dialog.dart';
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
+import 'features/exam_preview/domain/repositories/host_exam_preview_repository.dart';
+import 'features/exam_preview/presentation/pages/host_exam_preview_screen.dart';
+import 'features/exam_preview/data/preview_audio_session.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
-import 'features/host_console/domain/host_access_policy.dart';
-import 'features/host_console/presentation/pages/host_console_page.dart';
-import 'features/live_proctor/domain/live_proctor_access_policy.dart';
-import 'features/live_proctor/presentation/pages/proctor_workspace_page.dart';
 
 class PteApp extends StatelessWidget {
   const PteApp({super.key});
@@ -54,10 +59,7 @@ class PteApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: AppTypography.fontFamily,
-      ),
+      theme: AppTheme.light(),
       home: kIsDevSkipAuth
           ? const _DevStandaloneMenu()
           : BlocProvider<AuthBloc>.value(
@@ -180,22 +182,22 @@ class _AppAuthGateState extends State<AppAuthGate> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (_, state) =>
-          state is AuthIdle ||
-          state is AuthUnauthenticated ||
-          state is AuthError,
+      listenWhen: (_, state) => true,
       listener: (context, state) {
+        _syncSecuritySession(state);
         if (state is AuthUnauthenticated) {
           _sessionIdForStudent = null;
         }
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (state is AuthIdle ||
+            state is AuthUnauthenticated ||
+            state is AuthError) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           return switch (state) {
-            AuthIdle() ||
-            AuthUnauthenticated() ||
-            AuthError() => LoginPage(
+            AuthIdle() || AuthUnauthenticated() || AuthError() => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
@@ -206,15 +208,22 @@ class _AppAuthGateState extends State<AppAuthGate> {
               onSessionIdProvided: _rememberSessionId,
             ),
             AuthAuthenticated(:final claims)
-                when HostAccessPolicy.canEnterHostConsole(claims) =>
-              const HostConsolePage(),
-            AuthAuthenticated(:final claims)
-                when LiveProctorAccessPolicy.canControl(claims) =>
-              const ProctorWorkspacePage(),
+                when !ExamAccessPolicy.canTakeExam(claims) &&
+                    !ExamAccessPolicy.canPreviewExam(claims) =>
+              const ExamAccessDeniedPage(),
             AuthAuthenticated() when _sessionIdForStudent == null => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
+            AuthAuthenticated(:final claims)
+                when ExamAccessPolicy.canPreviewExam(claims) =>
+              HostExamPreviewScreen(
+                sessionInput: _sessionIdForStudent!,
+                repository: GetIt.instance<HostExamPreviewRepository>(),
+                mediaSession: GetIt.instance<PreviewAudioSession>(),
+                onExit: () =>
+                    context.read<AuthBloc>().add(const LogoutRequested()),
+              ),
             AuthAuthenticated() => StudentExamGate(
               initialSessionId: _sessionIdForStudent!,
             ),
@@ -223,15 +232,28 @@ class _AppAuthGateState extends State<AppAuthGate> {
       ),
     );
   }
+
+  void _syncSecuritySession(AuthState state) {
+    final getIt = GetIt.instance;
+    if (!getIt.isRegistered<ViolationRetryCoordinator>()) return;
+    final coordinator = getIt<ViolationRetryCoordinator>();
+    if (state is AuthAuthenticated &&
+        ExamAccessPolicy.canTakeExam(state.claims) &&
+        !ExamAccessPolicy.canPreviewExam(state.claims)) {
+      coordinator.start();
+    } else {
+      unawaited(coordinator.dispose());
+    }
+  }
 }
 
-/// The student exam flow starts the session ID captured from login.
+/// The student exam flow starts the exam code (or pasted session UUID)
+/// captured from login.
 /// [AttemptInProgress] shows the live task via
 /// [TaskTypeDispatcher] (keyed on the task, per phase-05 Design
-/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen] once,
-/// then hands off to [ReportScreen], with a back button (wired through
-/// `ReportScreen.onBack`, not a floating overlay — see that class's own
-/// doc) to reset [ExamAttemptBloc] and return to login for another session.
+/// Constraints); [AttemptCompleted] shows [SectionCompletedScreen], whose
+/// continue action resets [ExamAttemptBloc] and returns to login. The app
+/// never shows a score: students receive results by email once published.
 class StudentExamGate extends StatefulWidget {
   const StudentExamGate({super.key, required this.initialSessionId});
 
@@ -363,7 +385,7 @@ class StudentExamGateState extends State<StudentExamGate> {
             );
           }
           // AppAuthGate only constructs this widget after a student supplies
-          // a session ID; there is no second session-entry screen.
+          // an exam code; there is no second session-entry screen.
           return const Scaffold(body: LoadingView());
         },
       ),
@@ -544,62 +566,24 @@ class _AttemptStartErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surfaceCanvas,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimensions.spacingXl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppDimensions.spacingXl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: AppColors.error,
-                      size: AppDimensions.statusBannerIconSize,
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMd),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingSm),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: AppDimensions.spacingLg),
-                    PrimaryButton(
-                      label: ExamAttemptStrings.attemptStartRetry,
-                      onPressed: onRetry,
-                    ),
-                    if (onChangeSession != null) ...[
-                      const SizedBox(height: AppDimensions.spacingSm),
-                      OutlinedButton(
-                        onPressed: onChangeSession,
-                        child: const Text(
-                          ExamAttemptStrings.attemptStartChangeSession,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
+    return StatusScreen(
+      icon: Icons.error_outline,
+      title: title,
+      message: message,
+      isError: true,
+      children: [
+        PrimaryButton(
+          label: ExamAttemptStrings.attemptStartRetry,
+          onPressed: onRetry,
         ),
-      ),
+        if (onChangeSession != null) ...[
+          const SizedBox(height: AppDimensions.spacingSm),
+          SecondaryButton(
+            label: ExamAttemptStrings.attemptStartChangeSession,
+            onPressed: onChangeSession,
+          ),
+        ],
+      ],
     );
   }
 }

@@ -64,6 +64,10 @@ class DeviceCheckCubit extends Cubit<DeviceCheckState> {
   String? _recordedFilePath;
   _NowPlaying _nowPlaying = _NowPlaying.none;
 
+  /// Live mic level (dBFS) while the mic test is recording — see
+  /// [AudioRecorderService.inputLevels].
+  Stream<double> get inputLevels => _recorder.inputLevels;
+
   Future<void> startMicRecording() async {
     try {
       final path = await _resolveRecordingFilePath();

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:pte_app/core/constants/app_dimensions.dart';
 import 'exam_template_frame.dart';
 
 class TokenToggleTemplate extends StatelessWidget {
@@ -12,7 +11,7 @@ class TokenToggleTemplate extends StatelessWidget {
     required this.stimulus,
     required this.response,
     this.metadata = const [],
-    this.maxWidth = AppDimensions.contentMaxWidth,
+    this.maxWidth = double.infinity,
   });
 
   final String title;

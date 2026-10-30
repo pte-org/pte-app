@@ -2,7 +2,8 @@ import 'package:pte_app/core/network/api_client.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/audio_prompt_repository.dart';
 
 class AudioPromptRepositoryImpl implements AudioPromptRepository {
-  AudioPromptRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
+  AudioPromptRepositoryImpl({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 

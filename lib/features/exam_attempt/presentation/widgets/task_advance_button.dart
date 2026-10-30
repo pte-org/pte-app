@@ -23,12 +23,23 @@ class TaskAdvanceButton extends StatefulWidget {
     this.pinnedItemPublicId,
     required this.syncEngine,
     this.autoAdvanceOnExpiration = true,
+    this.forwardOnlyNext = false,
+    this.forwardOnlyNextEnabled = true,
   });
 
   final FlushableAnswerCubit? cubit;
   final String? pinnedItemPublicId;
   final SyncEngine syncEngine;
   final bool autoAdvanceOnExpiration;
+
+  /// Enables Next for a section that has no manual navigation (see the
+  /// server's `ManualNavigationPolicy`): the tap submits the answer and moves
+  /// on exactly like the per-task timer expiring, and Previous stays disabled.
+  final bool forwardOnlyNext;
+
+  /// Lets a screen hold [forwardOnlyNext] back until the task allows moving on
+  /// (e.g. its audio has finished). Timer expiry still advances regardless.
+  final bool forwardOnlyNextEnabled;
 
   @override
   State<TaskAdvanceButton> createState() => _TaskAdvanceButtonState();
@@ -46,19 +57,20 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
 
   /// Returns true only when the per-task timer expiring should auto-submit
   /// and advance. Rules:
-  /// - Practice mode: never auto-advance (student controls their own pace).
-  /// - Official READING/WRITING: never auto-advance (section timer is
-  ///   informational; only force-submit or manual next chốt answers).
-  /// - Official LISTENING/SPEAKING: respect the caller's [widget.autoAdvanceOnExpiration].
+  /// - READING/WRITING: never auto-advance (section timer is informational;
+  ///   only force-submit or manual next commits answers).
+  /// - LISTENING/SPEAKING: respect the caller's [widget.autoAdvanceOnExpiration].
   bool _shouldAutoAdvanceOnExpiration(AttemptInProgress state) {
     if (!widget.autoAdvanceOnExpiration) return false;
-    if (state.isPractice) return false;
     final section = state.task.section.toUpperCase();
     if (section == 'READING' || section == 'WRITING') return false;
     return true;
   }
 
-  Future<void> _advanceOnExpiration() async {
+  Future<void> _advanceOnExpiration() =>
+      _submitAndAdvance(AdvanceReason.timeExpired);
+
+  Future<void> _submitAndAdvance(AdvanceReason reason) async {
     if (_isNavigating) return;
     final state = context.read<ExamAttemptBloc>().state;
     if (state is! AttemptInProgress) return;
@@ -69,9 +81,7 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
     await widget.cubit?.flushPendingEdit();
     await widget.syncEngine.flushOne(state.task.pinnedItemPublicId);
     if (!mounted) return;
-    context.read<ExamAttemptBloc>().add(
-      const NextTaskRequested(reason: AdvanceReason.timeExpired),
-    );
+    context.read<ExamAttemptBloc>().add(NextTaskRequested(reason: reason));
   }
 
   Future<void> _navigate(
@@ -124,7 +134,9 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
   }
 
   void _handleStateChange(ExamAttemptState state) {
-    if (_isExpired(state) && state is AttemptInProgress && _shouldAutoAdvanceOnExpiration(state)) {
+    if (_isExpired(state) &&
+        state is AttemptInProgress &&
+        _shouldAutoAdvanceOnExpiration(state)) {
       _advanceOnExpiration();
       return;
     }
@@ -161,16 +173,23 @@ class _TaskAdvanceButtonState extends State<TaskAdvanceButton> {
           final canNavigate =
               state.submissionStatus == AttemptSubmissionStatus.ready;
           return ExamNavigationActions(
-            onPrevious: canNavigate && !_isNavigating && task.canNavigatePrevious
+            onPrevious:
+                canNavigate && !_isNavigating && task.canNavigatePrevious
                 ? () => _navigate(task, TaskNavigationDirection.previous)
                 : null,
-            onNext: canNavigate && task.canNavigateNext
+            onNext: _isNavigating || !canNavigate
+                ? null
+                : task.canNavigateNext
                 ? () => _navigate(task, TaskNavigationDirection.next)
+                : widget.forwardOnlyNext && widget.forwardOnlyNextEnabled
+                ? () => _submitAndAdvance(AdvanceReason.manual)
                 : null,
-            nextLabel: state.submissionStatus == AttemptSubmissionStatus.submitting
+            nextLabel:
+                state.submissionStatus == AttemptSubmissionStatus.submitting
                 ? ExamAttemptStrings.forceSubmitSubmittingLabel
                 : ExamAttemptStrings.taskAdvanceButtonLabel,
-            nextLoading: _isNavigating ||
+            nextLoading:
+                _isNavigating ||
                 state.submissionStatus == AttemptSubmissionStatus.submitting,
           );
         },

@@ -23,8 +23,8 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold
 /// Renders inside the shared exam shell as its injected content region.
 /// Structurally mirrors `AnswerShortQuestionScreen` exactly (same
 /// [AutoRecordCubit] lifecycle, same [AutoRecordTimerBridgeMixin] bridge,
-/// same fully-automatic advance, same [AudioPromptRecordBody]-shared 2-card
-/// layout) — only the sub-stage timing and instruction text differ. Fixed
+/// same fully-automatic advance, same [AudioPromptRecordBody]-shared single
+/// panel layout) — only the sub-stage timing and instruction text differ. Fixed
 /// (non-interpolated) instruction text, same style as Repeat Sentence's/
 /// Answer Short Question's.
 class SummarizeGroupDiscussionScreen extends StatefulWidget {
@@ -106,7 +106,8 @@ class _SummarizeGroupDiscussionScreenState
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _SummarizeGroupDiscussionBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,

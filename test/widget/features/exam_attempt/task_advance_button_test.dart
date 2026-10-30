@@ -34,6 +34,7 @@ class _FakeFlushableAnswerCubit implements FlushableAnswerCubit {
 
 TaskView sampleTask({
   String pinnedItemPublicId = 'item-1',
+  String section = 'READING',
   bool canNavigatePrevious = true,
   bool canNavigateNext = true,
 }) {
@@ -41,7 +42,7 @@ TaskView sampleTask({
     pinnedItemPublicId: pinnedItemPublicId,
     orderIndex: 1,
     totalTasks: 5,
-    section: 'READING',
+    section: section,
     taskType: 'MC_READING_SINGLE',
     title: 'Task title',
     prepSeconds: 0,
@@ -95,7 +96,11 @@ void main() {
     );
   });
 
-  Widget buildSubject() {
+  Widget buildSubject({
+    bool autoAdvanceOnExpiration = true,
+    bool forwardOnlyNext = false,
+    bool forwardOnlyNextEnabled = true,
+  }) {
     return MaterialApp(
       home: BlocProvider<ExamAttemptBloc>.value(
         value: bloc,
@@ -104,6 +109,9 @@ void main() {
             cubit: cubit,
             pinnedItemPublicId: 'item-1',
             syncEngine: syncEngine,
+            autoAdvanceOnExpiration: autoAdvanceOnExpiration,
+            forwardOnlyNext: forwardOnlyNext,
+            forwardOnlyNextEnabled: forwardOnlyNextEnabled,
           ),
         ),
       ),
@@ -130,19 +138,20 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('Previous requests the previous task', (tester) async {
+    testWidgets('student does not show Previous even when backend allows it', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildSubject());
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Previous'));
-      await tester.pump();
+      expect(find.widgetWithText(OutlinedButton, 'Previous'), findsNothing);
 
-      verify(
+      verifyNever(
         () => bloc.add(
           const NavigateTaskRequested(
             fromPinnedItemPublicId: 'item-1',
             direction: TaskNavigationDirection.previous,
           ),
         ),
-      ).called(1);
+      );
     });
 
     testWidgets('navigation loading ends after the next task is received', (
@@ -201,23 +210,26 @@ void main() {
     });
   });
 
+  // Official READING/WRITING never auto-advance on expiry, so this runs on a
+  // LISTENING task.
   testWidgets('response timer expiry retains submit-and-advance behavior', (
     tester,
   ) async {
+    final listeningTask = sampleTask(section: 'LISTENING');
     final controller = StreamController<ExamAttemptState>.broadcast();
     whenListen(
       bloc,
       controller.stream,
       initialState: AttemptInProgress(
         'attempt-1',
-        sampleTask(),
+        listeningTask,
         _runningSnapshot,
       ),
     );
 
     await tester.pumpWidget(buildSubject());
     controller.add(
-      AttemptInProgress('attempt-1', sampleTask(), _expiredSnapshot),
+      AttemptInProgress('attempt-1', listeningTask, _expiredSnapshot),
     );
     await tester.pump();
 
@@ -228,5 +240,110 @@ void main() {
           bloc.add(const NextTaskRequested(reason: AdvanceReason.timeExpired)),
     ).called(1);
     await controller.close();
+  });
+
+  for (final section in ['READING', 'WRITING']) {
+    testWidgets('$section: response timer expiry never auto-advances', (
+      tester,
+    ) async {
+      final task = sampleTask(section: section);
+      final controller = StreamController<ExamAttemptState>.broadcast();
+      whenListen(
+        bloc,
+        controller.stream,
+        initialState: AttemptInProgress('attempt-1', task, _runningSnapshot),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      controller.add(AttemptInProgress('attempt-1', task, _expiredSnapshot));
+      await tester.pump();
+
+      expect(cubit.calls, isEmpty);
+      verifyNever(() => syncEngine.flushOne(any()));
+      verifyNever(() => bloc.add(any(that: isA<NextTaskRequested>())));
+      await controller.close();
+    });
+  }
+
+  testWidgets(
+    'LISTENING: autoAdvanceOnExpiration=false suppresses auto-advance on expiry',
+    (tester) async {
+      final task = sampleTask(section: 'LISTENING');
+      final controller = StreamController<ExamAttemptState>.broadcast();
+      whenListen(
+        bloc,
+        controller.stream,
+        initialState: AttemptInProgress('attempt-1', task, _runningSnapshot),
+      );
+
+      await tester.pumpWidget(buildSubject(autoAdvanceOnExpiration: false));
+      controller.add(AttemptInProgress('attempt-1', task, _expiredSnapshot));
+      await tester.pump();
+
+      expect(cubit.calls, isEmpty);
+      verifyNever(() => bloc.add(any(that: isA<NextTaskRequested>())));
+      await controller.close();
+    },
+  );
+
+  group('forwardOnlyNext on a section without manual navigation', () {
+    void listeningTask() {
+      whenListen(
+        bloc,
+        const Stream<ExamAttemptState>.empty(),
+        initialState: AttemptInProgress(
+          'attempt-1',
+          sampleTask(
+            section: 'LISTENING',
+            canNavigatePrevious: false,
+            canNavigateNext: false,
+          ),
+          _runningSnapshot,
+        ),
+      );
+    }
+
+    testWidgets('Next is disabled by default', (tester) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject());
+
+      final next = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(next.onPressed, isNull);
+    });
+
+    testWidgets('Next submits and advances like a manual next task', (
+      tester,
+    ) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject(forwardOnlyNext: true));
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(cubit.calls, ['flushPendingEdit']);
+      verify(() => syncEngine.flushOne('item-1')).called(1);
+      verify(() => bloc.add(const NextTaskRequested())).called(1);
+      verifyNever(() => bloc.add(any(that: isA<NavigateTaskRequested>())));
+    });
+
+    testWidgets('Next stays disabled while forwardOnlyNextEnabled is false', (
+      tester,
+    ) async {
+      listeningTask();
+      await tester.pumpWidget(
+        buildSubject(forwardOnlyNext: true, forwardOnlyNextEnabled: false),
+      );
+
+      final next = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(next.onPressed, isNull);
+    });
+
+    testWidgets('Previous is hidden for forward-only student tasks', (
+      tester,
+    ) async {
+      listeningTask();
+      await tester.pumpWidget(buildSubject(forwardOnlyNext: true));
+
+      expect(find.widgetWithText(OutlinedButton, 'Previous'), findsNothing);
+    });
   });
 }

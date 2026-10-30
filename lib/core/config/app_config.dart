@@ -24,6 +24,13 @@ class AppConfig {
     defaultValue: '/api/v1/attempts',
   );
 
+  /// Exchanges the exam code a student types at login for the session's
+  /// UUID (`GET ...?code=`, STUDENT token required).
+  static const String sessionCodeResolvePath = String.fromEnvironment(
+    'PTE_SESSION_CODE_RESOLVE_PATH',
+    defaultValue: '/api/v1/student/exam-sessions/resolve',
+  );
+
   /// Every gateway `Dio` instance must set these — an unbounded call can
   /// otherwise strand a caller (e.g. `AuthBloc` stuck in
   /// `AuthAuthenticating` forever) on a stalled connection (QUAL-102,

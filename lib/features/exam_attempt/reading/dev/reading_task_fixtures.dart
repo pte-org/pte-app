@@ -58,10 +58,23 @@ class ReadingTaskFixtures {
     taskType: 'RE_ORDER_PARAGRAPHS',
     promptText: '',
     options: const [
-      TaskOption(text: 'Finally, the team published their findings in a major journal.', orderIndex: '3'),
-      TaskOption(text: 'First, the researchers gathered samples from three different sites.', orderIndex: '0'),
-      TaskOption(text: 'The samples were then analyzed over several months.', orderIndex: '1'),
-      TaskOption(text: 'Unexpected patterns emerged from the analysis.', orderIndex: '2'),
+      TaskOption(
+        text: 'Finally, the team published their findings in a major journal.',
+        orderIndex: '3',
+      ),
+      TaskOption(
+        text:
+            'First, the researchers gathered samples from three different sites.',
+        orderIndex: '0',
+      ),
+      TaskOption(
+        text: 'The samples were then analyzed over several months.',
+        orderIndex: '1',
+      ),
+      TaskOption(
+        text: 'Unexpected patterns emerged from the analysis.',
+        orderIndex: '2',
+      ),
     ],
   );
 

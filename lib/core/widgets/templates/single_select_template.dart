@@ -37,7 +37,7 @@ class SingleSelectTemplate extends StatelessWidget {
       metadata: metadata,
       maxWidth: readingLayout
           ? AppDimensions.readingWorkstationMaxWidth
-          : AppDimensions.contentMaxWidth,
+          : double.infinity,
     );
   }
 }

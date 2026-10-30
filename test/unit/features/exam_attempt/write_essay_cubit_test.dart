@@ -61,209 +61,237 @@ void main() {
   });
 
   group('draftChanged — payload-shape assertion (Step 8)', () {
-    test('typed text "hello world" writes exactly "hello world" on debounce expiry, no trimming/normalization', () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
-      );
-
-      cubit.draftChanged('hello world');
-      // Fire the captured debounce callback manually — no real Duration wait.
-      scheduler.callbacks.single();
-      await pumpEventQueue();
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+    test(
+      'typed text "hello world" writes exactly "hello world" on debounce expiry, no trimming/normalization',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final cubit = WriteEssayCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured, hasLength(1));
-      expect(captured.single, 'hello world');
+          scheduler: scheduler.call,
+        );
 
-      await cubit.close();
-    });
+        cubit.draftChanged('hello world');
+        // Fire the captured debounce callback manually — no real Duration wait.
+        scheduler.callbacks.single();
+        await pumpEventQueue();
 
-    test('leading/trailing whitespace the student actually typed is preserved verbatim in the payload', () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
-      );
+        final captured = verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: captureAny(named: 'payload'),
+          ),
+        ).captured;
+        expect(captured, hasLength(1));
+        expect(captured.single, 'hello world');
 
-      cubit.draftChanged('  hello world  ');
-      scheduler.callbacks.single();
-      await pumpEventQueue();
+        await cubit.close();
+      },
+    );
 
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+    test(
+      'leading/trailing whitespace the student actually typed is preserved verbatim in the payload',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final cubit = WriteEssayCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured.single, '  hello world  ');
+          scheduler: scheduler.call,
+        );
 
-      await cubit.close();
-    });
+        cubit.draftChanged('  hello world  ');
+        scheduler.callbacks.single();
+        await pumpEventQueue();
+
+        final captured = verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            payload: captureAny(named: 'payload'),
+          ),
+        ).captured;
+        expect(captured.single, '  hello world  ');
+
+        await cubit.close();
+      },
+    );
   });
 
-  group('draftChanged — emits draftText and precomputed wordCount immediately, before the debounce fires', () {
-    test('state updates synchronously on every keystroke, independent of the debounce timer', () {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
+  group(
+    'draftChanged — emits draftText and precomputed wordCount immediately, before the debounce fires',
+    () {
+      test(
+        'state updates synchronously on every keystroke, independent of the debounce timer',
+        () {
+          final scheduler = _CapturingScheduler();
+          final cubit = WriteEssayCubit(
+            outboxDao: outboxDao,
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            scheduler: scheduler.call,
+          );
+
+          cubit.draftChanged('hello world');
+
+          expect(cubit.state.draftText, 'hello world');
+          expect(cubit.state.wordCount, 2);
+          // No upsert yet — the debounce callback hasn't been invoked.
+          verifyNever(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: any(named: 'attemptPublicId'),
+              pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+              payload: any(named: 'payload'),
+            ),
+          );
+
+          unawaited(cubit.close());
+        },
+      );
+    },
+  );
+
+  group(
+    'debounce behavior via fake DebounceScheduler — no real Duration sleeps (Step 9)',
+    () {
+      test(
+        'rapid simulated draftChanged calls within the debounce window produce zero upsertAnswer calls until the '
+        "scheduler's captured callback is manually invoked",
+        () async {
+          final scheduler = _CapturingScheduler();
+          final cubit = WriteEssayCubit(
+            outboxDao: outboxDao,
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            scheduler: scheduler.call,
+          );
+
+          cubit.draftChanged('h');
+          cubit.draftChanged('he');
+          cubit.draftChanged('hel');
+          cubit.draftChanged('hell');
+          cubit.draftChanged('hello');
+
+          verifyNever(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: any(named: 'attemptPublicId'),
+              pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+              payload: any(named: 'payload'),
+            ),
+          );
+
+          // Each keystroke cancels the previous timer and reschedules a new
+          // one — 5 keystrokes means 5 scheduler invocations, but only the
+          // final (most recent) callback should still matter.
+          expect(scheduler.callbacks.length, 5);
+
+          // Firing only the last (live) callback should persist the latest text.
+          scheduler.callbacks.last();
+          await pumpEventQueue();
+
+          final captured = verify(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: 'attempt-1',
+              pinnedItemPublicId: 'item-1',
+              payload: captureAny(named: 'payload'),
+            ),
+          ).captured;
+          expect(captured, hasLength(1));
+          expect(captured.single, 'hello');
+
+          await cubit.close();
+        },
       );
 
-      cubit.draftChanged('hello world');
+      test(
+        'calling flushPendingEdit mid-debounce produces the upsert call immediately without invoking the '
+        'scheduled callback',
+        () async {
+          final scheduler = _CapturingScheduler();
+          final cubit = WriteEssayCubit(
+            outboxDao: outboxDao,
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            scheduler: scheduler.call,
+          );
 
-      expect(cubit.state.draftText, 'hello world');
-      expect(cubit.state.wordCount, 2);
-      // No upsert yet — the debounce callback hasn't been invoked.
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
+          cubit.draftChanged('hello world');
+          verifyNever(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: any(named: 'attemptPublicId'),
+              pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+              payload: any(named: 'payload'),
+            ),
+          );
+
+          await cubit.flushPendingEdit();
+
+          final captured = verify(
+            () => outboxDao.upsertAnswer(
+              attemptPublicId: 'attempt-1',
+              pinnedItemPublicId: 'item-1',
+              payload: captureAny(named: 'payload'),
+            ),
+          ).captured;
+          expect(captured, hasLength(1));
+          expect(captured.single, 'hello world');
+
+          // The pending timer must have been cancelled by the flush, not left
+          // to fire independently and double-write — the upsert happened
+          // without ever invoking the scheduled callback.
+          expect(scheduler.cancelCount, greaterThanOrEqualTo(1));
+
+          await cubit.close();
+        },
       );
 
-      unawaited(cubit.close());
-    });
-  });
-
-  group('debounce behavior via fake DebounceScheduler — no real Duration sleeps (Step 9)', () {
-    test('rapid simulated draftChanged calls within the debounce window produce zero upsertAnswer calls until the '
-        "scheduler's captured callback is manually invoked", () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
-      );
-
-      cubit.draftChanged('h');
-      cubit.draftChanged('he');
-      cubit.draftChanged('hel');
-      cubit.draftChanged('hell');
-      cubit.draftChanged('hello');
-
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
-      );
-
-      // Each keystroke cancels the previous timer and reschedules a new
-      // one — 5 keystrokes means 5 scheduler invocations, but only the
-      // final (most recent) callback should still matter.
-      expect(scheduler.callbacks.length, 5);
-
-      // Firing only the last (live) callback should persist the latest text.
-      scheduler.callbacks.last();
-      await pumpEventQueue();
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
+      test('close() cancels the pending debounce timer', () async {
+        final scheduler = _CapturingScheduler();
+        final cubit = WriteEssayCubit(
+          outboxDao: outboxDao,
           attemptPublicId: 'attempt-1',
           pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured, hasLength(1));
-      expect(captured.single, 'hello');
+          scheduler: scheduler.call,
+        );
 
-      await cubit.close();
-    });
+        cubit.draftChanged('hello');
+        expect(scheduler.cancelCount, 0);
 
-    test('calling flushPendingEdit mid-debounce produces the upsert call immediately without invoking the '
-        'scheduled callback', () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
-      );
+        await cubit.close();
 
-      cubit.draftChanged('hello world');
-      verifyNever(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: any(named: 'attemptPublicId'),
-          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
-          payload: any(named: 'payload'),
-        ),
-      );
-
-      await cubit.flushPendingEdit();
-
-      final captured = verify(
-        () => outboxDao.upsertAnswer(
-          attemptPublicId: 'attempt-1',
-          pinnedItemPublicId: 'item-1',
-          payload: captureAny(named: 'payload'),
-        ),
-      ).captured;
-      expect(captured, hasLength(1));
-      expect(captured.single, 'hello world');
-
-      // The pending timer must have been cancelled by the flush, not left
-      // to fire independently and double-write — the upsert happened
-      // without ever invoking the scheduled callback.
-      expect(scheduler.cancelCount, greaterThanOrEqualTo(1));
-
-      await cubit.close();
-    });
-
-    test('close() cancels the pending debounce timer', () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-1',
-        scheduler: scheduler.call,
-      );
-
-      cubit.draftChanged('hello');
-      expect(scheduler.cancelCount, 0);
-
-      await cubit.close();
-
-      expect(scheduler.cancelCount, 1);
-    });
-  });
+        expect(scheduler.cancelCount, 1);
+      });
+    },
+  );
 
   group('pinnedItemPublicId threading', () {
-    test('every debounced upsertAnswer call carries the pinnedItemPublicId from construction', () async {
-      final scheduler = _CapturingScheduler();
-      final cubit = WriteEssayCubit(
-        outboxDao: outboxDao,
-        attemptPublicId: 'attempt-9',
-        pinnedItemPublicId: 'item-9',
-        scheduler: scheduler.call,
-      );
+    test(
+      'every debounced upsertAnswer call carries the pinnedItemPublicId from construction',
+      () async {
+        final scheduler = _CapturingScheduler();
+        final cubit = WriteEssayCubit(
+          outboxDao: outboxDao,
+          attemptPublicId: 'attempt-9',
+          pinnedItemPublicId: 'item-9',
+          scheduler: scheduler.call,
+        );
 
-      cubit.draftChanged('draft text');
-      scheduler.callbacks.single();
-      await pumpEventQueue();
+        cubit.draftChanged('draft text');
+        scheduler.callbacks.single();
+        await pumpEventQueue();
 
-      verify(
-        () => outboxDao.upsertAnswer(attemptPublicId: 'attempt-9', pinnedItemPublicId: 'item-9', payload: 'draft text'),
-      ).called(1);
+        verify(
+          () => outboxDao.upsertAnswer(
+            attemptPublicId: 'attempt-9',
+            pinnedItemPublicId: 'item-9',
+            payload: 'draft text',
+          ),
+        ).called(1);
 
-      await cubit.close();
-    });
+        await cubit.close();
+      },
+    );
   });
 }

@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "audio_level_plugin.h"
 #include "flutter/generated_plugin_registrant.h"
 #include "lockdown_plugin.h"
 
@@ -26,6 +27,11 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  audio_level_plugin::AudioLevelPlugin::RegisterWithRegistrar(
+      flutter::PluginRegistrarManager::GetInstance()
+          ->GetRegistrar<flutter::PluginRegistrarWindows>(
+              flutter_controller_->engine()->GetRegistrarForPlugin(
+                  "AudioLevelPlugin")));
   // LockdownPlugin is a C++ flutter::Plugin (unlike this project's other
   // Windows plugins in generated_plugin_registrant.cc, which use the plain
   // C plugin API) — its registrar must go through PluginRegistrarManager to

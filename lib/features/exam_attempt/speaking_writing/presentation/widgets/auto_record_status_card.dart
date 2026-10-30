@@ -30,28 +30,37 @@ class AutoRecordStatusCard extends StatelessWidget {
     required this.task,
     required this.recordingState,
     required this.snapshot,
+    this.inputLevels,
+    this.softAppearance = true,
   });
 
   final TaskView task;
   final AutoRecordState recordingState;
   final TimerSnapshot? snapshot;
 
+  /// Live mic levels (dBFS), drawn as a waveform only while recording.
+  final Stream<double>? inputLevels;
+  final bool softAppearance;
+
   @override
   Widget build(BuildContext context) {
     if (recordingState.recordingPhase == RecordingPhase.unavailable) {
-      return const RecordedAnswerStatusCard(
+      return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: SpeakingWritingStrings.recordingMicrophoneUnavailableLabel,
         progress: 0.0,
       );
     }
     if (recordingState.recordingPhase == RecordingPhase.recorded) {
       return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: _uploadStatusLabel(),
         progress: 1.0,
       );
     }
     if (snapshot?.phase == TimerPhase.response) {
       return RecordedAnswerStatusCard(
+        softAppearance: softAppearance,
         statusLabel: _countdownLabel(
           prefix: SpeakingWritingStrings.recordingInProgressPrefix,
           suffix: SpeakingWritingStrings.recordingInProgressSuffix,
@@ -61,11 +70,16 @@ class AutoRecordStatusCard extends StatelessWidget {
           totalSeconds: task.responseSeconds,
           remaining: snapshot!.remaining,
         ),
+        inputLevels: recordingState.recordingPhase == RecordingPhase.recording
+            ? inputLevels
+            : null,
       );
     }
     final remaining =
         snapshot?.remaining ?? Duration(seconds: task.prepSeconds);
     return RecordedAnswerStatusCard(
+      isPreparing: true,
+      softAppearance: softAppearance,
       statusLabel: _countdownLabel(
         prefix: SpeakingWritingStrings.recordingBeginningInPrefix,
         suffix: SpeakingWritingStrings.recordingBeginningInSuffix,

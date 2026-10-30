@@ -10,8 +10,9 @@ class ShortcutInterceptorChannel {
   const ShortcutInterceptorChannel();
 
   static const _platform = MethodChannel('com.pte.lockdown/shortcuts');
-  static const _eventChannel =
-      EventChannel('com.pte.lockdown/shortcuts/events');
+  static const _eventChannel = EventChannel(
+    'com.pte.lockdown/shortcuts/events',
+  );
 
   /// Block system shortcuts (Alt+Tab, Win+D, PrintScreen, etc.).
   Future<void> blockSystemShortcuts() async {
@@ -37,8 +38,8 @@ class ShortcutInterceptorChannel {
 
   /// Stream of shortcut violation events (blocked key combo detected).
   Stream<String> get violations {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .map((event) => event as String);
+    return _eventChannel.receiveBroadcastStream().map(
+      (event) => event as String,
+    );
   }
 }

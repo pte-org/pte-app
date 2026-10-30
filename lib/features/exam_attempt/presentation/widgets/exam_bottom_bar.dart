@@ -10,8 +10,6 @@ class ExamBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ExamFooterBar(
-      navigationActions: action,
-    );
+    return ExamFooterBar(navigationActions: action);
   }
 }

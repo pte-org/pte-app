@@ -12,11 +12,11 @@ sealed class ExamAttemptEvent {
 /// student answered the last task (phase-08 auto time's-up).
 enum AdvanceReason { manual, timeExpired }
 
-/// Resolves [rawInput] into a session ID via `SessionEntryRepository`,
+/// Resolves [rawInput] into a session UUID via `SessionEntryRepository`,
 /// then starts or resumes the attempt for it. `rawInput`'s meaning is
 /// entirely owned by whichever `SessionEntryRepository` is registered
-/// (raw manual text today; a deep-link URI or a picked list item's ID
-/// later) — this event only carries it through untouched.
+/// (the exam code typed at login today; a deep-link URI later) — this
+/// event only carries it through untouched.
 final class SessionResolutionRequested extends ExamAttemptEvent {
   const SessionResolutionRequested({
     required this.rawInput,

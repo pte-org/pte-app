@@ -1,6 +1,7 @@
-/// Thrown when a session ID cannot be resolved (empty manual entry, an
-/// unparseable deep link) — never signaled by returning an empty string or
-/// leaving the returned future unresolved.
+/// Thrown when the student's input cannot be resolved to a session (empty
+/// entry, an exam code the student can't use) — never signaled by
+/// returning an empty string or leaving the returned future unresolved.
+/// Transport failures (network, rate limit, auth) stay [ApiException]s.
 class SessionResolutionException implements Exception {
   const SessionResolutionException(this.message);
 
@@ -11,12 +12,10 @@ class SessionResolutionException implements Exception {
 }
 
 /// Resolves the `sessionPublicId` a student wants to enter/resume, from
-/// whatever raw form the UI collected (`rawInput` — manual text today, a
-/// deep-link URI or a picked list item's ID later).
+/// whatever raw form the UI collected (`rawInput` — the exam code or a
+/// pasted session UUID typed at login today, a deep-link URI later).
 ///
-/// Member 3's session-discovery mechanism (self-service list vs.
-/// host-shared link) is unresolved as of this plan's writing (`plan.md`
-/// Risks). This interface is the swap seam: `ExamAttemptBloc` depends only
+/// This interface is the swap seam: `ExamAttemptBloc` depends only
 /// on this method, never on how a concrete implementation interprets
 /// `rawInput`. A drop-in replacement must implement only
 /// `resolveSessionPublicId(rawInput)` and the same

@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
-import 'package:pte_app/core/widgets/components/exam_status_block.dart';
-import 'package:pte_app/core/widgets/templates/fill_blanks_template.dart';
+import 'package:pte_app/core/widgets/templates/exam_task_frame.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import '../../constants/reading_strings.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/domain/blank_prompt_parser.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
@@ -12,6 +13,7 @@ import 'package:pte_app/features/exam_attempt/reading/presentation/cubit/fill_bl
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/reading/presentation/widgets/fill_blanks_drag_drop_body.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// Renders inside the shared exam shell — single scrollable column, no
 /// legacy passage split (reading-task-types Phase 5 Design
@@ -49,17 +51,15 @@ class FillBlanksDragDropScreen extends StatelessWidget {
       child: Builder(
         builder: (innerContext) => ExamScaffold(
           totalTasks: task.totalTasks,
-          body: FillBlanksTemplate(
+          body: ExamTaskFrame(
             title: TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
-            subtitle: task.section,
-            instruction:
-                TaskTypeMeta.forTaskType(task.taskType)?.instruction ??
-                'Drag the words into the correct blanks.',
-            stimulus: const ExamStatusBlock(
-              title: 'Word bank',
-              message: 'Drag each word to the matching blank in the passage.',
+            maxWidth: AppDimensions.readingWorkstationMaxWidth,
+            instruction: resolveTaskInstruction(
+              apiInstruction: task.taskTypeInstruction,
+              meta: TaskTypeMeta.forTaskType(task.taskType),
+              fallback: ReadingStrings.dragDropInstruction,
             ),
-            response: FillBlanksDragDropBody(task: task),
+            body: FillBlanksDragDropBody(task: task),
           ),
           bottomAction: TaskAdvanceButton(
             cubit: innerContext.read<FillBlanksDragDropCubit>(),

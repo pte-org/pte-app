@@ -16,6 +16,7 @@ import 'package:pte_app/features/exam_attempt/listening/presentation/cubit/fill_
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 import 'package:pte_app/features/exam_attempt/listening/presentation/widgets/fill_blanks_listening_text.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
+import 'package:pte_app/core/utils/task_instruction_resolver.dart';
 
 /// StatefulWidget owning one `TextEditingController` per gap (the cubit
 /// owns none — phase-05 Design Constraints, extends phase-02's corrected
@@ -29,7 +30,6 @@ class FillBlanksListeningScreen extends StatefulWidget {
     required this.syncEngine,
     required this.audioPlayerService,
     this.initialAnswerPayload,
-    this.isPractice = false,
   });
 
   final TaskView task;
@@ -38,7 +38,6 @@ class FillBlanksListeningScreen extends StatefulWidget {
   final SyncEngine syncEngine;
   final AudioPlayerService audioPlayerService;
   final String? initialAnswerPayload;
-  final bool isPractice;
 
   @override
   State<FillBlanksListeningScreen> createState() =>
@@ -64,7 +63,6 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
       gapCount: gapCount,
       audioSource: widget.task.audioUrl ?? '',
       initialPayload: widget.initialAnswerPayload,
-      isPractice: widget.isPractice,
     );
     _controllers = [
       for (var gapIndex = 0; gapIndex < gapCount; gapIndex++)
@@ -98,40 +96,15 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
                   TaskTypeMeta.forTaskType(widget.task.taskType)?.title ??
                   widget.task.title,
               subtitle: widget.task.section,
-              instruction:
-                  TaskTypeMeta.forTaskType(widget.task.taskType)?.instruction ??
-                  'Type the missing words as you listen.',
-              stimulus: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AudioListeningStatusCard(
-                    statusLabel: !state.hasStartedPlaying
-                        ? 'Tap to listen'
-                        : state.hasFinishedPlaying
-                            ? 'Audio finished'
-                            : 'Playing audio...',
-                    progress: !state.hasStartedPlaying
-                        ? 0.0
-                        : state.hasFinishedPlaying
-                            ? 1.0
-                            : state.progress,
-                  ),
-                  if (widget.isPractice) ...[
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        if (!state.hasStartedPlaying) {
-                          context.read<FillBlanksListeningCubit>().startPlayback();
-                        } else {
-                          context.read<FillBlanksListeningCubit>().replayAudio();
-                        }
-                      },
-                      icon: const Icon(Icons.play_circle_outline),
-                      label: Text(!state.hasStartedPlaying ? 'Tap to listen' : 'Listen again'),
-                    ),
-                  ],
-                ],
+              instruction: resolveTaskInstruction(
+                apiInstruction: widget.task.taskTypeInstruction,
+                meta: TaskTypeMeta.forTaskType(widget.task.taskType),
+              ),
+              stimulus: AudioListeningStatusCard(
+                statusLabel: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio...',
+                progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: SingleChildScrollView(
                 child: FillBlanksListeningText(

@@ -36,6 +36,9 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
        super(const AudioPromptPlaybackState()) {
     _positionSubscription = _player.position.listen(_onPosition);
     _durationSubscription = _player.duration.listen(_onDuration);
+    _completionSubscription = _player.hasFinishedPlaying.listen(
+      _onPlaybackFinished,
+    );
   }
 
   final AudioPromptRepository _repository;
@@ -48,9 +51,11 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
 
   late final StreamSubscription<Duration> _positionSubscription;
   late final StreamSubscription<Duration?> _durationSubscription;
+  late final StreamSubscription<bool> _completionSubscription;
 
   Duration _lastPosition = Duration.zero;
   Duration? _lastDuration;
+  bool _playbackFinished = false;
 
   /// Guards the one-shot trigger — same checked-and-set-synchronously
   /// pattern as `AutoRecordCubit._startInFlight` (the caller may forward
@@ -80,18 +85,8 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
     unawaited(_play());
   }
 
-  /// Manually triggers playback — used in practice mode where timer-driven
-  /// auto-play is disabled. Resets the one-shot guard after each play so
-  /// subsequent "Listen again" taps each start a fresh play session.
-  Future<void> playManually() async {
-    if (task.audioPromptRef == null) return;
-    _triggered = false;
-    _triggered = true;
-    await _play();
-    _triggered = false;
-  }
-
   Future<void> _play() async {
+    _playbackFinished = false;
     emit(state.copyWith(phase: AudioPromptPlaybackPhase.loading));
     try {
       final url = await _repository.playAudio(
@@ -100,7 +95,14 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
         playRequestId: _generatePlayRequestId(),
       );
       await _player.playUrl(url);
-      emit(state.copyWith(phase: AudioPromptPlaybackPhase.playing));
+      emit(
+        state.copyWith(
+          phase: _playbackFinished
+              ? AudioPromptPlaybackPhase.completed
+              : AudioPromptPlaybackPhase.playing,
+          progress: _playbackFinished ? 1.0 : state.progress,
+        ),
+      );
     } on ReplayLimitExceededException catch (e, stackTrace) {
       _logger.w(
         'Audio prompt play rejected: replay limit exceeded',
@@ -110,11 +112,16 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
       emit(
         state.copyWith(
           phase: AudioPromptPlaybackPhase.error,
-          errorMessage: SpeakingWritingStrings.audioPromptReplayLimitExceededMessage,
+          errorMessage:
+              SpeakingWritingStrings.audioPromptReplayLimitExceededMessage,
         ),
       );
     } on AudioUrlExpiredException catch (e, stackTrace) {
-      _logger.w('Audio prompt play rejected: URL expired', error: e, stackTrace: stackTrace);
+      _logger.w(
+        'Audio prompt play rejected: URL expired',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           phase: AudioPromptPlaybackPhase.error,
@@ -147,6 +154,21 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
     _emitProgress();
   }
 
+  void _onPlaybackFinished(bool finished) {
+    if (!finished) return;
+    _playbackFinished = true;
+    if (isClosed) return;
+    if (state.phase == AudioPromptPlaybackPhase.loading ||
+        state.phase == AudioPromptPlaybackPhase.playing) {
+      emit(
+        state.copyWith(
+          phase: AudioPromptPlaybackPhase.completed,
+          progress: 1.0,
+        ),
+      );
+    }
+  }
+
   /// Recomputed on every position/duration tick while [state.phase] is
   /// `playing` — held at 0.0 whenever duration is still unresolved (e.g.
   /// buffering), never divides by an unknown/zero duration.
@@ -155,7 +177,10 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
     final duration = _lastDuration;
     final progress = (duration == null || duration <= Duration.zero)
         ? 0.0
-        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+        : (_lastPosition.inMilliseconds / duration.inMilliseconds).clamp(
+            0.0,
+            1.0,
+          );
     emit(state.copyWith(progress: progress));
   }
 
@@ -173,6 +198,7 @@ class AudioPromptCubit extends Cubit<AudioPromptPlaybackState> {
   Future<void> close() async {
     unawaited(_positionSubscription.cancel());
     unawaited(_durationSubscription.cancel());
+    unawaited(_completionSubscription.cancel());
     await _player.close();
     return super.close();
   }
