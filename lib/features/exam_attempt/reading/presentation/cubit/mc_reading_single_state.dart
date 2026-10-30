@@ -9,7 +9,9 @@ class McReadingSingleState extends Equatable {
   final String? selectedOrderIndex;
 
   McReadingSingleState copyWith({String? selectedOrderIndex}) {
-    return McReadingSingleState(selectedOrderIndex: selectedOrderIndex ?? this.selectedOrderIndex);
+    return McReadingSingleState(
+      selectedOrderIndex: selectedOrderIndex ?? this.selectedOrderIndex,
+    );
   }
 
   @override

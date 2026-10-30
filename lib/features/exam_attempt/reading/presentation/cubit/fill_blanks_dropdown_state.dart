@@ -9,7 +9,9 @@ class FillBlanksDropdownState extends Equatable {
   final List<String?> selectedOrderIndexes;
 
   FillBlanksDropdownState copyWith({List<String?>? selectedOrderIndexes}) {
-    return FillBlanksDropdownState(selectedOrderIndexes: selectedOrderIndexes ?? this.selectedOrderIndexes);
+    return FillBlanksDropdownState(
+      selectedOrderIndexes: selectedOrderIndexes ?? this.selectedOrderIndexes,
+    );
   }
 
   @override

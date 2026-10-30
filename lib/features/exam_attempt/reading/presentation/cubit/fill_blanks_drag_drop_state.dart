@@ -11,7 +11,9 @@ class FillBlanksDragDropState extends Equatable {
   final Map<int, TaskOption> gapAssignments;
 
   FillBlanksDragDropState copyWith({Map<int, TaskOption>? gapAssignments}) {
-    return FillBlanksDragDropState(gapAssignments: gapAssignments ?? this.gapAssignments);
+    return FillBlanksDragDropState(
+      gapAssignments: gapAssignments ?? this.gapAssignments,
+    );
   }
 
   @override

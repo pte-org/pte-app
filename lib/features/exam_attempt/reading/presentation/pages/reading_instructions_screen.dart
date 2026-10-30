@@ -27,7 +27,10 @@ class ReadingInstructionsScreen extends StatelessWidget {
             const SizedBox(height: AppDimensions.spacingMedium),
             Align(
               alignment: Alignment.centerRight,
-              child: PrimaryButton(label: AppStrings.readingInstructionsButtonLabel, onPressed: onContinue),
+              child: PrimaryButton(
+                label: AppStrings.readingInstructionsButtonLabel,
+                onPressed: onContinue,
+              ),
             ),
           ],
         ),
