@@ -36,7 +36,9 @@ class TokenRefresher {
     // duplicated inline rather than shared, since refreshDio deliberately
     // carries zero interceptors (see class doc) and bypasses `ApiClient`
     // entirely.
-    final data = body.containsKey('success') ? body['data'] as Map<String, dynamic> : body;
+    final data = body.containsKey('success')
+        ? body['data'] as Map<String, dynamic>
+        : body;
     final newAccessToken = data['accessToken'] as String;
     final newRefreshToken = data['refreshToken'] as String;
     final expiresInSeconds = data['expiresInSeconds'] as int;

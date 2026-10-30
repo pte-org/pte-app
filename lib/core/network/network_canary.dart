@@ -13,7 +13,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 /// Constraints).
 class NetworkCanary {
   NetworkCanary({Stream<List<ConnectivityResult>>? connectivityStream})
-      : _connectivityStream = connectivityStream ?? Connectivity().onConnectivityChanged {
+    : _connectivityStream =
+          connectivityStream ?? Connectivity().onConnectivityChanged {
     _subscription = _connectivityStream.listen(_onConnectivityChanged);
   }
 
@@ -26,7 +27,9 @@ class NetworkCanary {
   Stream<void> get available => _controller.stream;
 
   void _onConnectivityChanged(List<ConnectivityResult> results) {
-    final isConnected = results.any((result) => result != ConnectivityResult.none);
+    final isConnected = results.any(
+      (result) => result != ConnectivityResult.none,
+    );
     if (isConnected && !_wasConnected) {
       _controller.add(null);
     }

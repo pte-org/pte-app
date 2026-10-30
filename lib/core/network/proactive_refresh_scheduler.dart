@@ -22,11 +22,11 @@ class ProactiveRefreshScheduler {
     DateTime Function()? now,
     TimerFactory? createTimer,
     Logger? logger,
-  })  : _safetyMargin = safetyMargin,
-        _retryDelay = retryDelay,
-        _now = now ?? DateTime.now,
-        _createTimer = createTimer ?? Timer.new,
-        _logger = logger ?? Logger();
+  }) : _safetyMargin = safetyMargin,
+       _retryDelay = retryDelay,
+       _now = now ?? DateTime.now,
+       _createTimer = createTimer ?? Timer.new,
+       _logger = logger ?? Logger();
 
   final TokenStore tokenStore;
   final Future<void> Function() onRefreshDue;
@@ -65,7 +65,11 @@ class ProactiveRefreshScheduler {
       // the reactive 401-interceptor as its only remaining fallback —
       // re-arm a short retry instead of dropping the failure (QUAL-003,
       // Phase 1 quality gate).
-      _logger.w('Proactive token refresh failed, retrying in $_retryDelay', error: e, stackTrace: stackTrace);
+      _logger.w(
+        'Proactive token refresh failed, retrying in $_retryDelay',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _timer = _createTimer(_retryDelay, _fireRefresh);
     }
   }
