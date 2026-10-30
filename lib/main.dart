@@ -10,7 +10,6 @@ import 'package:pte_app/features/auth/auth_module.dart';
 import 'package:pte_app/features/exam_attempt/exam_attempt_module.dart';
 import 'package:pte_app/features/exam_preview/data/preview_audio_session.dart';
 import 'package:pte_app/features/exam_preview/exam_preview_module.dart';
-import 'package:pte_app/features/report/report_module.dart';
 
 Future<void> main() async {
   // just_audio has no native Windows backend of its own — bridge it to
@@ -37,7 +36,6 @@ Future<void> main() async {
   setupExamAttemptModule();
   setupExamPreviewModule();
   await PreviewAudioSession.cleanupOrphans();
-  setupReportModule();
   runApp(const PteApp());
 }
 
