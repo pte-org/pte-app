@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:pte_app/core/constants/app_colors.dart';
-import 'package:pte_app/core/constants/app_dimensions.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/widgets/components/pte_audio_panel.dart';
+import 'package:pte_app/core/widgets/components/pte_status_audio_panel.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/recording_level_waveform.dart';
 
 /// Purely presentational "Recorded Answer" status card — takes an already
@@ -16,6 +16,14 @@ class RecordedAnswerStatusCard extends StatelessWidget {
     required this.statusLabel,
     required this.progress,
     this.inputLevels,
+    this.timeLabel,
+    this.title = AppStrings.audioRecorderTitle,
+    this.softAppearance = true,
+    this.onPauseResume,
+    this.onStop,
+    this.playing = true,
+    this.isPreparing = false,
+    this.statusStyle = false,
   });
 
   final String statusLabel;
@@ -25,60 +33,39 @@ class RecordedAnswerStatusCard extends StatelessWidget {
   final double progress;
 
   /// Live mic levels (dBFS); when set, a [RecordingLevelWaveform] is shown
-  /// under the status label. Callers pass it only while actually recording.
+  /// in the right-side meter. Callers pass it only while actually recording.
   final Stream<double>? inputLevels;
+  final String? timeLabel;
+  final String title;
+  final bool softAppearance;
+  final VoidCallback? onPauseResume;
+  final VoidCallback? onStop;
+  final bool playing;
+  final bool isPreparing;
+  final bool statusStyle;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      decoration: BoxDecoration(
-        color: AppColors.successContainer,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Text(
-              SpeakingWritingStrings.recordedAnswerCardTitle,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          Text(
-            SpeakingWritingStrings.recordingCurrentStatusLabel,
-            style: const TextStyle(color: AppColors.textPrimary),
-          ),
-          Text(
-            statusLabel,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (inputLevels case final levels?) ...[
-            const SizedBox(height: AppDimensions.spacingMedium),
-            RecordingLevelWaveform(levels: levels),
-          ],
-          const SizedBox(height: AppDimensions.spacingMedium),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(
-              AppDimensions.recordingProgressBarRadius,
-            ),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: AppDimensions.recordingProgressBarHeight,
-              backgroundColor: AppColors.onPrimary,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
+    if (statusStyle) {
+      return PteStatusAudioPanel(
+        isRecorder: true,
+        statusLabel: statusLabel,
+        progress: progress,
+      );
+    }
+    return PteAudioPanel(
+      variant: PteAudioPanelVariant.recorder,
+      title: title,
+      statusLabel: statusLabel,
+      progress: progress,
+      timeLabel: timeLabel,
+      onPrimaryAction: onPauseResume,
+      onStop: onStop,
+      playing: !isPreparing && playing,
+      isPreparingRecording: isPreparing,
+      sideIndicator: inputLevels == null
+          ? null
+          : RecordingLevelWaveform(levels: inputLevels!, compact: true),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/widgets/components/pte_audio_level_meter.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
 
 /// Level (dBFS) at or below which the waveform shows a flat baseline —
@@ -34,10 +35,15 @@ double normalizeInputLevel(double dbfs) {
 /// mic is actually picking up sound (e.g. that a headset mic, not a distant
 /// laptop mic, is in use).
 class RecordingLevelWaveform extends StatefulWidget {
-  const RecordingLevelWaveform({super.key, required this.levels});
+  const RecordingLevelWaveform({
+    super.key,
+    required this.levels,
+    this.compact = false,
+  });
 
   /// Live mic levels in dBFS — see `AudioRecorderService.inputLevels`.
   final Stream<double> levels;
+  final bool compact;
 
   @override
   State<RecordingLevelWaveform> createState() => _RecordingLevelWaveformState();
@@ -76,6 +82,12 @@ class _RecordingLevelWaveformState extends State<RecordingLevelWaveform> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.compact) {
+      return Semantics(
+        label: SpeakingWritingStrings.recordingInputLevelSemanticsLabel,
+        child: PteAudioLevelMeter(level: _history.last),
+      );
+    }
     return Semantics(
       label: SpeakingWritingStrings.recordingInputLevelSemanticsLabel,
       child: SizedBox(

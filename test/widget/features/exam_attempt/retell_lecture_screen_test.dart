@@ -101,14 +101,23 @@ void main() {
     ).thenAnswer((_) => const Stream<PendingMediaUpload?>.empty());
     when(() => recorder.start(any())).thenAnswer((_) async {});
     when(() => recorder.stop()).thenAnswer((_) async => null);
-    when(() => recorder.inputLevels).thenAnswer((_) => const Stream<double>.empty());
+    when(
+      () => recorder.inputLevels,
+    ).thenAnswer((_) => const Stream<double>.empty());
     // AudioPromptCubit subscribes to these in its constructor (every
     // screen build) and calls playAudio/playUrl/close whenever a
     // snapshot's elapsed time enters the mocked "Playing" sub-stage —
     // all 4 stubbed here so every existing test (most of which sweep
     // through that sub-stage) doesn't hit mocktail's MissingStubError.
-    when(() => audioPlayerService.position).thenAnswer((_) => const Stream<Duration>.empty());
-    when(() => audioPlayerService.duration).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.position,
+    ).thenAnswer((_) => const Stream<Duration>.empty());
+    when(
+      () => audioPlayerService.duration,
+    ).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.hasFinishedPlaying,
+    ).thenAnswer((_) => const Stream<bool>.empty());
     when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
     when(() => audioPlayerService.close()).thenAnswer((_) async {});
     when(
@@ -171,87 +180,78 @@ void main() {
     },
   );
 
-  group(
-    'the two cards always render simultaneously, each on its own independent sub-stage countdown',
-    () {
-      testWidgets(
-        'elapsed 0s (start of pre-listen prep): Listening shows "Beginning in 3", Record is blank',
-        (tester) async {
-          const snapshot = TimerSnapshot(
-            phase: TimerPhase.prep,
-            remaining: Duration(seconds: 70),
-            currentOrderIndex: 1,
-          );
-          stubBlocState(
-            AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
-          );
+  group('the shared panel switches from playback to recording across sub-stages', () {
+    testWidgets(
+      'elapsed 0s (start of pre-listen prep): Listening shows "Beginning in 3", Record is blank',
+      (tester) async {
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 70),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
+        );
 
-          await tester.pumpWidget(buildSubject());
+        await tester.pumpWidget(buildSubject());
 
-          expect(find.text('Beginning in 3 seconds'), findsOneWidget);
-          expect(
-            find.text('Volume'),
-            findsOneWidget,
-          ); // proves the Listening card rendered
-          expect(
-            find.text('Recorded Answer'),
-            findsOneWidget,
-          ); // the Record card is always present too
-          verifyNever(() => recorder.start(any()));
-        },
-      );
+        expect(find.text('Beginning in 3 seconds'), findsOneWidget);
+        expect(find.text('Audio Player'), findsOneWidget);
+        expect(find.text('Audio Recorder'), findsNothing);
+        verifyNever(() => recorder.start(any()));
+      },
+    );
 
-      testWidgets(
-        'elapsed 5s (mid audio playback): Listening shows "Playing 55 seconds left", Record still blank',
-        (tester) async {
-          // prepSeconds 70 - elapsed 5 = remaining 65.
-          const snapshot = TimerSnapshot(
-            phase: TimerPhase.prep,
-            remaining: Duration(seconds: 65),
-            currentOrderIndex: 1,
-          );
-          stubBlocState(
-            AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
-          );
+    testWidgets(
+      'elapsed 5s (mid audio playback): Listening shows "Playing 55 seconds left", Record still blank',
+      (tester) async {
+        // prepSeconds 70 - elapsed 5 = remaining 65.
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 65),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
+        );
 
-          await tester.pumpWidget(buildSubject());
+        await tester.pumpWidget(buildSubject());
 
-          expect(find.text('Playing 55 seconds left'), findsOneWidget);
-          // The Record card's bold status Text is empty in this sub-stage — its
-          // "Current Status:" label is still present (card always rendered),
-          // but no "Beginning in…"/"Recording" text should exist yet.
-          expect(find.textContaining('Beginning in'), findsNothing);
-          verifyNever(() => recorder.start(any()));
-        },
-      );
+        expect(find.text('Playing 55 seconds left'), findsOneWidget);
+        // The Record card's bold status Text is empty in this sub-stage — its
+        // The recorder panel is still present, but no
+        // "Beginning in…"/"Recording" text should exist yet.
+        expect(find.textContaining('Beginning in'), findsNothing);
+        verifyNever(() => recorder.start(any()));
+      },
+    );
 
-      testWidgets(
-        'elapsed 69s (mid pre-record prep, listening finished): Listening frozen at "Playing 0", Record shows '
-        '"Beginning in 1"',
-        (tester) async {
-          // prepSeconds 70 - elapsed 69 = remaining 1.
-          const snapshot = TimerSnapshot(
-            phase: TimerPhase.prep,
-            remaining: Duration(seconds: 1),
-            currentOrderIndex: 1,
-          );
-          stubBlocState(
-            AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
-          );
+    testWidgets(
+      'elapsed 69s (mid pre-record prep): the shared panel shows "Beginning in 1"',
+      (tester) async {
+        // prepSeconds 70 - elapsed 69 = remaining 1.
+        const snapshot = TimerSnapshot(
+          phase: TimerPhase.prep,
+          remaining: Duration(seconds: 1),
+          currentOrderIndex: 1,
+        );
+        stubBlocState(
+          AttemptInProgress('attempt-1', _retellLectureTask(), snapshot),
+        );
 
-          await tester.pumpWidget(buildSubject());
+        await tester.pumpWidget(buildSubject());
 
-          expect(find.text('Playing 0 seconds left'), findsOneWidget);
-          expect(find.text('Beginning in 1 seconds'), findsOneWidget);
-          verifyNever(() => recorder.start(any()));
-        },
-      );
-    },
-  );
+        expect(find.text('Playing 0 seconds left'), findsNothing);
+        expect(find.text('Audio Player'), findsNothing);
+        expect(find.text('Audio Recorder'), findsOneWidget);
+        expect(find.text('Beginning in 1 seconds'), findsOneWidget);
+        verifyNever(() => recorder.start(any()));
+      },
+    );
+  });
 
   testWidgets(
-    'a new response-phase snapshot on the bloc stream auto-starts recording; Listening stays frozen, Record shows '
-    '"Recording"',
+    'a new response-phase snapshot on the bloc stream auto-starts recording in the shared panel',
     (tester) async {
       const prep = TimerSnapshot(
         phase: TimerPhase.prep,
@@ -275,7 +275,9 @@ void main() {
       await tester.pump();
 
       verify(() => recorder.start(any())).called(1);
-      expect(find.text('Playing 0 seconds left'), findsOneWidget);
+      expect(find.text('Playing 0 seconds left'), findsNothing);
+      expect(find.text('Audio Player'), findsNothing);
+      expect(find.text('Audio Recorder'), findsOneWidget);
       expect(find.text('Recording 40 seconds left'), findsOneWidget);
     },
   );
@@ -341,7 +343,8 @@ void main() {
       // is reached), which is expected, not a leftover recording label.
       expect(find.text('Still uploading…'), findsOneWidget);
       expect(find.text('Recording 40 seconds left'), findsNothing);
-      expect(find.text('Playing 0 seconds left'), findsOneWidget);
+      expect(find.text('Playing 0 seconds left'), findsNothing);
+      expect(find.byKey(const ValueKey('pteAudioPanel')), findsOneWidget);
     },
   );
 

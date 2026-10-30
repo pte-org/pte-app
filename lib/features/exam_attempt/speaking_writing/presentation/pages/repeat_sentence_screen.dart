@@ -26,9 +26,9 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold
 /// [AutoRecordTimerBridgeMixin] bridge, same fully-automatic advance) —
 /// both now share [AutoRecordCubit]/[AutoRecordState] and the timer-bridge
 /// mixin (unified once Describe Image hit this project's 3-occurrence DRY
-/// threshold); the body itself (the two always-visible cards) is likewise
-/// shared via [AudioPromptRecordBody], unified once Retell Lecture made
-/// this the 3rd screen with this exact card shape.
+/// threshold); the body itself is shared via [AudioPromptRecordBody], whose
+/// single [AudioPromptRecordPanel] transitions from prompt playback to the
+/// candidate recorder when the prompt audio completes.
 class RepeatSentenceScreen extends StatefulWidget {
   const RepeatSentenceScreen({
     super.key,
@@ -107,7 +107,8 @@ class _RepeatSentenceScreenState extends State<RepeatSentenceScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _RepeatSentenceBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,

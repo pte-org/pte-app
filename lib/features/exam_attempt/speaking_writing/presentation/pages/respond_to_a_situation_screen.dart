@@ -16,27 +16,25 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_sta
 import 'package:pte_app/features/exam_attempt/speaking_writing/constants/speaking_writing_strings.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_cubit.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/audio_prompt_playback_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/read_aloud_cubit.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
-import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_body.dart';
+import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_prompt_record_panel.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_advance_on_upload_ready.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/task_advance_button.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/auto_record_timer_bridge_mixin.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
-import 'package:pte_app/core/widgets/templates/record_response_template.dart';
+import 'package:pte_app/core/widgets/templates/status_speaking_task_frame.dart';
 
 /// Renders inside the shared exam shell as its injected content region.
 /// The FIRST Speaking screen combining a persistent situation-text display
-/// (`task.promptText`, shown above the cards — unlike `ReadAloudScreen`'s
-/// passage-after-card layout) with the [AudioListeningPrepCard]/
-/// [RecordedAnswerPrepCard] 2-card system. Does not call
-/// [AudioPromptRecordBody] itself — that widget's fixed internal `Column`
-/// (`InstructionText` immediately followed by the two cards) can't
-/// interleave the situation text between them, so this screen composes the
-/// now-public [AudioListeningPrepCard]/[RecordedAnswerPrepCard]/
-/// [elapsedPrepSeconds] directly, reusing [AudioPromptRecordBody]'s own
-/// `build()` wiring shell (`Padding` → `BlocSelector` → `BlocBuilder`) as
-/// its template rather than as a black box. Otherwise structurally
+/// (`task.promptText`, shown above the shared audio panel — unlike
+/// `ReadAloudScreen`'s passage-after-card layout) with the shared
+/// [AudioPromptRecordPanel]. Playback and recording stay in one panel.
+/// Does not call
+/// [AudioPromptRecordBody] itself because the situation text is a distinct
+/// stimulus in this task. It reuses the same [AudioPromptRecordPanel] and
+/// timer/cubit wiring as the other audio-prompt tasks. Otherwise structurally
 /// identical to `AnswerShortQuestionScreen` (same [AutoRecordCubit]
 /// lifecycle, same [AutoRecordTimerBridgeMixin] bridge, same fully-
 /// automatic advance).
@@ -129,7 +127,8 @@ class _RespondToASituationScreenState extends State<RespondToASituationScreen>
       child: ExamScaffold(
         totalTasks: widget.task.totalTasks,
         body: _RespondToASituationBody(task: widget.task),
-        bottomAction: (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
+        bottomAction:
+            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
             ? TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,
@@ -155,33 +154,28 @@ class _RespondToASituationBody extends StatelessWidget {
           state is AttemptInProgress ? state.timerSnapshot : null,
       builder: (context, snapshot) {
         return BlocBuilder<AutoRecordCubit, AutoRecordState>(
-          builder: (context, state) {
-            return RecordResponseTemplate(
-              title:
-                  TaskTypeMeta.forTaskType(task.taskType)?.title ?? task.title,
-              subtitle: task.section,
-              instruction:
-                  SpeakingWritingStrings.respondToASituationInstructionText,
-              stimulus: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(task.promptText ?? ''),
-                  const SizedBox(height: 16),
-                  AudioListeningPrepCard(
+          builder: (context, recordingState) {
+            return BlocBuilder<AudioPromptCubit, AudioPromptPlaybackState>(
+              builder: (context, playback) {
+                return StatusSpeakingTaskFrame(
+                  taskType: task.taskType,
+                  title:
+                      TaskTypeMeta.forTaskType(task.taskType)?.title ??
+                      task.title,
+                  instruction:
+                      SpeakingWritingStrings.respondToASituationInstructionText,
+                  promptText: task.promptText,
+                  panels: AudioPromptRecordPanel(
                     task: task,
                     snapshot: snapshot,
+                    playback: playback,
+                    recordingState: recordingState,
                     preListenSeconds: task.preListenSeconds!,
                     preRecordSeconds: task.preRecordSeconds!,
+                    inputLevels: context.read<AutoRecordCubit>().inputLevels,
                   ),
-                ],
-              ),
-              response: RecordedAnswerPrepCard(
-                task: task,
-                recordingState: state,
-                snapshot: snapshot,
-                preRecordSeconds: task.preRecordSeconds!,
-                inputLevels: context.read<AutoRecordCubit>().inputLevels,
-              ),
+                );
+              },
             );
           },
         );
