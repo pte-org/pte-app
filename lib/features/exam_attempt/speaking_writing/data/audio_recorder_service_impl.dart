@@ -10,7 +10,8 @@ const String readAloudContentType = 'audio/wav';
 /// How often [AudioRecorderServiceImpl.inputLevels] samples the mic.
 const Duration _inputLevelInterval = Duration(milliseconds: 100);
 
-class AudioRecorderServiceImpl implements AudioRecorderService {
+class AudioRecorderServiceImpl
+    implements AudioRecorderService, PreviewRecordingControls {
   AudioRecorderServiceImpl({AudioRecorder? recorder})
     : _recorder = recorder ?? AudioRecorder();
 
@@ -33,6 +34,12 @@ class AudioRecorderServiceImpl implements AudioRecorderService {
 
   @override
   Future<bool> isRecording() => _recorder.isRecording();
+
+  @override
+  Future<void> pauseRecording() => _recorder.pause();
+
+  @override
+  Future<void> resumeRecording() => _recorder.resume();
 
   /// Cached so every caller gets the same stream instance — widgets compare
   /// it across rebuilds to avoid resubscribing.

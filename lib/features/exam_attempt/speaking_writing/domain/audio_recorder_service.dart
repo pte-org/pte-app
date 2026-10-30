@@ -23,3 +23,8 @@ abstract class AudioRecorderService {
 final class AudioInputUnavailableException implements Exception {
   const AudioInputUnavailableException();
 }
+
+abstract interface class PreviewRecordingControls {
+  Future<void> pauseRecording();
+  Future<void> resumeRecording();
+}
