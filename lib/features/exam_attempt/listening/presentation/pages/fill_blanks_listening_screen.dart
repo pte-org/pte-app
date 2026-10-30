@@ -101,7 +101,9 @@ class _FillBlanksListeningScreenState extends State<FillBlanksListeningScreen> {
                 meta: TaskTypeMeta.forTaskType(widget.task.taskType),
               ),
               stimulus: AudioListeningStatusCard(
-                statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                statusLabel: state.hasFinishedPlaying
+                    ? 'Audio finished'
+                    : 'Playing audio...',
                 progress: state.hasFinishedPlaying ? 1.0 : state.progress,
               ),
               response: SingleChildScrollView(

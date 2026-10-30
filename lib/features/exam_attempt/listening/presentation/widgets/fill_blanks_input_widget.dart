@@ -1,36 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:pte_app/core/constants/app_colors.dart';
 import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
 
-/// One inline gap's text field, sized to sit inside a `WidgetSpan` without
-/// breaking line flow (phase-05 Design Constraints). The
-/// `TextEditingController` is owned and disposed by the screen, never by
-/// this widget or the cubit.
+/// Controllers belong to the screen; TextField owns its focus lifecycle.
 class FillBlanksInputWidget extends StatelessWidget {
-  const FillBlanksInputWidget({super.key, required this.controller});
-
+  const FillBlanksInputWidget({
+    super.key,
+    required this.controller,
+    this.width = AppDimensions.listeningBlankWidth,
+  });
   final TextEditingController controller;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(2)),
+      borderSide: BorderSide(color: AppColors.border),
+    );
     return SizedBox(
-      width: AppDimensions.fillBlanksGapMinWidth,
+      width: width,
+      height: AppDimensions.listeningBlankHeight,
       child: TextField(
         controller: controller,
         maxLines: 1,
+        textInputAction: TextInputAction.next,
+        autocorrect: false,
+        enableSuggestions: false,
         inputFormatters: [FilteringTextInputFormatter.deny(',')],
-        textAlign: TextAlign.center,
+        textAlign: TextAlign.left,
+        textAlignVertical: TextAlignVertical.center,
+        textDirection: TextDirection.ltr,
+        style: AppTypography.examAnswer,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.all(
-            AppDimensions.fillBlanksGapPadding,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 8,
           ),
           filled: true,
-          fillColor: AppColors.interactiveSelected,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: AppColors.border),
+          fillColor: AppColors.surface,
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+            borderSide: const BorderSide(
+              color: AppColors.brandPrimary,
+              width: 2,
+            ),
           ),
         ),
       ),

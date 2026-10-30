@@ -68,12 +68,15 @@ class HighlightIncorrectWordsScreen extends StatelessWidget {
                       meta: TaskTypeMeta.forTaskType(task.taskType),
                     ),
                     stimulus: AudioListeningStatusCard(
-                      statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
                       progress: state.hasFinishedPlaying ? 1.0 : state.progress,
                     ),
                     response: SingleChildScrollView(
                       child: WordSelectionList(
                         words: words,
+                        transcript: task.promptText,
                         selectedIndices: state.selectedWordIndices,
                         onToggle: (wordIndex) => context
                             .read<HighlightIncorrectWordsCubit>()

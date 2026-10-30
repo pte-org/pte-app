@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:pte_app/core/constants/task_type_meta.dart';
+import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_typography.dart';
+import '../../domain/listening_choice_prompt.dart';
 import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/audio_listening_status_card.dart';
 import 'package:pte_app/core/widgets/components/choice_list.dart';
@@ -52,6 +56,7 @@ class McListeningSingleScreen extends StatelessWidget {
           totalTasks: task.totalTasks,
           body: BlocBuilder<McListeningSingleCubit, McListeningSingleState>(
             builder: (context, state) {
+              final question = listeningChoiceQuestion(task.promptText);
               final options = task.options ?? const [];
               final selected = {
                 for (var index = 0; index < options.length; index++)
@@ -59,12 +64,25 @@ class McListeningSingleScreen extends StatelessWidget {
                     index,
               };
               return SingleSelectTemplate(
-                title: task.title,
+                title:
+                    TaskTypeMeta.forTaskType(task.taskType)?.title ??
+                    task.title,
                 subtitle: task.section,
                 instruction: 'Select the correct response.',
-                stimulus: AudioListeningStatusCard(
-                  statusLabel: state.hasFinishedPlaying ? 'Audio finished' : 'Playing audio...',
-                  progress: state.hasFinishedPlaying ? 1.0 : state.progress,
+                stimulus: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (question.isNotEmpty) ...[
+                      Text(question, style: AppTypography.examAnswer),
+                      const SizedBox(height: AppDimensions.spacingMd),
+                    ],
+                    AudioListeningStatusCard(
+                      statusLabel: state.hasFinishedPlaying
+                          ? 'Audio finished'
+                          : 'Playing audio...',
+                      progress: state.hasFinishedPlaying ? 1.0 : state.progress,
+                    ),
+                  ],
                 ),
                 response: SingleChildScrollView(
                   child: ChoiceList(

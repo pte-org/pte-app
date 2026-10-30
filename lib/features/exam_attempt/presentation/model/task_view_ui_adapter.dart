@@ -1,5 +1,6 @@
 import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/widgets/exam/stimulus_spec.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/listening_prompt_policy.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/presentation/model/exam_task_ui_model.dart';
 import 'package:pte_app/core/utils/task_instruction_resolver.dart';
@@ -66,13 +67,14 @@ class TaskViewUiAdapter {
         ),
       );
     }
-    if (task.promptText?.trim().isNotEmpty == true) {
+    final prompt = candidatePromptText(canonicalTaskType, task.promptText);
+    if (prompt.isNotEmpty) {
       parts.add(
         StimulusPart(
           kind: meta.section == 'READING'
               ? StimulusPartKind.passage
               : StimulusPartKind.text,
-          content: task.promptText!,
+          content: prompt,
           label: 'Task content',
         ),
       );
