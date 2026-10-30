@@ -242,6 +242,9 @@ void main() {
     when(
       () => audioPlayerService.duration,
     ).thenAnswer((_) => const Stream<Duration?>.empty());
+    when(
+      () => audioPlayerService.hasFinishedPlaying,
+    ).thenAnswer((_) => const Stream<bool>.empty());
     when(() => audioPlayerService.playUrl(any())).thenAnswer((_) async {});
     when(() => audioPlayerService.close()).thenAnswer((_) async {});
     when(
