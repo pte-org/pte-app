@@ -77,7 +77,9 @@ class _WritingPreviewWebState extends State<WritingPreviewWeb> {
         actions: [
           IconButton(
             icon: const Icon(Icons.arrow_forward),
-            onPressed: _index == _entries.length - 1 ? null : () => setState(() => _index += 1),
+            onPressed: _index == _entries.length - 1
+                ? null
+                : () => setState(() => _index += 1),
           ),
         ],
       ),
