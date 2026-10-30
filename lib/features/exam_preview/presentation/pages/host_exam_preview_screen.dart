@@ -1,14 +1,15 @@
-import 'package:pte_app/features/exam_preview/constants/exam_preview_strings.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:pte_app/core/constants/app_colors.dart';
-import 'package:pte_app/core/constants/app_dimensions.dart';
+import 'package:pte_app/core/constants/app_strings.dart';
+import 'package:pte_app/core/constants/exam_chrome_config.dart';
+import 'package:pte_app/core/widgets/exam/exam_header_bar.dart';
+import 'package:pte_app/core/widgets/exam/exam_shell.dart';
 import 'package:pte_app/core/widgets/loading_view.dart';
 import 'package:pte_app/core/widgets/primary_button.dart';
 import 'package:pte_app/core/widgets/status_screen.dart';
 
+import '../../constants/exam_preview_strings.dart';
 import '../../data/preview_audio_session.dart';
 import '../../domain/repositories/host_exam_preview_repository.dart';
 import '../cubit/host_exam_preview_cubit.dart';
@@ -17,155 +18,122 @@ import '../model/preview_task_ui_adapter.dart';
 import '../widgets/host_preview_navigation.dart';
 import '../widgets/host_preview_task_dispatcher.dart';
 
+/// Host execution uses the candidate shell and shared task UI, backed only by
+/// a read-only snapshot and in-memory answers rather than a student attempt.
 class HostExamPreviewScreen extends StatelessWidget {
   const HostExamPreviewScreen({
     super.key,
-    required this.sessionPublicId,
+    required this.sessionInput,
     required this.repository,
     this.mediaSession,
+    this.onExit,
   });
 
-  final String sessionPublicId;
+  final String sessionInput;
   final HostExamPreviewRepository repository;
   final PreviewAudioSession? mediaSession;
+  final VoidCallback? onExit;
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HostExamPreviewCubit(
-        repository: repository,
-        mediaSession: mediaSession,
-      )..load(sessionPublicId),
-      child: _HostExamPreviewView(sessionPublicId: sessionPublicId),
-    );
-  }
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) =>
+        HostExamPreviewCubit(repository: repository, mediaSession: mediaSession)
+          ..loadForEntry(sessionInput),
+    child: _HostExamView(sessionInput: sessionInput, onExit: onExit),
+  );
 }
 
-class _HostExamPreviewView extends StatelessWidget {
-  const _HostExamPreviewView({required this.sessionPublicId});
+class _HostExamView extends StatelessWidget {
+  const _HostExamView({required this.sessionInput, this.onExit});
 
-  final String sessionPublicId;
+  final String sessionInput;
+  final VoidCallback? onExit;
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<HostExamPreviewCubit, HostExamPreviewState>(
-      listenWhen: (_, state) => state is HostExamPreviewFinished,
-      listener: (context, _) {
-        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.surfaceCanvas,
-        appBar: AppBar(
-          title: const Text(ExamPreviewStrings.previewTitle),
-          leading: BackButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ),
-        body: BlocBuilder<HostExamPreviewCubit, HostExamPreviewState>(
-          builder: (context, state) {
-            return switch (state) {
-              HostExamPreviewInitial() ||
-              HostExamPreviewLoading() => const LoadingView(),
-              HostExamPreviewError() => _PreviewError(
-                sessionPublicId: sessionPublicId,
-              ),
-              HostExamPreviewFinished() => const SizedBox.shrink(),
-              HostExamPreviewReady() => _PreviewReady(state: state),
-            };
-          },
-        ),
-      ),
-    );
+  void _exit(BuildContext context) {
+    if (onExit != null) {
+      onExit!();
+    } else {
+      Navigator.of(context).maybePop();
+    }
   }
-}
-
-class _PreviewError extends StatelessWidget {
-  const _PreviewError({required this.sessionPublicId});
-
-  final String sessionPublicId;
 
   @override
-  Widget build(BuildContext context) {
-    return StatusScreen(
-      icon: Icons.cloud_off,
-      title: ExamPreviewStrings.previewErrorTitle,
-      message: ExamPreviewStrings.previewErrorMessage,
-      isError: true,
-      children: [
-        PrimaryButton(
-          label: ExamPreviewStrings.retry,
-          onPressed: () =>
-              context.read<HostExamPreviewCubit>().load(sessionPublicId),
-        ),
-      ],
-    );
-  }
-}
-
-class _PreviewReady extends StatelessWidget {
-  const _PreviewReady({required this.state});
-
-  final HostExamPreviewReady state;
-
-  @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<HostExamPreviewCubit>();
-    final item = state.currentItem;
-    final model = PreviewTaskUiAdapter.adapt(item);
-    final remaining = state.remainingSeconds;
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.spacingMd,
-            vertical: AppDimensions.spacingSm,
-          ),
-          color: AppColors.surface,
-          child: Row(
+  Widget build(BuildContext context) =>
+      BlocConsumer<HostExamPreviewCubit, HostExamPreviewState>(
+        listenWhen: (_, current) => current is HostExamPreviewFinished,
+        listener: (context, _) => _exit(context),
+        builder: (context, state) => switch (state) {
+          HostExamPreviewInitial() ||
+          HostExamPreviewLoading() => const Scaffold(body: LoadingView()),
+          HostExamPreviewError(:final error) => StatusScreen(
+            icon: Icons.error_outline,
+            title: ExamPreviewStrings.previewErrorTitle,
+            message: error is FormatException
+                ? error.message
+                : ExamPreviewStrings.previewErrorMessage,
+            isError: true,
             children: [
-              Expanded(
-                child: Text(
-                  ExamPreviewStrings.examHeading(state.snapshot.name),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+              PrimaryButton(
+                label: ExamPreviewStrings.retry,
+                onPressed: () => context
+                    .read<HostExamPreviewCubit>()
+                    .loadForEntry(sessionInput),
               ),
-              Text(
-                ExamPreviewStrings.taskProgress(
-                  state.currentIndex + 1,
-                  state.snapshot.items.length,
-                ),
+              TextButton(
+                onPressed: () => _exit(context),
+                child: const Text(AppStrings.logout),
               ),
-              if (remaining != null) ...[
-                const SizedBox(width: AppDimensions.spacingMd),
-                Text(ExamPreviewStrings.remainingTime(remaining)),
-              ],
             ],
           ),
+          HostExamPreviewFinished() => const SizedBox.shrink(),
+          HostExamPreviewReady() => _buildExam(context, state),
+        },
+      );
+
+  Widget _buildExam(BuildContext context, HostExamPreviewReady state) {
+    final cubit = context.read<HostExamPreviewCubit>();
+    final item = state.currentItem;
+    final remaining = state.remainingSeconds;
+    return ExamShell(
+      header: ExamHeaderBar(
+        examTitle: state.snapshot.name,
+        candidateName: ExamPreviewStrings.hostName,
+        candidateId: sessionInput.trim(),
+        itemLabel: ExamChromeConfig.itemLabel(
+          orderIndex: state.currentIndex,
+          totalTasks: state.snapshot.items.length,
         ),
-        Expanded(
-          child: HostPreviewTaskDispatcher(
-            key: ValueKey(item.snapshotItemPublicId),
-            model: model,
-            answer: cubit.answerFor(item),
-            onAnswerChanged: cubit.setAnswer,
-            onAudioPressed: item.audioUrl == null
-                ? null
-                : () => cubit.playAudio(item.audioUrl!),
-            onStartRecording: cubit.startRecording,
-            onStopRecording: cubit.stopRecording,
-            isRecording: state.isRecording,
-          ),
+        timeLabel: ExamChromeConfig.formatDuration(
+          remaining == null ? null : Duration(seconds: remaining),
         ),
-        HostPreviewNavigation(
-          canGoBack: state.currentIndex > 0,
-          isLast: state.currentIndex == state.snapshot.items.length - 1,
-          isBusy: state.isTransitioning,
-          onPrevious: cubit.previous,
-          onNext: cubit.next,
-          onFinish: cubit.finish,
-        ),
-      ],
+        onForceSubmit: state.isTransitioning ? null : cubit.finish,
+      ),
+      body: HostPreviewTaskDispatcher(
+        key: ValueKey(item.snapshotItemPublicId),
+        model: PreviewTaskUiAdapter.adapt(item),
+        answer: cubit.answerFor(item),
+        onAnswerChanged: cubit.setAnswer,
+        onAudioPressed: item.audioUrl == null
+            ? null
+            : () => cubit.playAudio(item.audioUrl!),
+        remainingSeconds: state.remainingSeconds,
+        isPreparing: state.isPreparing,
+        recordingUnavailable: state.recordingUnavailable,
+        inputLevels: cubit.inputLevels,
+        audioPosition: cubit.audioPosition,
+        isRecording: state.isRecording,
+        isRecordingPaused: state.isRecordingPaused,
+        mediaSession: cubit.mediaSession,
+        onRecordingPauseResume: cubit.mediaSession?.canPauseRecording == true
+            ? cubit.toggleRecordingPause
+            : null,
+        onRecordingStop: cubit.stopRecording,
+      ),
+      footer: HostPreviewNavigation(
+        isBusy: state.isTransitioning,
+        onPrevious: cubit.previous,
+        onNext: cubit.next,
+      ),
     );
   }
 }

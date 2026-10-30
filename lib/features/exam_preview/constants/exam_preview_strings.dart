@@ -1,6 +1,18 @@
 /// Copy owned by the authenticated host exam preview feature.
 abstract final class ExamPreviewStrings {
   static const String sessionIdRequired = 'Session id cannot be empty';
+  static const String sessionNotFound =
+      'Exam code was not found in your organization.';
+  static const String sessionNotReady =
+      'This exam has not generated its questions yet.';
+  static const String hostName = 'Host';
+  static const String completed = 'Completed';
+  static const String playing = 'Playing';
+  static const String paused = 'Paused';
+  static const String stopped = 'Stopped';
+  static const String audioLoading = 'Loading audio';
+  static const String audioFailed = 'Audio unavailable';
+  static const String audioReady = 'Ready';
   static const String emptyResponse = 'Preview response is empty';
   static const String emptyTasks = 'Exam preview has no tasks';
   static const String itemsRequired = 'Preview response has no items array';
@@ -24,12 +36,12 @@ abstract final class ExamPreviewStrings {
   static const String previous = 'Previous';
   static const String finish = 'Finish preview';
   static const String next = 'Next';
-  static const String previewErrorTitle = 'Preview unavailable';
+  static const String previewErrorTitle = 'Exam unavailable';
   static const String previewErrorMessage =
-      'The exam snapshot could not be loaded. It may not be ready yet.';
+      'The exam could not be opened. Check the exam code and try again.';
   static const String taskTitle = 'Task';
   static const String defaultInstruction =
-      'Review this task in host preview mode.';
+      'Follow the instructions for this task.';
   static const String unsupportedTitle = 'Task cannot be previewed';
   static const String previewOnly = 'Preview only · no answer submission';
   static const String noStimulusTitle = 'No additional stimulus';

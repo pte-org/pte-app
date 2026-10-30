@@ -1,5 +1,6 @@
 import 'package:pte_app/core/constants/task_type_meta.dart';
 import 'package:pte_app/core/widgets/exam/stimulus_spec.dart';
+import 'package:pte_app/features/exam_attempt/listening/domain/listening_prompt_policy.dart';
 
 import '../../domain/entities/preview_snapshot.dart';
 import 'preview_task_ui_model.dart';
@@ -17,8 +18,11 @@ class PreviewTaskUiAdapter {
         resolution.registration?.meta ??
         TaskTypeMeta.forTaskType(item.taskTypeCode ?? item.taskType ?? '');
     final parts = <StimulusPart>[];
-    final prompt = item.promptText?.trim();
-    if (prompt != null && prompt.isNotEmpty) {
+    final prompt = candidatePromptText(
+      item.taskTypeCode ?? item.taskType,
+      item.promptText,
+    );
+    if (prompt.isNotEmpty) {
       parts.add(StimulusPart(kind: StimulusPartKind.text, content: prompt));
     }
     final imageUrl = item.imageUrl?.trim();

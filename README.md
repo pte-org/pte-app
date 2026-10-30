@@ -14,7 +14,9 @@ An authenticated `HOST_ADMIN` can use this app to preview an existing exam
 snapshot without changing the exam lifecycle. The host flow is intentionally
 read-only:
 
-- It loads the host's tenant-scoped exam list and an existing snapshot.
+- Enter the exam code on the same sign-in form used by students. The app resolves
+  that code within the host's organization and opens the existing snapshot
+  directly in the shared candidate exam shell; no preview-list screen is shown.
 - Every preview item has a local `Next` action, including speaking and audio
   tasks, so a host can review the complete exam flow.
 - Answers stay in memory only. Preview does not create or start an attempt,

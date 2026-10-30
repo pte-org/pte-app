@@ -45,7 +45,8 @@ import 'features/exam_attempt/presentation/widgets/lockdown_activation_failure_d
 import 'features/exam_attempt/speaking_writing/dev/speaking_writing_task_preview_screen.dart';
 import 'features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'features/exam_preview/domain/repositories/host_exam_preview_repository.dart';
-import 'features/exam_preview/presentation/pages/host_exam_list_screen.dart';
+import 'features/exam_preview/presentation/pages/host_exam_preview_screen.dart';
+import 'features/exam_preview/data/preview_audio_session.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_bloc.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
@@ -207,17 +208,22 @@ class _AppAuthGateState extends State<AppAuthGate> {
               onSessionIdProvided: _rememberSessionId,
             ),
             AuthAuthenticated(:final claims)
-                when ExamAccessPolicy.canPreviewExam(claims) =>
-              HostExamListScreen(
-                repository: GetIt.instance<HostExamPreviewRepository>(),
-              ),
-            AuthAuthenticated(:final claims)
-                when !ExamAccessPolicy.canTakeExam(claims) =>
+                when !ExamAccessPolicy.canTakeExam(claims) &&
+                    !ExamAccessPolicy.canPreviewExam(claims) =>
               const ExamAccessDeniedPage(),
             AuthAuthenticated() when _sessionIdForStudent == null => LoginPage(
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
+            AuthAuthenticated(:final claims)
+                when ExamAccessPolicy.canPreviewExam(claims) =>
+              HostExamPreviewScreen(
+                sessionInput: _sessionIdForStudent!,
+                repository: GetIt.instance<HostExamPreviewRepository>(),
+                mediaSession: GetIt.instance<PreviewAudioSession>(),
+                onExit: () =>
+                    context.read<AuthBloc>().add(const LogoutRequested()),
+              ),
             AuthAuthenticated() => StudentExamGate(
               initialSessionId: _sessionIdForStudent!,
             ),

@@ -21,6 +21,9 @@ final class HostExamPreviewReady extends HostExamPreviewState {
     this.remainingSeconds,
     this.isTransitioning = false,
     this.isRecording = false,
+    this.isRecordingPaused = false,
+    this.isPreparing = false,
+    this.recordingUnavailable = false,
   });
 
   final PreviewSnapshot snapshot;
@@ -30,6 +33,9 @@ final class HostExamPreviewReady extends HostExamPreviewState {
   final int? remainingSeconds;
   final bool isTransitioning;
   final bool isRecording;
+  final bool isRecordingPaused;
+  final bool isPreparing;
+  final bool recordingUnavailable;
 
   PreviewItem get currentItem => snapshot.items[currentIndex];
 
@@ -41,6 +47,9 @@ final class HostExamPreviewReady extends HostExamPreviewState {
     bool clearRemainingSeconds = false,
     bool? isTransitioning,
     bool? isRecording,
+    bool? isRecordingPaused,
+    bool? isPreparing,
+    bool? recordingUnavailable,
   }) {
     return HostExamPreviewReady(
       snapshot: snapshot,
@@ -52,6 +61,9 @@ final class HostExamPreviewReady extends HostExamPreviewState {
           : remainingSeconds ?? this.remainingSeconds,
       isTransitioning: isTransitioning ?? this.isTransitioning,
       isRecording: isRecording ?? this.isRecording,
+      isRecordingPaused: isRecordingPaused ?? this.isRecordingPaused,
+      isPreparing: isPreparing ?? this.isPreparing,
+      recordingUnavailable: recordingUnavailable ?? this.recordingUnavailable,
     );
   }
 }
