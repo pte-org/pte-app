@@ -445,12 +445,10 @@ void main() {
         );
 
         final captured = verify(
-          () => dio.post<dynamic>(captureAny(), data: captureAny(named: 'data')),
+          () =>
+              dio.post<dynamic>(captureAny(), data: captureAny(named: 'data')),
         ).captured;
-        expect(
-          captured[0],
-          '/api/v1/attempts/attempt-1/answers/encrypted',
-        );
+        expect(captured[0], '/api/v1/attempts/attempt-1/answers/encrypted');
         expect(captured[1], {
           'pinnedItemPublicId': 'item-1',
           'wrappedKey': 'wrapped-key-base64',
@@ -493,8 +491,11 @@ void main() {
             ciphertext: 'ciphertext',
           ),
           throwsA(
-            isA<NotCurrentTaskException>()
-                .having((e) => e.message, 'message', 'NOT_CURRENT_TASK'),
+            isA<NotCurrentTaskException>().having(
+              (e) => e.message,
+              'message',
+              'NOT_CURRENT_TASK',
+            ),
           ),
         );
       },
@@ -551,41 +552,50 @@ void main() {
   });
 
   group('saveAnswer() for manual task navigation', () {
-    test('posts a plain draft without using the advancing answer endpoint', () async {
-      final requestOptions = RequestOptions(path: '/api/v1/attempts/attempt-1/answers/save');
-      when(
-        () => dio.post<dynamic>(
-          '/api/v1/attempts/attempt-1/answers/save',
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer(
-        (_) async => Response<dynamic>(
-          requestOptions: requestOptions,
-          statusCode: 200,
-          data: {'success': true, 'data': null, 'message': null},
-        ),
-      );
+    test(
+      'posts a plain draft without using the advancing answer endpoint',
+      () async {
+        final requestOptions = RequestOptions(
+          path: '/api/v1/attempts/attempt-1/answers/save',
+        );
+        when(
+          () => dio.post<dynamic>(
+            '/api/v1/attempts/attempt-1/answers/save',
+            data: any(named: 'data'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<dynamic>(
+            requestOptions: requestOptions,
+            statusCode: 200,
+            data: {'success': true, 'data': null, 'message': null},
+          ),
+        );
 
-      await apiClient.saveAnswer(
-        attemptPublicId: 'attempt-1',
-        pinnedItemPublicId: 'item-2',
-        payload: 'draft answer',
-      );
+        await apiClient.saveAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'item-2',
+          payload: 'draft answer',
+        );
 
-      final data = verify(
-        () => dio.post<dynamic>(
-          '/api/v1/attempts/attempt-1/answers/save',
-          data: captureAny(named: 'data'),
-        ),
-      ).captured.single as Map<String, dynamic>;
-      expect(data, {
-        'pinnedItemPublicId': 'item-2',
-        'payload': 'draft answer',
-      });
-    });
+        final data =
+            verify(
+                  () => dio.post<dynamic>(
+                    '/api/v1/attempts/attempt-1/answers/save',
+                    data: captureAny(named: 'data'),
+                  ),
+                ).captured.single
+                as Map<String, dynamic>;
+        expect(data, {
+          'pinnedItemPublicId': 'item-2',
+          'payload': 'draft answer',
+        });
+      },
+    );
 
     test('posts strict-mode drafts to the encrypted save route', () async {
-      final requestOptions = RequestOptions(path: '/api/v1/attempts/attempt-1/answers/encrypted/save');
+      final requestOptions = RequestOptions(
+        path: '/api/v1/attempts/attempt-1/answers/encrypted/save',
+      );
       when(
         () => dio.post<dynamic>(
           '/api/v1/attempts/attempt-1/answers/encrypted/save',
@@ -620,5 +630,4 @@ void main() {
       ).called(1);
     });
   });
-
 }
