@@ -41,14 +41,18 @@ class ExamStatusBlock extends StatelessWidget {
                 Text(
                   title,
                   style: AppTypography.bodyBold.copyWith(
-                    color: AppColors.textPrimary,
+                    color: kind == ExamStatusKind.error
+                        ? AppColors.errorDark
+                        : AppColors.textPrimary,
                   ),
                 ),
                 if (message != null)
                   Text(
                     message!,
                     style: AppTypography.bodyRegular.copyWith(
-                      color: AppColors.textSecondary,
+                      color: kind == ExamStatusKind.error
+                          ? AppColors.errorDark
+                          : AppColors.textSecondary,
                     ),
                   ),
               ],

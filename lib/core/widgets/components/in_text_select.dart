@@ -26,7 +26,7 @@ class InTextSelect extends StatelessWidget {
           DropdownMenuItem<String>(value: option, child: Text(option)),
       ],
       onChanged: onChanged,
-      style: AppTypography.bodyRegular.copyWith(color: AppColors.textPrimary),
+      style: AppTypography.examAnswer.copyWith(color: AppColors.textPrimary),
       decoration: const InputDecoration(
         isDense: true,
         filled: true,

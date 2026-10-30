@@ -9,12 +9,14 @@ class ChoiceList extends StatelessWidget {
     required this.selectedIndices,
     required this.mode,
     required this.onTap,
+    this.plain = false,
   });
 
   final List<String> labels;
   final Set<int> selectedIndices;
   final ChoiceSelectionMode mode;
   final ValueChanged<int> onTap;
+  final bool plain;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class ChoiceList extends StatelessWidget {
             selected: selectedIndices.contains(index),
             mode: mode,
             onTap: () => onTap(index),
+            plain: plain,
           ),
           if (index < labels.length - 1) const SizedBox(height: 8),
         ],
