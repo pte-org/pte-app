@@ -7,6 +7,7 @@ project(runner LANGUAGES CXX)
 #
 # Any new source files that you add to the application should be added here.
 add_executable(${BINARY_NAME} WIN32
+  "audio_level_plugin.cpp"
   "flutter_window.cpp"
   "lockdown_plugin.cpp"
   "main.cpp"
@@ -42,6 +43,7 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 # instead, so this was never needed until LockdownPlugin was added).
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app flutter_wrapper_plugin)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "ole32.lib" "uuid.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
