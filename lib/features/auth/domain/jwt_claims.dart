@@ -18,14 +18,18 @@ class JwtClaims {
 JwtClaims decodeJwtClaims(String jwt) {
   final segments = jwt.split('.');
   if (segments.length != 3) {
-    throw const FormatException('Not a well-formed JWT (expected 3 dot-separated segments)');
+    throw const FormatException(
+      'Not a well-formed JWT (expected 3 dot-separated segments)',
+    );
   }
 
   final payloadSegment = base64Url.normalize(segments[1]);
   final payloadJson = utf8.decode(base64Url.decode(payloadSegment));
   final claims = jsonDecode(payloadJson) as Map<String, dynamic>;
 
-  final roles = (claims['roles'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [];
+  final roles =
+      (claims['roles'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+      const [];
   final tenantId = claims['tenant_id'] as String?;
 
   return JwtClaims(roles: roles, tenantId: tenantId);
