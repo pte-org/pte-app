@@ -9,7 +9,8 @@ import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubi
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/write_essay_state.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/widgets/word_count_label.dart';
 
-class _MockWriteEssayCubit extends MockCubit<WriteEssayState> implements WriteEssayCubit {}
+class _MockWriteEssayCubit extends MockCubit<WriteEssayState>
+    implements WriteEssayCubit {}
 
 void main() {
   late _MockWriteEssayCubit cubit;
@@ -18,7 +19,11 @@ void main() {
   setUp(() {
     cubit = _MockWriteEssayCubit();
     stateController = StreamController<WriteEssayState>.broadcast();
-    whenListen(cubit, stateController.stream, initialState: const WriteEssayState(draftText: 'hello', wordCount: 1));
+    whenListen(
+      cubit,
+      stateController.stream,
+      initialState: const WriteEssayState(draftText: 'hello', wordCount: 1),
+    );
   });
 
   tearDown(() async {
@@ -29,7 +34,12 @@ void main() {
     return MaterialApp(
       home: BlocProvider<WriteEssayCubit>.value(
         value: cubit,
-        child: Scaffold(body: WordCountLabel(minWordCount: minWordCount, maxWordCount: maxWordCount)),
+        child: Scaffold(
+          body: WordCountLabel(
+            minWordCount: minWordCount,
+            maxWordCount: maxWordCount,
+          ),
+        ),
       ),
     );
   }
@@ -39,7 +49,8 @@ void main() {
   /// selected slice (here `wordCount`) actually changes, so comparing
   /// `identical()` across pumps is a faithful proxy for "did this widget
   /// rebuild" (Step 13).
-  Text textWidget(WidgetTester tester) => tester.widget<Text>(find.byType(Text));
+  Text textWidget(WidgetTester tester) =>
+      tester.widget<Text>(find.byType(Text));
 
   group('WordCountLabel — BlocSelector rebuild-avoidance (Step 13)', () {
     testWidgets(
@@ -51,57 +62,75 @@ void main() {
 
         // Unrelated change: different draftText, but the same wordCount —
         // e.g. one word swapped for another single word.
-        stateController.add(const WriteEssayState(draftText: 'howdy', wordCount: 1));
+        stateController.add(
+          const WriteEssayState(draftText: 'howdy', wordCount: 1),
+        );
         await tester.pump();
 
         final afterText = textWidget(tester);
         expect(
           identical(beforeText, afterText),
           isTrue,
-          reason: 'BlocSelector must not rebuild the label for a state change that leaves wordCount unchanged',
+          reason:
+              'BlocSelector must not rebuild the label for a state change that leaves wordCount unchanged',
         );
         expect(afterText.data, '1 words');
       },
     );
 
-    testWidgets('an actual wordCount change does rebuild the label', (tester) async {
+    testWidgets('an actual wordCount change does rebuild the label', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildSubject());
       final beforeText = textWidget(tester);
 
-      stateController.add(const WriteEssayState(draftText: 'hello world', wordCount: 2));
+      stateController.add(
+        const WriteEssayState(draftText: 'hello world', wordCount: 2),
+      );
       await tester.pump();
 
       final afterText = textWidget(tester);
       expect(
         identical(beforeText, afterText),
         isFalse,
-        reason: 'BlocSelector must rebuild the label when the wordCount slice changes',
+        reason:
+            'BlocSelector must rebuild the label when the wordCount slice changes',
       );
       expect(afterText.data, '2 words');
     });
 
-    testWidgets('renders the plain "N words" suffix with no bounds when min/max are not provided', (tester) async {
-      await tester.pumpWidget(buildSubject());
+    testWidgets(
+      'renders the plain "N words" suffix with no bounds when min/max are not provided',
+      (tester) async {
+        await tester.pumpWidget(buildSubject());
 
-      expect(find.text('1 words'), findsOneWidget);
-    });
+        expect(find.text('1 words'), findsOneWidget);
+      },
+    );
 
-    testWidgets('renders both min and max bounds when both are provided', (tester) async {
+    testWidgets('renders both min and max bounds when both are provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildSubject(minWordCount: 5, maxWordCount: 20));
 
       expect(find.text('1 words (min 5, max 20)'), findsOneWidget);
     });
 
-    testWidgets('renders only the min bound when only minWordCount is provided', (tester) async {
-      await tester.pumpWidget(buildSubject(minWordCount: 5));
+    testWidgets(
+      'renders only the min bound when only minWordCount is provided',
+      (tester) async {
+        await tester.pumpWidget(buildSubject(minWordCount: 5));
 
-      expect(find.text('1 words (min 5)'), findsOneWidget);
-    });
+        expect(find.text('1 words (min 5)'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'being outside the min/max bounds does not render an error state — guidance only, never a hard gate',
       (tester) async {
-        await tester.pumpWidget(buildSubject(minWordCount: 50, maxWordCount: 100));
+        await tester.pumpWidget(
+          buildSubject(minWordCount: 50, maxWordCount: 100),
+        );
 
         expect(find.text('1 words (min 50, max 100)'), findsOneWidget);
         expect(find.byType(Icon), findsNothing);

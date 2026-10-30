@@ -14,7 +14,8 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_eve
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_state.dart';
 import 'package:pte_app/features/exam_attempt/presentation/widgets/exam_scaffold.dart';
 
-class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState> implements ExamAttemptBloc {}
+class _MockExamAttemptBloc extends MockBloc<ExamAttemptEvent, ExamAttemptState>
+    implements ExamAttemptBloc {}
 
 TaskView _task() {
   return TaskView(
@@ -33,7 +34,11 @@ void main() {
   late _MockExamAttemptBloc bloc;
   late StreamController<ExamAttemptState> stateController;
 
-  const snapshot = TimerSnapshot(phase: TimerPhase.response, remaining: Duration(seconds: 30), currentOrderIndex: 1);
+  const snapshot = TimerSnapshot(
+    phase: TimerPhase.response,
+    remaining: Duration(seconds: 30),
+    currentOrderIndex: 1,
+  );
 
   setUpAll(() {
     registerFallbackValue(const AppResumed());
@@ -42,7 +47,11 @@ void main() {
   setUp(() {
     bloc = _MockExamAttemptBloc();
     stateController = StreamController<ExamAttemptState>.broadcast();
-    whenListen(bloc, stateController.stream, initialState: AttemptInProgress('attempt-1', _task(), snapshot));
+    whenListen(
+      bloc,
+      stateController.stream,
+      initialState: AttemptInProgress('attempt-1', _task(), snapshot),
+    );
   });
 
   tearDown(() async {
@@ -58,7 +67,9 @@ void main() {
     );
   }
 
-  testWidgets('the app returning to the foreground dispatches AppResumed', (tester) async {
+  testWidgets('the app returning to the foreground dispatches AppResumed', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
@@ -66,7 +77,9 @@ void main() {
     verify(() => bloc.add(any(that: isA<AppResumed>()))).called(1);
   });
 
-  testWidgets('the app going to the background does not dispatch AppResumed', (tester) async {
+  testWidgets('the app going to the background does not dispatch AppResumed', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -74,67 +87,72 @@ void main() {
     verifyNever(() => bloc.add(any(that: isA<AppResumed>())));
   });
 
-  testWidgets('the observer is removed on dispose — no AppResumed after the widget is gone', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+  testWidgets(
+    'the observer is removed on dispose — no AppResumed after the widget is gone',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
 
-    verifyNever(() => bloc.add(any(that: isA<AppResumed>())));
-  });
+      verifyNever(() => bloc.add(any(that: isA<AppResumed>())));
+    },
+  );
 
-  testWidgets('retryable submit failure keeps the exam visible and exposes Retry submit', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
-    stateController.add(
-      AttemptInProgress(
-        'attempt-1',
-        _task(),
-        snapshot,
-        submissionStatus: AttemptSubmissionStatus.retryableFailure,
-        submissionError: Exception('offline'),
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'retryable submit failure keeps the exam visible and exposes Retry submit',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+      stateController.add(
+        AttemptInProgress(
+          'attempt-1',
+          _task(),
+          snapshot,
+          submissionStatus: AttemptSubmissionStatus.retryableFailure,
+          submissionError: Exception('offline'),
+        ),
+      );
+      await tester.pump();
 
-    expect(
-      find.text(
-        'The server did not confirm submission. Your exam is still open; retry when ready.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Retry submit'), findsOneWidget);
+      expect(
+        find.text(
+          'The server did not confirm submission. Your exam is still open; retry when ready.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Retry submit'), findsOneWidget);
 
-    await tester.tap(find.text('Retry submit'));
-    verify(() => bloc.add(const ForceSubmitRequested())).called(1);
-  });
+      await tester.tap(find.text('Retry submit'));
+      verify(() => bloc.add(const ForceSubmitRequested())).called(1);
+    },
+  );
 
-  testWidgets('submitting state blocks the task surface with acknowledgement progress', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject());
-    stateController.add(
-      AttemptInProgress(
-        'attempt-1',
-        _task(),
-        snapshot,
-        submissionStatus: AttemptSubmissionStatus.submitting,
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'submitting state blocks the task surface with acknowledgement progress',
+    (tester) async {
+      await tester.pumpWidget(buildSubject());
+      stateController.add(
+        AttemptInProgress(
+          'attempt-1',
+          _task(),
+          snapshot,
+          submissionStatus: AttemptSubmissionStatus.submitting,
+        ),
+      );
+      await tester.pump();
 
-    expect(
-      find.text(
-        'Submitting your exam. Keep this window open until submission is confirmed.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is IgnorePointer && widget.ignoring,
-      ),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.text(
+          'Submitting your exam. Keep this window open until submission is confirmed.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is IgnorePointer && widget.ignoring,
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

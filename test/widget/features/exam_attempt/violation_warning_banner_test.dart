@@ -9,12 +9,13 @@ import 'package:pte_app/features/exam_attempt/presentation/widgets/violation_war
 /// Pumps the banner inside a real Material host so the widget tree
 /// can resolve `Theme.of`/`Material`/`MediaQuery` — same pattern
 /// every other widget test in this codebase uses.
-Future<void> _pumpBanner(WidgetTester tester, Stream<ViolationType> stream) async {
+Future<void> _pumpBanner(
+  WidgetTester tester,
+  Stream<ViolationType> stream,
+) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(
-        body: ViolationWarningBanner(violations: stream),
-      ),
+      home: Scaffold(body: ViolationWarningBanner(violations: stream)),
     ),
   );
 }
@@ -34,8 +35,11 @@ void main() {
       await _pumpBanner(tester, controller.stream);
       controller.add(type);
       await tester.pump();
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget,
-          reason: 'banner icon should appear for ${type.name}');
+      expect(
+        find.byIcon(Icons.warning_amber_rounded),
+        findsOneWidget,
+        reason: 'banner icon should appear for ${type.name}',
+      );
       // The exact message text is verified per-type by the bloc test
       // (string keys live in ExamAttemptStrings); here we only assert
       // that SOME non-empty text is rendered.
@@ -45,7 +49,9 @@ void main() {
     }
   });
 
-  testWidgets('auto-dismisses after the configured display duration', (tester) async {
+  testWidgets('auto-dismisses after the configured display duration', (
+    tester,
+  ) async {
     final controller = StreamController<ViolationType>.broadcast();
     await _pumpBanner(tester, controller.stream);
     controller.add(ViolationType.fullscreenExit);
