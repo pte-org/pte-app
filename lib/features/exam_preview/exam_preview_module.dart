@@ -17,6 +17,8 @@ void setupExamPreviewModule() {
   getIt.registerFactory<PreviewAudioSession>(
     () => PreviewAudioSession(
       player: AudioPlayerServiceImpl(volumeService: getIt<VolumeService>()),
+      playerFactory: () =>
+          AudioPlayerServiceImpl(volumeService: getIt<VolumeService>()),
       recorder: AudioRecorderServiceImpl(),
     ),
   );
