@@ -153,9 +153,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
 
       verify(() => player.playFile('/tmp/device_check_test.wav')).called(1);
@@ -174,9 +177,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
       playbackController.add(true);
       await tester.pump();
@@ -237,9 +243,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Stop'));
       await tester.pump();
-      await tester.tap(
-        find.widgetWithText(ElevatedButton, 'Play my recording'),
+      final playMyRecordingFinder = find.widgetWithText(
+        ElevatedButton,
+        'Play my recording',
       );
+      await tester.ensureVisible(playMyRecordingFinder);
+      await tester.tap(playMyRecordingFinder);
       await tester.pump();
       playbackController.add(true);
       await tester.pump();
