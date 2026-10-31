@@ -29,7 +29,25 @@ class AuthRepositoryImpl implements AuthRepository {
       refreshToken: data['refreshToken'] as String,
       expiresInSeconds: data['expiresInSeconds'] as int,
     );
-    return decodeJwtClaims(accessToken);
+    return decodeJwtClaims(accessToken).copyWith(
+      mustChangePassword: data['mustChangePassword'] == true,
+    );
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final refreshToken = await _tokenStore.readRefreshToken();
+    await _apiClient.post<void>(
+      '/api/v1/auth/change-password',
+      data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'refreshToken': ?refreshToken,
+      },
+    );
   }
 
   @override

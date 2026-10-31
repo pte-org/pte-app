@@ -11,6 +11,17 @@ final class LoginRequested extends AuthEvent {
   final String password;
 }
 
+/// Replaces the temporary password the account signed in with.
+final class PasswordChangeSubmitted extends AuthEvent {
+  const PasswordChangeSubmitted({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  final String currentPassword;
+  final String newPassword;
+}
+
 final class LogoutRequested extends AuthEvent {
   const LogoutRequested();
 }

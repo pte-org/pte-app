@@ -25,6 +25,7 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/domain/exam_access_policy.dart';
+import 'features/auth/presentation/pages/change_password_page.dart';
 import 'features/auth/presentation/pages/exam_access_denied_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/device_check/data/device_check_audio_player_impl.dart';
@@ -207,6 +208,10 @@ class _AppAuthGateState extends State<AppAuthGate> {
               requireSessionId: true,
               onSessionIdProvided: _rememberSessionId,
             ),
+            // A temporary password must be replaced before anything else.
+            AuthPasswordChangeRequired() ||
+            AuthPasswordChanging() ||
+            AuthPasswordChangeFailed() => const ChangePasswordPage(),
             AuthAuthenticated(:final claims)
                 when !ExamAccessPolicy.canTakeExam(claims) &&
                     !ExamAccessPolicy.canPreviewExam(claims) =>

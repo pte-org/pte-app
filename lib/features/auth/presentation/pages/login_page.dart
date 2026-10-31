@@ -8,9 +8,11 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/network/friendly_error_message.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/components/exam_status_block.dart';
+import '../../constants/auth_strings.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/auth_field_decoration.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -78,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
         fontSize: 12,
         color: AppColors.loginText,
       ),
-      decoration: _fieldDecoration(AppStrings.loginUsernameLabel),
+      decoration: authFieldDecoration(AppStrings.loginUsernameLabel),
       validator: (value) => value == null || value.trim().isEmpty
           ? AppStrings.loginEmailRequired
           : null,
@@ -94,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
         fontSize: 12,
         color: AppColors.loginText,
       ),
-      decoration: _fieldDecoration(AppStrings.loginPasswordLabel),
+      decoration: authFieldDecoration(AppStrings.loginPasswordLabel),
       validator: (value) => value == null || value.isEmpty
           ? AppStrings.loginPasswordRequired
           : null,
@@ -115,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
         fontSize: 12,
         color: AppColors.loginText,
       ),
-      decoration: _fieldDecoration(
+      decoration: authFieldDecoration(
         widget.requireSessionId
             ? AppStrings.loginSessionIdRequiredLabel
             : AppStrings.loginSessionIdLabel,
@@ -127,55 +129,6 @@ class _LoginPageState extends State<LoginPage> {
           widget.requireSessionId && (value == null || value.trim().isEmpty)
           ? AppStrings.loginSessionIdRequired
           : null,
-    );
-  }
-
-  InputDecoration _fieldDecoration(String label, {String? helperText}) {
-    return InputDecoration(
-      labelText: label,
-      helperText: helperText,
-      helperMaxLines: 2,
-      helperStyle: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: 10,
-        height: 1.25,
-        color: AppColors.loginMutedText,
-      ),
-      labelStyle: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: AppColors.loginText,
-      ),
-      floatingLabelBehavior: FloatingLabelBehavior.always,
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        borderSide: const BorderSide(color: AppColors.loginFieldBorder),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        borderSide: const BorderSide(color: AppColors.loginFieldBorder),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-      errorStyle: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: 10,
-        height: 1.2,
-        color: AppColors.error,
-      ),
     );
   }
 
@@ -315,6 +268,17 @@ class _LoginCard extends StatelessWidget {
                 failureMessage,
                 const SizedBox(height: 10),
                 SizedBox(height: 31, child: submitButton),
+                const SizedBox(height: 12),
+                const Text(
+                  AuthStrings.forgotPasswordHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 10,
+                    height: 1.25,
+                    color: AppColors.loginMutedText,
+                  ),
+                ),
               ],
             ),
           ),
