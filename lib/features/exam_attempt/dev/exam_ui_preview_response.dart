@@ -128,11 +128,16 @@ class _ExamUiPreviewResponseState extends State<ExamUiPreviewResponse> {
       return Column(
         children: [
           for (var index = 0; index < model.options.length; index++)
-            ListTile(
-              tileColor: AppColors.surfaceSubtle,
-              leading: Text('${index + 1}'),
-              title: Text(model.options[index].text),
-              trailing: const Icon(Icons.drag_handle),
+            // Own Material: the ListTile paints its tile color and ink on the nearest Material, and the
+            // bordered card around the response would hide them.
+            Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                tileColor: AppColors.surfaceSubtle,
+                leading: Text('${index + 1}'),
+                title: Text(model.options[index].text),
+                trailing: const Icon(Icons.drag_handle),
+              ),
             ),
         ],
       );
