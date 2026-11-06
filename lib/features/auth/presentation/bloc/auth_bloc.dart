@@ -17,7 +17,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
        _scheduler = scheduler,
        super(const AuthIdle()) {
     on<LoginRequested>(_onLoginRequested);
-    on<PasswordChangeSubmitted>(_onPasswordChangeSubmitted);
     on<LogoutRequested>(_onLogoutRequested);
   }
 
@@ -40,11 +39,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       _scheduler.scheduleFromTokenStore();
-      emit(
-        claims.mustChangePassword
-            ? AuthPasswordChangeRequired(claims)
-            : AuthAuthenticated(claims),
-      );
+      emit(AuthAuthenticated(claims));
     } catch (e) {
       // Any failure here — a mapped ApiException or an unexpected shape
       // error from a malformed 2xx body — must still reach AuthError;
@@ -56,37 +51,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
     } finally {
       _isAuthenticating = false;
-    }
-  }
-
-  /// Only meaningful while a temporary password is waiting to be replaced; a
-  /// second submit while one is in flight, or from any other state, is ignored.
-  Future<void> _onPasswordChangeSubmitted(
-    PasswordChangeSubmitted event,
-    Emitter<AuthState> emit,
-  ) async {
-    final claims = switch (state) {
-      AuthPasswordChangeRequired(:final claims) => claims,
-      AuthPasswordChangeFailed(:final claims) => claims,
-      _ => null,
-    };
-    if (claims == null) {
-      return;
-    }
-    emit(AuthPasswordChanging(claims));
-    try {
-      await _repository.changePassword(
-        currentPassword: event.currentPassword,
-        newPassword: event.newPassword,
-      );
-      emit(AuthAuthenticated(claims.copyWith(mustChangePassword: false)));
-    } catch (e) {
-      emit(
-        AuthPasswordChangeFailed(
-          claims,
-          e is ApiException ? e : UnknownApiException(e.toString()),
-        ),
-      );
     }
   }
 

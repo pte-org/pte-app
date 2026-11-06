@@ -6,24 +6,10 @@ import 'dart:convert';
 /// request regardless of what the client believes its own role is
 /// (phase-01 Design Constraints, FR-02).
 class JwtClaims {
-  const JwtClaims({
-    required this.roles,
-    this.tenantId,
-    this.mustChangePassword = false,
-  });
+  const JwtClaims({required this.roles, this.tenantId});
 
   final List<String> roles;
   final String? tenantId;
-
-  /// Read from the login response, not from the token: the account is signed
-  /// in with a temporary password that must be replaced before anything else.
-  final bool mustChangePassword;
-
-  JwtClaims copyWith({bool? mustChangePassword}) => JwtClaims(
-    roles: roles,
-    tenantId: tenantId,
-    mustChangePassword: mustChangePassword ?? this.mustChangePassword,
-  );
 }
 
 /// Manual base64Url decode of the JWT payload segment — no `jwt_decoder`
