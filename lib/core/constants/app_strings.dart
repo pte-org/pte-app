@@ -14,6 +14,8 @@ class AppStrings {
   static const String loginBrand = 'PTE Exam';
   static const String loginTitle = 'Sign in to your exam';
   static const String loginUsernameLabel = 'Login username';
+  static const String loginUsernameHint =
+      'The username from your account e-mail or from your organization, e.g. center.a7k2m9xq.';
   static const String loginPasswordLabel = 'Login password';
   static const String loginSessionIdLabel = 'Exam code (optional)';
   static const String loginSessionIdRequiredLabel = 'Exam code';
@@ -24,8 +26,7 @@ class AppStrings {
   static const String loginSessionIdRequired =
       'Exam code is required for student sign-in';
   static const String loginSubmit = 'Log in';
-  static const String loginEmailLabel = loginUsernameLabel;
-  static const String loginEmailRequired = 'Login username is required';
+  static const String loginUsernameRequired = 'Login username is required';
   static const String loginPasswordRequired = 'Login password is required';
   static const String loginFailure =
       'Sign-in failed. Check your credentials and try again.';

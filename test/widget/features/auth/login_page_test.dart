@@ -66,7 +66,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text(AppStrings.loginEmailRequired), findsOneWidget);
+      expect(find.text(AppStrings.loginUsernameRequired), findsOneWidget);
       expect(find.text(AppStrings.loginPasswordRequired), findsOneWidget);
       expect(find.text(AppStrings.loginSessionIdLabel), findsOneWidget);
       verifyNever(
