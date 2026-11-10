@@ -78,9 +78,12 @@ class _LoginPageState extends State<LoginPage> {
         fontSize: 12,
         color: AppColors.loginText,
       ),
-      decoration: _fieldDecoration(AppStrings.loginUsernameLabel),
+      decoration: _fieldDecoration(
+        AppStrings.loginUsernameLabel,
+        helperText: AppStrings.loginUsernameHint,
+      ),
       validator: (value) => value == null || value.trim().isEmpty
-          ? AppStrings.loginEmailRequired
+          ? AppStrings.loginUsernameRequired
           : null,
     );
   }
