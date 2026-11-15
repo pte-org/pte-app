@@ -18,6 +18,7 @@ class _FakeSecureStorage extends Mock implements FlutterSecureStorage {}
 class _FakeAdapter implements HttpClientAdapter {
   int refreshCallCount = 0;
   int protectedCallCount = 0;
+  int loginCallCount = 0;
   // Deliberately different from the client's stale 'expired-token' header
   // so the first request against '/protected' genuinely 401s.
   String currentValidToken = 'server-issued-token';
@@ -50,6 +51,11 @@ class _FakeAdapter implements HttpClientAdapter {
           Headers.contentTypeHeader: [Headers.jsonContentType],
         },
       );
+    }
+
+    if (options.path == '/api/v1/auth/login') {
+      loginCallCount++;
+      return ResponseBody.fromString('{}', 401);
     }
 
     if (options.path == '/protected') {
@@ -121,6 +127,25 @@ void main() {
       expect(response.data, {'ok': true});
       expect(adapter.refreshCallCount, 1);
       expect(adapter.protectedCallCount, 2); // original (401) + retry (200)
+    },
+  );
+
+  test(
+    'a 401 from the login call is surfaced as is: no refresh, no replay of the login',
+    () async {
+      await expectLater(
+        dio.post<Map<String, dynamic>>('/api/v1/auth/login', data: {}),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.response?.statusCode,
+            'status',
+            401,
+          ),
+        ),
+      );
+
+      expect(adapter.refreshCallCount, 0);
+      expect(adapter.loginCallCount, 1);
     },
   );
 

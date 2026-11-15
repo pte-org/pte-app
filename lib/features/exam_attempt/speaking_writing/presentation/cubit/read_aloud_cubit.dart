@@ -51,6 +51,7 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
     _rowSubscription = _mediaDao
         .watchRow(attemptPublicId, pinnedItemPublicId)
         .listen((row) {
+          if (isClosed) return;
           emit(
             state.copyWith(
               uploadStatus: row == null
