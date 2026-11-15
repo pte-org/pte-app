@@ -29,7 +29,8 @@ class TokenRefreshInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode != 401) {
+    if (err.response?.statusCode != 401 ||
+        _isAuthEndpoint(err.requestOptions.path)) {
       handler.next(err);
       return;
     }
@@ -44,6 +45,17 @@ class TokenRefreshInterceptor extends Interceptor {
       handler.next(err);
     }
   }
+
+  /// A 401 from these calls answers the credentials in the request itself (a wrong password, a dead refresh
+  /// token), not an expired access token, so refreshing would only add a doomed round trip — and, with a leftover
+  /// refresh token on the device, could rotate it and replay the login.
+  static const List<String> _authPaths = [
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/logout',
+  ];
+
+  static bool _isAuthEndpoint(String path) => _authPaths.any(path.contains);
 
   Future<Response<dynamic>> _retryWithToken(
     RequestOptions options,
