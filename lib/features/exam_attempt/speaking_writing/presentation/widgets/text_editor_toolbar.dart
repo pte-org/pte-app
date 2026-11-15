@@ -35,6 +35,18 @@ class _TextEditorToolbarState extends State<TextEditorToolbar> {
   }
 
   @override
+  void didUpdateWidget(TextEditorToolbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_pushSnapshotOnEdit);
+      _undoStack.clear();
+      _redoStack.clear();
+      _lastSnapshot = widget.controller.text;
+      widget.controller.addListener(_pushSnapshotOnEdit);
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller.removeListener(_pushSnapshotOnEdit);
     super.dispose();
