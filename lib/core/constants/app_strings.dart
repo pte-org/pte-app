@@ -15,7 +15,7 @@ class AppStrings {
   static const String loginTitle = 'Sign in to your exam';
   static const String loginUsernameLabel = 'Login username';
   static const String loginUsernameHint =
-      'The username from your account e-mail or from your organization, e.g. center.a7k2m9xq.';
+      'Use the username your organization sent to your e-mail, e.g. center.a7k2m9xq.';
   static const String loginPasswordLabel = 'Login password';
   static const String loginSessionIdLabel = 'Exam code (optional)';
   static const String loginSessionIdRequiredLabel = 'Exam code';

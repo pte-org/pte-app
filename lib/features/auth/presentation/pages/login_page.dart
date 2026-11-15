@@ -72,7 +72,11 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildEmailField() {
     return TextFormField(
       controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
+      // A username such as `center.a7k2m9xq`, not an e-mail address: a plain text keyboard without
+      // auto-correction keeps it comfortable to type.
+      keyboardType: TextInputType.text,
+      autocorrect: false,
+      enableSuggestions: false,
       style: const TextStyle(
         fontFamily: AppTypography.fontFamily,
         fontSize: 12,
