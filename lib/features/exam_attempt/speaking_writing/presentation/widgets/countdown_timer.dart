@@ -36,10 +36,30 @@ class _CountdownTimerState extends State<CountdownTimer> {
   void initState() {
     super.initState();
     _remaining = widget.totalSeconds;
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _sub?.cancel();
+    if (_remaining <= 0) {
+      scheduleMicrotask(() {
+        if (mounted) widget.onExpired?.call();
+      });
+      return;
+    }
     final stream = (widget._ticker ?? _defaultTicker)(
       const Duration(seconds: 1),
     );
     _sub = stream.listen(_onTick);
+  }
+
+  @override
+  void didUpdateWidget(CountdownTimer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.totalSeconds != widget.totalSeconds || oldWidget._ticker != widget._ticker) {
+      _remaining = widget.totalSeconds;
+      _startTimer();
+    }
   }
 
   void _onTick(int _) {
