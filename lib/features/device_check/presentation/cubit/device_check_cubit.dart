@@ -155,7 +155,7 @@ class DeviceCheckCubit extends Cubit<DeviceCheckState> {
   }
 
   void _onPlaybackFinished(bool finished) {
-    if (!finished) return;
+    if (!finished || isClosed) return;
     switch (_nowPlaying) {
       case _NowPlaying.mic:
         emit(_withMic(phase: MicCheckPhase.playedBack, confirmed: null));
