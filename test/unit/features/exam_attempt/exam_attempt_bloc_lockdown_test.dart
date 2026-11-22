@@ -36,11 +36,17 @@ class _MockLockdownService extends Mock implements LockdownService {}
 
 class _MockHeartbeatService extends Mock implements HeartbeatService {}
 
-TaskView _task({String pinnedItemPublicId = 'item-1'}) {
+// By default every fixture task is the last one according to the server, so a
+// test only reloads the task list when it asks for a mid-exam task.
+TaskView _task({
+  String pinnedItemPublicId = 'item-1',
+  int orderIndex = 4,
+  int totalTasks = 5,
+}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
-    orderIndex: 1,
-    totalTasks: 5,
+    orderIndex: orderIndex,
+    totalTasks: totalTasks,
     section: 'READING',
     taskType: 'MC_READING_SINGLE',
     title: 'Task title',
@@ -95,7 +101,7 @@ void main() {
     ).thenAnswer((_) async => 'session-1');
     when(
       () => syncEngine.taskRejectedExternally,
-    ).thenAnswer((_) => const Stream<void>.empty());
+    ).thenAnswer((_) => const Stream<String>.empty());
     when(
       () => timerService.ticks,
     ).thenAnswer((_) => const Stream<TimerSnapshot>.empty());
