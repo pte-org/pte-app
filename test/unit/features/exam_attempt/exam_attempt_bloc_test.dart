@@ -119,6 +119,9 @@ void main() {
     when(() => heartbeatService.start(any())).thenReturn(null);
     when(() => heartbeatService.stop()).thenReturn(null);
     when(() => heartbeatService.dispose()).thenReturn(null);
+    when(
+      () => heartbeatService.sessionClosed,
+    ).thenAnswer((_) => const Stream<void>.empty());
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
     when(
       () => lockdownService.activateAttemptExitGuard(
@@ -896,6 +899,73 @@ void main() {
         ]);
         verify(() => syncEngine.stopSync()).called(1);
         verify(() => timerService.stop()).called(1);
+        verify(() => mediaUploadCoordinator.stop()).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a forceSubmit() refused with SESSION_CLOSED ends the attempt instead of offering retry',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => repository.forceSubmit('attempt-1'),
+        ).thenThrow(const ForbiddenException('SESSION_CLOSED'));
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptSessionClosed>(),
+      ],
+      verify: (_) {
+        verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+        verify(() => syncEngine.stopSync()).called(1);
+        verify(() => timerService.stop()).called(1);
+        verify(() => mediaUploadCoordinator.stop()).called(1);
+      },
+    );
+
+    final sessionClosedSignal = StreamController<void>.broadcast();
+    tearDownAll(sessionClosedSignal.close);
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the heartbeat reporting SESSION_CLOSED ends the attempt and stops all syncing',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => heartbeatService.sessionClosed,
+        ).thenAnswer((_) => sessionClosedSignal.stream);
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        sessionClosedSignal.add(null);
+      },
+      wait: const Duration(milliseconds: 20),
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptSessionClosed>(),
+      ],
+      verify: (_) {
+        verifyNever(() => repository.forceSubmit(any()));
+        verify(() => syncEngine.stopSync()).called(1);
         verify(() => mediaUploadCoordinator.stop()).called(1);
       },
     );

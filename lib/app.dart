@@ -317,7 +317,9 @@ class StudentExamGateState extends State<StudentExamGate> {
       value: _bloc,
       child: BlocConsumer<ExamAttemptBloc, ExamAttemptState>(
         listener: (context, state) {
-          if (state is AttemptInProgress || state is AttemptCompleted) {
+          if (state is AttemptInProgress ||
+              state is AttemptCompleted ||
+              state is AttemptSessionClosed) {
             _attemptStarted = true;
           }
           if (state is AttemptInProgress) {
@@ -372,6 +374,19 @@ class StudentExamGateState extends State<StudentExamGate> {
               canRetry: state.canRetry,
               onContinue: _resetToLogin,
               onRetry: _retrySession,
+            );
+          }
+          if (state is AttemptSessionClosed) {
+            return StatusScreen(
+              icon: Icons.timer_off_outlined,
+              title: ExamAttemptStrings.sessionEndedTitle,
+              message: ExamAttemptStrings.sessionEndedMessage,
+              children: [
+                PrimaryButton(
+                  label: ExamAttemptStrings.sessionEndedLeaveButton,
+                  onPressed: _resetToLogin,
+                ),
+              ],
             );
           }
           if (state is AttemptError) {

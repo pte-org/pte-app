@@ -109,6 +109,12 @@ final class ForceSubmitRequested extends ExamAttemptEvent {
   final AdvanceReason reason;
 }
 
+/// The server reported `SESSION_CLOSED` for the running attempt (heartbeat or
+/// submit). Ends the attempt locally; the server already settled it.
+final class SessionClosedDetected extends ExamAttemptEvent {
+  const SessionClosedDetected();
+}
+
 /// `kDebugMode`-only: seeds [task] straight into `AttemptInProgress` without
 /// any repository/network call, so a dev-preview screen (e.g.
 /// `SpeakingWritingTaskPreviewScreen`) can drive `AutoRecordTimerBridgeMixin`'s

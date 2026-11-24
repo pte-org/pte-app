@@ -111,6 +111,15 @@ final class AttemptCompleted extends ExamAttemptState {
   final bool canRetry;
 }
 
+/// The exam session was closed (by the host or at its end time) while the
+/// student was still working. The server settles the attempt itself — only
+/// answers already saved count — so the student can only leave.
+final class AttemptSessionClosed extends ExamAttemptState {
+  const AttemptSessionClosed(this.attemptPublicId);
+
+  final String attemptPublicId;
+}
+
 /// Carries either a Phase 1 [ApiException] (attempt-lifecycle call
 /// failed) or this feature's `SessionResolutionException` (exam code
 /// couldn't be resolved) — both reach the same error state, per phase-03

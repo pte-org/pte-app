@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:logger/logger.dart';
 
 import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 
 /// Matches [Timer.periodic]'s signature so a fake factory can be injected
 /// for deterministic tests (no real wall-clock waits) — same pattern
@@ -41,6 +43,12 @@ class HeartbeatService {
 
   Timer? _timer;
   String? _runningAttemptId;
+  final StreamController<void> _sessionClosed = StreamController<void>.broadcast();
+
+  /// Fires once the server answers a heartbeat with `SESSION_CLOSED` — the host
+  /// (or the schedule) closed the exam, so nothing more can be saved for this
+  /// attempt. The heartbeat stops itself; the owner decides what the student sees.
+  Stream<void> get sessionClosed => _sessionClosed.stream;
 
   /// Starts pinging immediately (not waiting for the first interval to
   /// elapse) and every [_interval] thereafter. A no-op if already running
@@ -74,9 +82,18 @@ class HeartbeatService {
   /// Never throws, never surfaces to the caller — a failed heartbeat is
   /// purely informational for the (separate) connectivity-monitoring
   /// feature and must never affect the exam flow (Phase 4 Risk mitigation).
+  /// The one exception is a closed session, reported on [sessionClosed].
   Future<void> _beat(String attemptPublicId) async {
     try {
       await _apiClient.sendHeartbeat(attemptPublicId);
+    } on ForbiddenException catch (e) {
+      if (e.message == ExamAttemptStrings.sessionClosedCode &&
+          _runningAttemptId == attemptPublicId) {
+        stop();
+        _sessionClosed.add(null);
+        return;
+      }
+      _logger.w('Heartbeat refused, retrying in $_interval', error: e);
     } catch (e, stackTrace) {
       _logger.w(
         'Heartbeat failed, retrying in $_interval',
@@ -94,5 +111,8 @@ class HeartbeatService {
 
   /// Terminal teardown — not called between attempts, only at app/service
   /// teardown, mirroring `TimerService.dispose`/`SyncEngine.dispose`.
-  void dispose() => stop();
+  void dispose() {
+    stop();
+    unawaited(_sessionClosed.close());
+  }
 }
