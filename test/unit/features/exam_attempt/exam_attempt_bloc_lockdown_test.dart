@@ -133,6 +133,9 @@ void main() {
     when(() => heartbeatService.stop()).thenReturn(null);
     when(() => heartbeatService.dispose()).thenReturn(null);
     when(
+      () => heartbeatService.sessionClosed,
+    ).thenAnswer((_) => const Stream<void>.empty());
+    when(
       () => lockdownService.activateLockdown(
         mode: any(named: 'mode'),
         attemptPublicId: any(named: 'attemptPublicId'),

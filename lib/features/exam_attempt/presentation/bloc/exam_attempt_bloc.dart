@@ -8,6 +8,7 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_navigation_constants.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -51,6 +52,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     on<ForceSubmitRequested>(_onForceSubmitRequested);
     on<DevPreviewAttemptSeeded>(_onDevPreviewAttemptSeeded);
     on<AppResumed>(_onAppResumed);
+    on<SessionClosedDetected>(_onSessionClosedDetected);
     _timerTicksSubscription = _timerService.ticks.listen(
       (snapshot) => add(TimerSnapshotUpdated(snapshot)),
     );
@@ -60,6 +62,9 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     _taskRejectedSubscription = _syncEngine.taskRejectedExternally.listen(
       (pinnedItemPublicId) =>
           add(SyncTaskRejectedExternally(pinnedItemPublicId)),
+    );
+    _sessionClosedSubscription = _heartbeatService.sessionClosed.listen(
+      (_) => add(const SessionClosedDetected()),
     );
   }
 
@@ -74,6 +79,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
   late final StreamSubscription<String> _taskRejectedSubscription;
+  late final StreamSubscription<void> _sessionClosedSubscription;
 
   /// When the current task became active through an advance. `null` after a
   /// fresh start or resume, so reopening the app never triggers the Next
@@ -412,6 +418,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         canRetry: response.canRetry,
       );
     } catch (e) {
+      if (_isSessionClosed(e)) {
+        await _endBecauseSessionClosed(attemptPublicId, emit);
+        return;
+      }
       final latestState = state;
       if (latestState is AttemptInProgress &&
           latestState.attemptPublicId == attemptPublicId) {
@@ -531,7 +541,53 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // If it fails, let the caller keep the attempt active and expose Retry;
     // forceSubmit is idempotent, so the next retry can re-run this boundary.
     await _lockdownService.allowExitAfterSubmission();
+    await _tearDownAttempt();
+    final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
+    _lastAdvanceReason = AdvanceReason.manual;
+    emit(
+      AttemptCompleted(
+        attemptPublicId,
+        timeExpired: timeExpired,
+        attemptNumber: attemptNumber,
+        remainingRetries: remainingRetries,
+        canRetry: canRetry,
+      ),
+    );
+  }
 
+  bool _isSessionClosed(Object error) =>
+      error is ForbiddenException &&
+      error.message == ExamAttemptStrings.sessionClosedCode;
+
+  Future<void> _onSessionClosedDetected(
+    SessionClosedDetected event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    await _endBecauseSessionClosed(attemptPublicId, emit);
+  }
+
+  /// The session closed under the student: the server already submitted the
+  /// attempt with whatever it had received, so there is nothing left to
+  /// retry. Stops all sync, releases the exam guard and lets the student leave.
+  Future<void> _endBecauseSessionClosed(
+    String attemptPublicId,
+    Emitter<ExamAttemptState> emit,
+  ) async {
+    if (_attemptPublicId != attemptPublicId) return;
+    try {
+      await _lockdownService.allowExitAfterSubmission();
+    } on Object catch (_) {
+      // The exam is over either way; a failing native unlock must not keep
+      // the student on a screen that can no longer do anything.
+    }
+    await _tearDownAttempt();
+    _lastAdvanceReason = AdvanceReason.manual;
+    emit(AttemptSessionClosed(attemptPublicId));
+  }
+
+  Future<void> _tearDownAttempt() async {
     _attemptPublicId = null;
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
@@ -559,17 +615,6 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // The native permission is already open; a failed flag teardown cannot
       // turn the completion surface into an unacknowledged exit path.
     }
-    final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
-    _lastAdvanceReason = AdvanceReason.manual;
-    emit(
-      AttemptCompleted(
-        attemptPublicId,
-        timeExpired: timeExpired,
-        attemptNumber: attemptNumber,
-        remainingRetries: remainingRetries,
-        canRetry: canRetry,
-      ),
-    );
   }
 
   Future<void> _emitFromResponse(
@@ -687,6 +732,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     unawaited(_timerTicksSubscription.cancel());
     unawaited(_taskAdvancedSubscription.cancel());
     unawaited(_taskRejectedSubscription.cancel());
+    unawaited(_sessionClosedSubscription.cancel());
     // Best-effort: if the bloc is being torn down while a lockdown
     // session is still active (force-quit, hot-restart, etc.) we want
     // the window back to a normal state. Errors are silently ignored

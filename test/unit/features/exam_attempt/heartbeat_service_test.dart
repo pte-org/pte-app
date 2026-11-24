@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:pte_app/core/network/api_client.dart';
+import 'package:pte_app/core/network/api_exceptions.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 
 class _MockApiClient extends Mock implements ApiClient {}
@@ -181,6 +182,50 @@ void main() {
       verify(() => apiClient.sendHeartbeat('attempt-1')).called(2);
     },
   );
+
+  test(
+    'SESSION_CLOSED is reported once on sessionClosed and stops the heartbeat',
+    () async {
+      final factory = _CapturingPeriodicFactory();
+      when(
+        () => apiClient.sendHeartbeat(any()),
+      ).thenThrow(const ForbiddenException('SESSION_CLOSED'));
+      final service = HeartbeatService(
+        apiClient: apiClient,
+        createPeriodicTimer: factory.call,
+      );
+      var closedSignals = 0;
+      service.sessionClosed.listen((_) => closedSignals++);
+
+      service.start('attempt-1');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(closedSignals, 1);
+      // Stopped: starting again for the same attempt is no longer a no-op.
+      service.start('attempt-1');
+      expect(factory.periods, hasLength(2));
+    },
+  );
+
+  test('a different 403 is swallowed like any failed heartbeat', () async {
+    final factory = _CapturingPeriodicFactory();
+    when(
+      () => apiClient.sendHeartbeat(any()),
+    ).thenThrow(const ForbiddenException('SOMETHING_ELSE'));
+    final service = HeartbeatService(
+      apiClient: apiClient,
+      createPeriodicTimer: factory.call,
+    );
+    var closedSignals = 0;
+    service.sessionClosed.listen((_) => closedSignals++);
+
+    service.start('attempt-1');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(closedSignals, 0);
+    service.start('attempt-1');
+    expect(factory.periods, hasLength(1));
+  });
 
   test('dispose() stops the chain', () async {
     final factory = _CapturingPeriodicFactory();

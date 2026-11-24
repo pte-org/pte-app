@@ -37,6 +37,15 @@ class ExamAttemptStrings {
   static const String sessionClosedCode = 'SESSION_CLOSED';
   static const String sessionClosedMessage =
       'This exam has already closed. Please contact your host if you need help.';
+  static const String attendanceRequiredCode = 'ATTENDANCE_REQUIRED';
+  static const String attendanceRequiredMessage =
+      "Your proctor hasn't checked you in yet. Please wait for check-in, then try again.";
+  static const String sessionEndedTitle ='The exam has ended';
+  static const String sessionEndedMessage =
+      'This exam was closed by the host or reached its end time. '
+      'Answers already saved have been submitted; anything not yet saved '
+      'could not be counted.';
+  static const String sessionEndedLeaveButton = 'Leave exam';
   static const String notEntitledCode = 'NOT_ENTITLED';
   static const String notEntitledMessage =
       "You aren't registered for this exam. Check the exam code or contact your host.";
