@@ -65,6 +65,45 @@ void main() {
   );
 
   test(
+    'markSyncedIfUnchanged leaves a row pending when a newer payload replaced the one that was sent',
+    () async {
+      await db.answerOutboxDao.upsertAnswer(
+        attemptPublicId: 'a1',
+        pinnedItemPublicId: 'p1',
+        payload: '',
+      );
+      // The real answer lands while the blank request is still in flight.
+      await db.answerOutboxDao.upsertAnswer(
+        attemptPublicId: 'a1',
+        pinnedItemPublicId: 'p1',
+        payload: 'media-1',
+      );
+
+      await db.answerOutboxDao.markSyncedIfUnchanged('a1', 'p1', '');
+
+      final row = (await db.answerOutboxDao.queryByAttempt('a1')).single;
+      expect(row.status, AnswerSyncStatus.pending.name);
+      expect(row.payload, 'media-1');
+    },
+  );
+
+  test(
+    'markSyncedIfUnchanged marks a row synced when the payload matches',
+    () async {
+      await db.answerOutboxDao.upsertAnswer(
+        attemptPublicId: 'a1',
+        pinnedItemPublicId: 'p1',
+        payload: 'x',
+      );
+
+      await db.answerOutboxDao.markSyncedIfUnchanged('a1', 'p1', 'x');
+
+      final row = (await db.answerOutboxDao.queryByAttempt('a1')).single;
+      expect(row.status, AnswerSyncStatus.synced.name);
+    },
+  );
+
+  test(
     'queryPendingByAttempt returns only pending rows, never synced/terminalRejected ones',
     () async {
       await db.answerOutboxDao.upsertAnswer(
@@ -77,7 +116,7 @@ void main() {
         pinnedItemPublicId: 'synced-1',
         payload: 'x',
       );
-      await db.answerOutboxDao.markSynced('a1', 'synced-1');
+      await db.answerOutboxDao.markSyncedIfUnchanged('a1', 'synced-1', 'x');
       await db.answerOutboxDao.upsertAnswer(
         attemptPublicId: 'a1',
         pinnedItemPublicId: 'rejected-1',

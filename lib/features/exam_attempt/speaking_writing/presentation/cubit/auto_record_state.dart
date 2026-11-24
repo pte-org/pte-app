@@ -22,6 +22,9 @@ class AutoRecordState extends Equatable implements UploadTrackingState {
   @override
   final PendingMediaUploadStatus? uploadStatus;
 
+  @override
+  bool get hasLocalRecording => recordingPhase == RecordingPhase.recorded;
+
   AutoRecordState copyWith({
     RecordingPhase? recordingPhase,
     PendingMediaUploadStatus? uploadStatus,

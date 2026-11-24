@@ -367,5 +367,14 @@ class MediaUploadCoordinator {
       payload: row.mediaPublicId!,
     );
     await _mediaDao.deleteRow(row.attemptPublicId, row.pinnedItemPublicId);
+    // The answer now references the server-side media id, so the local WAV is
+    // no longer needed. Best-effort: a failed delete must never undo a
+    // finished upload.
+    try {
+      final file = File(row.localFilePath);
+      if (await file.exists()) await file.delete();
+    } on FileSystemException catch (e) {
+      _logger.w('Could not delete uploaded recording file', error: e);
+    }
   }
 }

@@ -54,7 +54,7 @@ void main() {
         payload: any(named: 'payload'),
       ),
     ).thenAnswer((_) async {});
-    when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    when(() => syncEngine.submitForAdvance(any())).thenAnswer((_) async {});
 
     const snapshot = TimerSnapshot(
       phase: TimerPhase.response,
@@ -109,7 +109,26 @@ void main() {
   testWidgets(
     'the advance button is still present in the fallback state — the student is never stuck',
     (tester) async {
-      await tester.pumpWidget(buildSubject(_taskWithout(null)));
+      // Next only exists while a later task follows, so seed a two-task attempt.
+      final task = _taskWithout(null);
+      const snapshot = TimerSnapshot(
+        phase: TimerPhase.response,
+        remaining: Duration(seconds: 30),
+        currentOrderIndex: 1,
+      );
+      final state = AttemptInProgress(
+        'attempt-1',
+        task,
+        snapshot,
+        allTasks: [task, task],
+      );
+      when(() => bloc.state).thenReturn(state);
+      whenListen(
+        bloc,
+        const Stream<ExamAttemptState>.empty(),
+        initialState: state,
+      );
+      await tester.pumpWidget(buildSubject(task));
 
       expect(find.byType(ElevatedButton), findsOneWidget);
     },

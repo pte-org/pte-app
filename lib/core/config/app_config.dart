@@ -38,4 +38,9 @@ class AppConfig {
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 10);
   static const Duration sendTimeout = Duration(seconds: 10);
+
+  /// Recorded answers are uncompressed WAV (3–7 MB), so the direct Cloudinary
+  /// upload needs far longer than a JSON gateway call on a slow uplink.
+  static const Duration uploadSendTimeout = Duration(minutes: 2);
+  static const Duration uploadReceiveTimeout = Duration(minutes: 1);
 }

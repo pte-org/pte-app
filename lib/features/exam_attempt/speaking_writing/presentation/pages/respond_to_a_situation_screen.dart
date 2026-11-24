@@ -128,15 +128,15 @@ class _RespondToASituationScreenState extends State<RespondToASituationScreen>
         totalTasks: widget.task.totalTasks,
         body: _RespondToASituationBody(task: widget.task),
         bottomAction:
-            (widget.task.canNavigatePrevious || widget.task.canNavigateNext)
-            ? TaskAdvanceButton(
+            AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
+              pinnedItemPublicId: widget.task.pinnedItemPublicId,
+              syncEngine: widget.syncEngine,
+              child: TaskAdvanceButton(
                 syncEngine: widget.syncEngine,
                 autoAdvanceOnExpiration: false,
-              )
-            : AutoAdvanceOnUploadReady<AutoRecordCubit, AutoRecordState>(
-                pinnedItemPublicId: widget.task.pinnedItemPublicId,
-                syncEngine: widget.syncEngine,
+                beforeLeaving: _cubit.finalizeForAdvance,
               ),
+            ),
       ),
     );
   }

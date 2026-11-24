@@ -66,9 +66,10 @@ class SyncEngine {
   Timer? _periodicTimer;
   bool _isFlushing = false;
   Future<void>? _flushInFlight;
+  final Map<String, Future<void>> _advancesInFlight = {};
 
-  final StreamController<void> _taskRejectedController =
-      StreamController<void>.broadcast();
+  final StreamController<String> _taskRejectedController =
+      StreamController<String>.broadcast();
 
   /// Emits whenever a background flush discovers the currently-displayed
   /// task has already been closed out server-side (`NotCurrentTaskException`)
@@ -78,7 +79,11 @@ class SyncEngine {
   /// `currentOrderIndex` noticed by polling) but never emits at all as of
   /// client-side-exam-timer Phase 3, since polling was removed — this stream
   /// is the only one of the two still actually capable of firing.
-  Stream<void> get taskRejectedExternally => _taskRejectedController.stream;
+  ///
+  /// Each event carries the pinned item id the server rejected, so the
+  /// listener can ignore a rejection for a task that is no longer displayed
+  /// instead of skipping one more task.
+  Stream<String> get taskRejectedExternally => _taskRejectedController.stream;
 
   /// Starts background outbox flushing for [attemptPublicId]. A no-op if
   /// already running for the *same* attempt. Throws [StateError] if called
@@ -190,6 +195,44 @@ class SyncEngine {
     await _flushOne(row, advance: advance);
   }
 
+  /// Submits the answer of [pinnedItemPublicId] and moves the server pointer,
+  /// for every "go to the next task" action (Next button, timer expiry).
+  ///
+  /// Unlike [flushOne] this always calls the server: an existing outbox row is
+  /// re-sent in whatever status it has (re-sending an identical payload is
+  /// harmless), and a task with no row yet is stored and sent as a blank
+  /// answer so an untouched task still advances the pointer. Failures follow
+  /// [_flushOne]: retryable errors leave the row pending, never throw.
+  ///
+  /// A second call for a task whose submit is still running joins it, so the
+  /// Next button and the Speaking auto-advance never send the same task twice.
+  Future<void> submitForAdvance(String pinnedItemPublicId) {
+    final running = _advancesInFlight[pinnedItemPublicId];
+    if (running != null) return running;
+    // Block body on purpose: `Map.remove` returns this very future, and a
+    // `whenComplete` callback that returns a future is awaited (deadlock).
+    final submit = _submitForAdvance(pinnedItemPublicId).whenComplete(() {
+      _advancesInFlight.remove(pinnedItemPublicId);
+    });
+    _advancesInFlight[pinnedItemPublicId] = submit;
+    return submit;
+  }
+
+  Future<void> _submitForAdvance(String pinnedItemPublicId) async {
+    final attemptId = _runningAttemptId;
+    if (attemptId == null) return;
+    // Insert-if-absent: a real answer written by a cubit or the media
+    // uploader in the meantime must never be overwritten by the blank.
+    await _outboxDao.insertAnswerIfAbsent(
+      attemptPublicId: attemptId,
+      pinnedItemPublicId: pinnedItemPublicId,
+      payload: '',
+    );
+    final row = await _outboxDao.getAnswer(attemptId, pinnedItemPublicId);
+    if (row == null) return;
+    await _flushOne(row, advance: true);
+  }
+
   Future<void> _flush(
     String attemptPublicId, {
     bool includeActiveTask = false,
@@ -288,9 +331,10 @@ class SyncEngine {
           );
         }
       }
-      await _outboxDao.markSynced(
+      await _outboxDao.markSyncedIfUnchanged(
         answer.attemptPublicId,
         answer.pinnedItemPublicId,
+        answer.payload,
       );
       _backoff.reset();
     } on NotCurrentTaskException catch (e) {
@@ -303,7 +347,7 @@ class SyncEngine {
         answer.pinnedItemPublicId,
         e.message,
       );
-      _taskRejectedController.add(null);
+      _taskRejectedController.add(answer.pinnedItemPublicId);
     } on ConflictException catch (e) {
       // Generic fallback — an already-submitted answer or any other/future
       // 409 cause not yet given its own type. Still terminal (Phase 2's

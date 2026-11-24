@@ -52,7 +52,7 @@ void main() {
         payload: any(named: 'payload'),
       ),
     ).thenAnswer((_) async {});
-    when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    when(() => syncEngine.submitForAdvance(any())).thenAnswer((_) async {});
 
     const snapshot = TimerSnapshot(
       phase: TimerPhase.response,

@@ -83,7 +83,9 @@ void main() {
           payload: any(named: 'payload'),
         ),
       ).thenAnswer((_) async => _okResponse());
-      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final engine = SyncEngine(
         outboxDao: dao,
@@ -102,7 +104,9 @@ void main() {
           payload: 'payload',
         ),
       ).called(1);
-      verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+      verify(
+        () => dao.markSyncedIfUnchanged('attempt-1', 'p1', any()),
+      ).called(1);
     },
   );
 
@@ -135,7 +139,7 @@ void main() {
       verify(
         () => dao.markTerminalRejected('attempt-1', 'p1', 'NOT_CURRENT_TASK'),
       ).called(1);
-      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markSyncedIfUnchanged(any(), any(), any()));
     },
   );
 
@@ -172,7 +176,7 @@ void main() {
           'Request rejected (400)',
         ),
       ).called(1);
-      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markSyncedIfUnchanged(any(), any(), any()));
     },
   );
 
@@ -199,7 +203,7 @@ void main() {
       canaryController.add(null);
       await Future<void>.delayed(Duration.zero);
 
-      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markSyncedIfUnchanged(any(), any(), any()));
       verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
     },
   );
@@ -227,7 +231,7 @@ void main() {
       canaryController.add(null);
       await Future<void>.delayed(Duration.zero);
 
-      verifyNever(() => dao.markSynced(any(), any()));
+      verifyNever(() => dao.markSyncedIfUnchanged(any(), any(), any()));
       verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
       verifyNever(() => dao.markPending(any(), any()));
     },
@@ -274,7 +278,9 @@ void main() {
           payload: any(named: 'payload'),
         ),
       ).thenAnswer((_) async => _okResponse());
-      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final engine = SyncEngine(
         outboxDao: dao,
@@ -327,7 +333,9 @@ void main() {
           payload: any(named: 'payload'),
         ),
       ).thenAnswer((_) async => _okResponse());
-      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final engine = SyncEngine(
         outboxDao: dao,
@@ -407,7 +415,9 @@ void main() {
           payload: any(named: 'payload'),
         ),
       ).thenAnswer((_) async => _okResponse());
-      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final engine = SyncEngine(
         outboxDao: dao,
@@ -442,6 +452,202 @@ void main() {
       ).called(1);
     },
   );
+
+  group('submitForAdvance', () {
+    setUp(() {
+      when(
+        () => dao.insertAnswerIfAbsent(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async {});
+    });
+
+    SyncEngine startedEngine() {
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+      engine.startSync('attempt-1');
+      addTearDown(engine.stopSync);
+      return engine;
+    }
+
+    void stubSubmit() {
+      when(
+        () => apiClient.submitAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async => _okResponse());
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
+    }
+
+    test(
+      'a task with no outbox row is stored and submitted as a blank answer',
+      () async {
+        when(
+          () => dao.getAnswer('attempt-1', 'p1'),
+        ).thenAnswer((_) async => _row(pinnedItemPublicId: 'p1', payload: ''));
+        stubSubmit();
+
+        await startedEngine().submitForAdvance('p1');
+
+        verify(
+          () => dao.insertAnswerIfAbsent(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            payload: '',
+          ),
+        ).called(1);
+        verify(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            payload: '',
+          ),
+        ).called(1);
+        verify(
+          () => dao.markSyncedIfUnchanged('attempt-1', 'p1', any()),
+        ).called(1);
+      },
+    );
+
+    test(
+      'an already synced row is re-submitted with its own payload, not blanked',
+      () async {
+        when(() => dao.getAnswer('attempt-1', 'p1')).thenAnswer(
+          (_) async => _row(
+            pinnedItemPublicId: 'p1',
+            payload: 'my answer',
+            status: AnswerSyncStatus.synced,
+          ),
+        );
+        stubSubmit();
+
+        await startedEngine().submitForAdvance('p1');
+
+        // The blank insert is insert-or-ignore in the DAO, so the stored row
+        // (not the blank) is what gets submitted.
+        verify(
+          () => apiClient.submitAnswer(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'p1',
+            payload: 'my answer',
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'a network failure leaves the row pending and does not throw',
+      () async {
+        when(
+          () => dao.getAnswer('attempt-1', 'p1'),
+        ).thenAnswer((_) async => _row(pinnedItemPublicId: 'p1'));
+        when(
+          () => apiClient.submitAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenThrow(const NetworkException('offline'));
+
+        await startedEngine().submitForAdvance('p1');
+
+        verifyNever(() => dao.markSyncedIfUnchanged(any(), any(), any()));
+        verifyNever(() => dao.markTerminalRejected(any(), any(), any()));
+      },
+    );
+
+    test(
+      'a rejected task emits its own id on taskRejectedExternally',
+      () async {
+        when(
+          () => dao.getAnswer('attempt-1', 'p1'),
+        ).thenAnswer((_) async => _row(pinnedItemPublicId: 'p1'));
+        when(
+          () => apiClient.submitAnswer(
+            attemptPublicId: any(named: 'attemptPublicId'),
+            pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenThrow(const NotCurrentTaskException('NOT_CURRENT_TASK'));
+        when(
+          () => dao.markTerminalRejected(any(), any(), any()),
+        ).thenAnswer((_) async {});
+
+        final engine = startedEngine();
+        final rejected = <String>[];
+        final sub = engine.taskRejectedExternally.listen(rejected.add);
+        addTearDown(sub.cancel);
+
+        await engine.submitForAdvance('p1');
+        await Future<void>.delayed(Duration.zero);
+
+        expect(rejected, ['p1']);
+      },
+    );
+
+    test('does nothing when no attempt is running', () async {
+      final engine = SyncEngine(
+        outboxDao: dao,
+        apiClient: apiClient,
+        canary: canary,
+      );
+
+      await engine.submitForAdvance('p1');
+
+      verifyNever(() => dao.getAnswer(any(), any()));
+    });
+
+    test('concurrent calls for the same task share one submit', () async {
+      when(
+        () => dao.getAnswer('attempt-1', 'p1'),
+      ).thenAnswer((_) async => _row(pinnedItemPublicId: 'p1', payload: ''));
+      final gate = Completer<Response<void>>();
+      when(
+        () => apiClient.submitAnswer(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) => gate.future);
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
+
+      final engine = startedEngine();
+      final first = engine.submitForAdvance('p1');
+      final second = engine.submitForAdvance('p1');
+      await Future<void>.delayed(Duration.zero);
+      gate.complete(_okResponse());
+      await Future.wait([first, second]);
+
+      verify(
+        () => apiClient.submitAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'p1',
+          payload: '',
+        ),
+      ).called(1);
+
+      // The guard is released afterwards: a later call submits again.
+      await engine.submitForAdvance('p1');
+      verify(
+        () => apiClient.submitAnswer(
+          attemptPublicId: 'attempt-1',
+          pinnedItemPublicId: 'p1',
+          payload: '',
+        ),
+      ).called(1);
+    });
+  });
 
   group('Typed-409 dispatch and taskRejectedExternally regression', () {
     test(
@@ -547,7 +753,9 @@ void main() {
           now: () => currentTime,
         );
 
-        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markSyncedIfUnchanged(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
         // Pass 1: one pending row, submitAnswer throws RateLimitException
         // with no server-supplied Retry-After — falls back to the
@@ -621,7 +829,9 @@ void main() {
         ).thenAnswer((_) async => _okResponse());
 
         await engine.flushNow('attempt-1');
-        verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+        verify(
+          () => dao.markSyncedIfUnchanged('attempt-1', 'p1', any()),
+        ).called(1);
         expect(
           backoff.isActive,
           isFalse,
@@ -708,7 +918,9 @@ void main() {
             ciphertext: any(named: 'ciphertext'),
           ),
         ).thenAnswer((_) async => _okResponse());
-        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markSyncedIfUnchanged(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
         const encryptionPublicKey =
             'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmkRv1ibV6X9T/mPzAkvP68kJ7v+nhkV99yPj3EMYdGtrS4t8+41k6UJFKNKFe4ea7AfGQnl68XFgwQsezrOqEe5D2ildsNi6t8+MGfxbYFmN2QH4F/u2eTPjCH31RNeeuY0p0pjlL7nD2hX9GhGjRzz1juhu0Mvc5qPIVEsJKMjPpY/vhpccmPLtDU240hq5roEOV/NObL8HywJjiP8i9NUimPvDq8aA5f5lMdBj0ui3skCaF1J4lBVOST5KRjDBmAEGMloMbZstN2Q5LiVZWk1AQzL18zHQ9sNp0FzxlyD/iVXsYJEYCzYB4KoGttreCDyhzIeYnqZnyZia70jCwQIDAQAB';
@@ -734,7 +946,9 @@ void main() {
         ).called(1);
 
         // Verify the row is marked synced
-        verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+        verify(
+          () => dao.markSyncedIfUnchanged('attempt-1', 'p1', any()),
+        ).called(1);
       },
     );
 
@@ -751,7 +965,9 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).thenAnswer((_) async => _okResponse());
-        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markSyncedIfUnchanged(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
         final engine = SyncEngine(
           outboxDao: dao,
@@ -772,7 +988,9 @@ void main() {
           ),
         ).called(1);
 
-        verify(() => dao.markSynced('attempt-1', 'p1')).called(1);
+        verify(
+          () => dao.markSyncedIfUnchanged('attempt-1', 'p1', any()),
+        ).called(1);
       },
     );
 
@@ -789,7 +1007,9 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).thenAnswer((_) async => _okResponse());
-        when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+        when(
+          () => dao.markSyncedIfUnchanged(any(), any(), any()),
+        ).thenAnswer((_) async {});
 
         final engine = SyncEngine(
           outboxDao: dao,
@@ -877,7 +1097,9 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 20));
         return _okResponse();
       });
-      when(() => dao.markSynced(any(), any())).thenAnswer((_) async {});
+      when(
+        () => dao.markSyncedIfUnchanged(any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final engine = SyncEngine(
         outboxDao: dao,

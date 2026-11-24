@@ -43,6 +43,9 @@ class _MockSyncEngine extends Mock implements SyncEngine {}
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getTemporaryPath() async => '/tmp';
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '/tmp';
 }
 
 TaskView _readAloudTask({String pinnedItemPublicId = 'item-1'}) {
@@ -268,4 +271,23 @@ void main() {
       verifyNever(() => recorder.start(any()));
     },
   );
+
+  testWidgets('shows Next and no Previous while the prompt is being prepared', (
+    tester,
+  ) async {
+    const snapshot = TimerSnapshot(
+      phase: TimerPhase.prep,
+      remaining: Duration(seconds: 10),
+      currentOrderIndex: 1,
+    );
+    final task = _readAloudTask();
+    stubBlocState(
+      AttemptInProgress('attempt-1', task, snapshot, allTasks: [task, task]),
+    );
+
+    await tester.pumpWidget(buildSubject());
+
+    expect(find.widgetWithText(ElevatedButton, 'Next'), findsOneWidget);
+    expect(find.textContaining('Previous'), findsNothing);
+  });
 }
