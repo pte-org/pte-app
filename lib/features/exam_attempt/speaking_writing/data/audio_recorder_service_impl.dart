@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
 
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
@@ -23,6 +26,8 @@ class AudioRecorderServiceImpl
         (await _recorder.listInputDevices()).isEmpty) {
       throw const AudioInputUnavailableException();
     }
+    // The recorder plugin does not create missing parent folders.
+    await Directory(p.dirname(filePath)).create(recursive: true);
     await _recorder.start(
       const RecordConfig(encoder: AudioEncoder.wav, autoGain: true),
       path: filePath,

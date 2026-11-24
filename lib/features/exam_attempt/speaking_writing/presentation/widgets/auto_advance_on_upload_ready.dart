@@ -10,12 +10,15 @@ import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_blo
 import 'package:pte_app/features/exam_attempt/presentation/bloc/exam_attempt_event.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/upload_tracking_state.dart';
 
-/// Auto-advances once the recording finishes uploading — real PTE speaking
-/// tasks never wait for a manual tap once the response window ends: as soon
-/// as [PendingMediaUploadStatus.ready] is reached, this flushes the answer
-/// and requests the next task on its own. Renders nothing itself — each
-/// task-type screen's own status card is what shows upload progress to the
-/// student now.
+/// Auto-advances as soon as the recording is safely stored on the device —
+/// real PTE speaking tasks never wait for a manual tap once the response
+/// window ends, and the student must not wait on the network either. The
+/// upload keeps running in the background ([MediaUploadCoordinator]); its
+/// answer reaches the outbox once [PendingMediaUploadStatus.ready] and the
+/// terminal submit still blocks until every recording is uploaded. A
+/// [PendingMediaUploadStatus.ready] transition remains as a retry trigger if
+/// the first advance attempt failed. Renders nothing itself — each task-type
+/// screen's own status card shows upload progress.
 ///
 /// Generic over any bloc/state pair exposing [UploadTrackingState] —
 /// `StateStreamable<S>` is `flutter_bloc`'s own bound (the same one
@@ -92,8 +95,14 @@ class _AutoAdvanceOnUploadReadyState<
   Widget build(BuildContext context) {
     return BlocListener<C, S>(
       listenWhen: (previous, current) =>
-          previous.uploadStatus != PendingMediaUploadStatus.ready &&
-          current.uploadStatus == PendingMediaUploadStatus.ready,
+          // The row for this recording has just been written locally. Gated
+          // on this screen's own recording so a pre-existing row (e.g. on
+          // re-entering a task) never auto-advances by itself.
+          (previous.uploadStatus == null &&
+              current.uploadStatus != null &&
+              current.hasLocalRecording) ||
+          (previous.uploadStatus != PendingMediaUploadStatus.ready &&
+              current.uploadStatus == PendingMediaUploadStatus.ready),
       listener: (context, state) => unawaited(_advance()),
       child: widget.child,
     );

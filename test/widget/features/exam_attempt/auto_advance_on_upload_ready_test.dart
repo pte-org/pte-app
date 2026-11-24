@@ -120,6 +120,71 @@ void main() {
       );
 
       testWidgets(
+        'advances as soon as the recording row is written locally, without waiting for the upload',
+        (tester) async {
+          stubCubitState(
+            const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+          );
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.recorded,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verify(() => syncEngine.submitForAdvance('item-1')).called(1);
+          verify(
+            () => bloc.add(
+              const NextTaskRequested(fromPinnedItemPublicId: 'item-1'),
+            ),
+          ).called(1);
+
+          // The upload progressing and finishing later must not advance again.
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pump();
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.ready,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => syncEngine.submitForAdvance(any()));
+          verifyNever(() => bloc.add(any()));
+        },
+      );
+
+      testWidgets(
+        'a row that already existed on screen entry (no recording made here) never auto-advances',
+        (tester) async {
+          stubCubitState(const AutoRecordState());
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => syncEngine.submitForAdvance(any()));
+          verifyNever(() => bloc.add(any()));
+        },
+      );
+
+      testWidgets(
         'a later unrelated rebuild while already ready never advances a second time',
         (tester) async {
           stubCubitState(

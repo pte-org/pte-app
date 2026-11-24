@@ -50,6 +50,9 @@ class _MockMediaUploadCoordinator extends Mock
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getTemporaryPath() async => '/tmp';
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '/tmp';
 }
 
 TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {

@@ -13,15 +13,26 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 
-/// Resolves the local temp-file path a recording for `(attemptPublicId,
+/// Folder (inside the app's Documents directory, next to `pte_app.sqlite`)
+/// holding recordings that are waiting to be uploaded. Not the OS temp
+/// folder: the upload now continues in the background after the student
+/// leaves the task, and temp cleanup must not delete a pending answer.
+const String recordingsDirectoryName = 'recordings';
+
+/// Resolves the local file path a recording for `(attemptPublicId,
 /// pinnedItemPublicId)` is written to — deterministic per key so a
-/// restart can locate the same file (phase-06 Design Constraints).
+/// restart can locate the same file (phase-06 Design Constraints). The folder
+/// itself is created by the recorder right before it starts writing.
 Future<String> resolveRecordingFilePath(
   String attemptPublicId,
   String pinnedItemPublicId,
 ) async {
-  final dir = await getTemporaryDirectory();
-  return p.join(dir.path, '${attemptPublicId}_$pinnedItemPublicId.wav');
+  final documents = await getApplicationDocumentsDirectory();
+  return p.join(
+    documents.path,
+    recordingsDirectoryName,
+    '${attemptPublicId}_$pinnedItemPublicId.wav',
+  );
 }
 
 /// Owns start/stop recording and observes the resulting
