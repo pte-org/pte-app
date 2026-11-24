@@ -29,6 +29,7 @@ void main() {
       'SESSION_NOT_STARTED': ExamAttemptStrings.sessionNotStartedMessage,
       'SESSION_CLOSED': ExamAttemptStrings.sessionClosedMessage,
       'NOT_ENTITLED': ExamAttemptStrings.notEntitledMessage,
+      'ATTENDANCE_REQUIRED': ExamAttemptStrings.attendanceRequiredMessage,
     };
     cases.forEach((code, message) {
       test(code, () {
