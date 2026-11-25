@@ -13,6 +13,7 @@ import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/listening/data/audio_player_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/audio_prompt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_attempt_repository_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/repositories/exam_code_session_entry_repository.dart';
@@ -65,11 +66,18 @@ void setupExamAttemptModule() {
     () => AudioRecorderServiceImpl(),
   );
 
+  // One cache per app run, shared by the bloc (downloads, clears at attempt
+  // end) and every listening player (reads). Own unauthenticated Dio.
+  getIt.registerLazySingleton<AttemptAudioCache>(() => AttemptAudioCache());
+
   // Not a singleton: each listening screen's cubit needs its own player
   // instance (one `close()` per task, not shared across tasks) — phase-01
   // Design Constraints. registerFactory gives a fresh instance per get().
   getIt.registerFactory<AudioPlayerService>(
-    () => AudioPlayerServiceImpl(volumeService: getIt<VolumeService>()),
+    () => AudioPlayerServiceImpl(
+      volumeService: getIt<VolumeService>(),
+      audioCache: getIt<AttemptAudioCache>(),
+    ),
   );
 
   getIt.registerLazySingleton<MediaRepository>(
@@ -104,6 +112,7 @@ void setupExamAttemptModule() {
       mediaUploadCoordinator: getIt<MediaUploadCoordinator>(),
       lockdownService: getIt<LockdownService>(),
       heartbeatService: getIt<HeartbeatService>(),
+      audioCache: getIt<AttemptAudioCache>(),
     ),
   );
 }

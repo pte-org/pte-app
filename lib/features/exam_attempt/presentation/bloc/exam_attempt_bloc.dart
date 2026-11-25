@@ -9,6 +9,7 @@ import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_navigation_constants.dart';
 import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -34,8 +35,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required MediaUploadCoordinator mediaUploadCoordinator,
     required LockdownService lockdownService,
     required HeartbeatService heartbeatService,
+    AttemptAudioCache? audioCache,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now,
+       _audioCache = audioCache,
        _repository = repository,
        _sessionEntryRepository = sessionEntryRepository,
        _syncEngine = syncEngine,
@@ -69,6 +72,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   }
 
   final DateTime Function() _now;
+  final AttemptAudioCache? _audioCache;
   final ExamAttemptRepository _repository;
   final SessionEntryRepository _sessionEntryRepository;
   final SyncEngine _syncEngine;
@@ -498,6 +502,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       final safeIndex = resumeIndex < 0 ? 0 : resumeIndex;
       final resumeTask = freshTasks[safeIndex];
 
+      _prefetchAudio(freshTasks);
       _syncEngine.setActiveTask(resumeTask.pinnedItemPublicId);
       _timerService.seedFromTask(resumeTask);
       _timerService.startPolling(attemptPublicId);
@@ -587,8 +592,22 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     emit(AttemptSessionClosed(attemptPublicId));
   }
 
+  /// Background download of the attempt's listening audio so prompts keep
+  /// playing offline. Never blocks or fails the exam: a task whose audio is
+  /// not cached simply streams.
+  void _prefetchAudio(List<TaskView> tasks) {
+    final cache = _audioCache;
+    if (cache == null) return;
+    unawaited(
+      cache
+          .prefetch(tasks.map((t) => t.audioUrl))
+          .catchError((Object _) {}),
+    );
+  }
+
   Future<void> _tearDownAttempt() async {
     _attemptPublicId = null;
+    unawaited(_audioCache?.clear());
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
     _timerService.stop();
@@ -668,6 +687,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
     final safeIndex = currentIndex < 0 ? 0 : currentIndex;
 
+    _prefetchAudio(allTasks);
     _syncEngine.setActiveTask(task.pinnedItemPublicId);
     // Started on every in-progress transition, not just the first — a
     // no-op while already running (MediaUploadCoordinator.start()'s own
