@@ -10,6 +10,7 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/sync/submission_preparation_exception.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -38,6 +39,8 @@ class _MockHeartbeatService extends Mock implements HeartbeatService {}
 
 class _MockLockdownService extends Mock implements LockdownService {}
 
+class _MockAttemptAudioCache extends Mock implements AttemptAudioCache {}
+
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
 /// interface seam requires no `ExamAttemptBloc` change (phase-03 Steps 11).
@@ -57,6 +60,8 @@ TaskView _task({
   String pinnedItemPublicId = 'item-1',
   int orderIndex = 4,
   int totalTasks = 5,
+  String? audioUrl,
+  String? imageUrl,
 }) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
@@ -67,6 +72,8 @@ TaskView _task({
     title: 'Task title',
     prepSeconds: 30,
     responseSeconds: 60,
+    audioUrl: audioUrl,
+    imageUrl: imageUrl,
   );
 }
 
@@ -74,12 +81,19 @@ AttemptTaskResponse _inProgressResponse({
   String attemptPublicId = 'attempt-1',
   String pinnedItemPublicId = 'item-1',
   int orderIndex = 4,
+  String? audioUrl,
+  String? imageUrl,
 }) {
   return AttemptTaskResponse(
     attemptPublicId: attemptPublicId,
     attemptStatus: 'IN_PROGRESS',
     completed: false,
-    task: _task(pinnedItemPublicId: pinnedItemPublicId, orderIndex: orderIndex),
+    task: _task(
+      pinnedItemPublicId: pinnedItemPublicId,
+      orderIndex: orderIndex,
+      audioUrl: audioUrl,
+      imageUrl: imageUrl,
+    ),
     lockdownMode: 'NONE',
   );
 }
@@ -1293,6 +1307,103 @@ void main() {
       verify: (_) {
         verifyNever(() => repository.fetchNextTask(any()));
         verify(() => syncEngine.setActiveTask('item-2')).called(1);
+      },
+    );
+  });
+
+  group('Offline listening audio cache', () {
+    late _MockAttemptAudioCache audioCache;
+
+    setUp(() {
+      audioCache = _MockAttemptAudioCache();
+      when(() => audioCache.prefetch(any())).thenAnswer((_) async {});
+      when(() => audioCache.clear()).thenAnswer((_) async {});
+    });
+
+    ExamAttemptBloc buildCachedBloc() => ExamAttemptBloc(
+      repository: repository,
+      sessionEntryRepository: sessionEntryRepository,
+      syncEngine: syncEngine,
+      timerService: timerService,
+      mediaUploadCoordinator: mediaUploadCoordinator,
+      lockdownService: lockdownService,
+      heartbeatService: heartbeatService,
+      audioCache: audioCache,
+    );
+
+    void stubEntry(AttemptTaskResponse first, List<AttemptTaskResponse> all) {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => first);
+      when(
+        () => repository.fetchAllTasks('attempt-1'),
+      ).thenAnswer((_) async => all);
+    }
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'prefetches the audio and images of every loaded task once the attempt is in progress',
+      setUp: () => stubEntry(
+        _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
+        [
+          _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
+          _inProgressResponse(
+            pinnedItemPublicId: 'item-2',
+            imageUrl: 'https://cdn.test/2.png',
+          ),
+        ],
+      ),
+      build: buildCachedBloc,
+      act: (bloc) =>
+          bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        final urls =
+            verify(() => audioCache.prefetch(captureAny())).captured.single
+                as Iterable<String?>;
+        expect(urls.whereType<String>().toList(), [
+          'https://cdn.test/1.mp3',
+          'https://cdn.test/2.png',
+        ]);
+        verifyNever(() => audioCache.clear());
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a failing prefetch never breaks the exam',
+      setUp: () {
+        stubEntry(_inProgressResponse(), [_inProgressResponse()]);
+        when(
+          () => audioCache.prefetch(any()),
+        ).thenAnswer((_) async => throw StateError('disk full'));
+      },
+      build: buildCachedBloc,
+      act: (bloc) =>
+          bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'clears the cached audio when the attempt ends',
+      setUp: () {
+        stubEntry(_inProgressResponse(), [_inProgressResponse()]);
+      },
+      build: buildCachedBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptCompleted>(),
+      ],
+      verify: (_) {
+        verify(() => audioCache.clear()).called(1);
       },
     );
   });

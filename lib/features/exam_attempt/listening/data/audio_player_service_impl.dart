@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 
 import 'package:pte_app/core/audio/volume_service.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/listening/domain/audio_player_service.dart';
 
 /// `just_audio`-backed impl. [play]'s `source` is a Flutter asset path (e.g.
@@ -18,9 +19,13 @@ class AudioPlayerServiceImpl
         PreviewPlaybackControls,
         PreviewPlaybackReplayControls,
         PlaybackFailureSource {
-  AudioPlayerServiceImpl({AudioPlayer? player, VolumeService? volumeService})
-    : _player = player ?? AudioPlayer(),
-      _volumeService = volumeService {
+  AudioPlayerServiceImpl({
+    AudioPlayer? player,
+    VolumeService? volumeService,
+    AttemptAudioCache? audioCache,
+  }) : _player = player ?? AudioPlayer(),
+       _volumeService = volumeService,
+       _audioCache = audioCache {
     _stateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _hasFinishedPlayingController.add(true);
@@ -50,6 +55,7 @@ class AudioPlayerServiceImpl
   }
 
   final VolumeService? _volumeService;
+  final AttemptAudioCache? _audioCache;
   late final StreamSubscription<PlayerState> _stateSubscription;
   final StreamController<bool> _hasFinishedPlayingController =
       StreamController<bool>.broadcast();
@@ -62,11 +68,26 @@ class AudioPlayerServiceImpl
   @override
   Future<void> play(String source) async {
     if (source.startsWith('http://') || source.startsWith('https://')) {
-      await _player.setUrl(source);
+      await _setRemoteSource(source);
     } else {
       await _player.setAsset(source);
     }
     _startPlayback();
+  }
+
+  /// Prefers the attempt's downloaded copy so the prompt still plays offline;
+  /// streams the URL when there is no usable local file.
+  Future<void> _setRemoteSource(String url) async {
+    final localPath = _audioCache?.localPathFor(url);
+    if (localPath != null) {
+      try {
+        await _player.setFilePath(localPath);
+        return;
+      } on Object catch (_) {
+        // Unreadable local copy: fall back to streaming below.
+      }
+    }
+    await _player.setUrl(url);
   }
 
   @override
