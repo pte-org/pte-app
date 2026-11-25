@@ -10,10 +10,23 @@ import 'package:pte_app/core/config/app_config.dart';
 
 const _cacheDirName = 'pte_attempt_audio';
 const _maxParallelDownloads = 3;
-const _knownExtensions = {'.mp3', '.wav', '.m4a', '.aac', '.ogg', '.opus'};
+const _knownExtensions = {
+  '.mp3',
+  '.wav',
+  '.m4a',
+  '.aac',
+  '.ogg',
+  '.opus',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
+};
 
-/// Keeps a local copy of an attempt's listening audio so a prompt still
-/// plays after the network drops mid-exam.
+/// Keeps a local copy of an attempt's listening audio and task images so a
+/// prompt still plays, and an image still shows, after the network drops
+/// mid-exam.
 ///
 /// Files live in a private temp folder under random names and are deleted by
 /// [clear] when the attempt ends. A leftover folder from an earlier run

@@ -61,6 +61,7 @@ TaskView _task({
   int orderIndex = 4,
   int totalTasks = 5,
   String? audioUrl,
+  String? imageUrl,
 }) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
@@ -72,6 +73,7 @@ TaskView _task({
     prepSeconds: 30,
     responseSeconds: 60,
     audioUrl: audioUrl,
+    imageUrl: imageUrl,
   );
 }
 
@@ -80,6 +82,7 @@ AttemptTaskResponse _inProgressResponse({
   String pinnedItemPublicId = 'item-1',
   int orderIndex = 4,
   String? audioUrl,
+  String? imageUrl,
 }) {
   return AttemptTaskResponse(
     attemptPublicId: attemptPublicId,
@@ -89,6 +92,7 @@ AttemptTaskResponse _inProgressResponse({
       pinnedItemPublicId: pinnedItemPublicId,
       orderIndex: orderIndex,
       audioUrl: audioUrl,
+      imageUrl: imageUrl,
     ),
     lockdownMode: 'NONE',
   );
@@ -1340,14 +1344,14 @@ void main() {
     }
 
     blocTest<ExamAttemptBloc, ExamAttemptState>(
-      'prefetches the audio of every loaded task once the attempt is in progress',
+      'prefetches the audio and images of every loaded task once the attempt is in progress',
       setUp: () => stubEntry(
         _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
         [
           _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
           _inProgressResponse(
             pinnedItemPublicId: 'item-2',
-            audioUrl: 'https://cdn.test/2.mp3',
+            imageUrl: 'https://cdn.test/2.png',
           ),
         ],
       ),
@@ -1359,9 +1363,9 @@ void main() {
         final urls =
             verify(() => audioCache.prefetch(captureAny())).captured.single
                 as Iterable<String?>;
-        expect(urls.toList(), [
+        expect(urls.whereType<String>().toList(), [
           'https://cdn.test/1.mp3',
-          'https://cdn.test/2.mp3',
+          'https://cdn.test/2.png',
         ]);
         verifyNever(() => audioCache.clear());
       },

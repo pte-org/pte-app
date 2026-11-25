@@ -69,6 +69,21 @@ void main() {
     expect(a, isNot(contains('cdn.test')));
   });
 
+  test('downloads task images and keeps their extension', () async {
+    final cache = build(_FakeAudioAdapter());
+
+    await cache.prefetch([
+      'https://cdn.test/describe.png?sig=abc',
+      'https://cdn.test/other.jpg',
+    ]);
+
+    expect(
+      cache.localPathFor('https://cdn.test/describe.png?sig=abc'),
+      endsWith('.png'),
+    );
+    expect(cache.localPathFor('https://cdn.test/other.jpg'), endsWith('.jpg'));
+  });
+
   test('never sends an Authorization header', () async {
     final adapter = _FakeAudioAdapter();
     await build(adapter).prefetch(['https://cdn.test/a.mp3']);

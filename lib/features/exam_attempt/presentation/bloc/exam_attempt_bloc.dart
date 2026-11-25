@@ -592,15 +592,15 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     emit(AttemptSessionClosed(attemptPublicId));
   }
 
-  /// Background download of the attempt's listening audio so prompts keep
-  /// playing offline. Never blocks or fails the exam: a task whose audio is
-  /// not cached simply streams.
+  /// Background download of the attempt's listening audio and task images so
+  /// prompts keep playing and images keep showing offline. Never blocks or
+  /// fails the exam: a task whose media is not cached simply streams.
   void _prefetchAudio(List<TaskView> tasks) {
     final cache = _audioCache;
     if (cache == null) return;
     unawaited(
       cache
-          .prefetch(tasks.map((t) => t.audioUrl))
+          .prefetch(tasks.expand((t) => [t.imageUrl, t.audioUrl]))
           .catchError((Object _) {}),
     );
   }
