@@ -13,15 +13,26 @@ import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/domain/audio_recorder_service.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/presentation/cubit/auto_record_state.dart';
 
-/// Resolves the local temp-file path a recording for `(attemptPublicId,
+/// Folder (inside the app's Documents directory, next to `pte_app.sqlite`)
+/// holding recordings that are waiting to be uploaded. Not the OS temp
+/// folder: the upload now continues in the background after the student
+/// leaves the task, and temp cleanup must not delete a pending answer.
+const String recordingsDirectoryName = 'recordings';
+
+/// Resolves the local file path a recording for `(attemptPublicId,
 /// pinnedItemPublicId)` is written to — deterministic per key so a
-/// restart can locate the same file (phase-06 Design Constraints).
+/// restart can locate the same file (phase-06 Design Constraints). The folder
+/// itself is created by the recorder right before it starts writing.
 Future<String> resolveRecordingFilePath(
   String attemptPublicId,
   String pinnedItemPublicId,
 ) async {
-  final dir = await getTemporaryDirectory();
-  return p.join(dir.path, '${attemptPublicId}_$pinnedItemPublicId.wav');
+  final documents = await getApplicationDocumentsDirectory();
+  return p.join(
+    documents.path,
+    recordingsDirectoryName,
+    '${attemptPublicId}_$pinnedItemPublicId.wav',
+  );
 }
 
 /// Owns start/stop recording and observes the resulting
@@ -87,8 +98,15 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   /// in [onTimerSnapshot] — before the first `await` can yield — and cleared
   /// on completion (success *or* failure) so a later legitimate transition
   /// isn't permanently blocked.
-  bool _startInFlight = false;
-  bool _stopInFlight = false;
+  Future<void>? _startRun;
+
+  /// Set once the student leaves the task ([finalizeForAdvance]); from then on
+  /// the timer must not begin a new recording for a task that is being left.
+  bool _leaving = false;
+
+  /// The running stop, shared by the timer, [finalizeForAdvance] and [close] so
+  /// the recorder is stopped and the media row written exactly once.
+  Future<void>? _stopRun;
 
   /// Auto-starts/auto-stops recording purely from a forwarded [TimerSnapshot]
   /// and this cubit's own [RecordingPhase] — the caller (the screen, bridging
@@ -110,27 +128,82 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   void onTimerSnapshot(TimerSnapshot snapshot) {
     if (snapshot.phase != TimerPhase.response) return;
     if (state.recordingPhase == RecordingPhase.idle) {
-      if (_startInFlight) return;
-      _startInFlight = true;
-      unawaited(startRecording().whenComplete(() => _startInFlight = false));
+      if (_leaving || _startRun != null) return;
+      unawaited(startRecording());
     } else if (state.recordingPhase == RecordingPhase.recording &&
         snapshot.remaining <= Duration.zero) {
-      if (_stopInFlight) return;
-      _stopInFlight = true;
-      unawaited(stopRecording().whenComplete(() => _stopInFlight = false));
+      if (_stopRun != null) return;
+      // Best-effort: a failing stop must not surface as an unhandled error.
+      unawaited(_stopOnce().catchError((_) {}));
     }
   }
 
-  Future<void> startRecording() async {
+  /// Starts recording; concurrent callers share the run. Tracked in
+  /// [_startRun] so [finalizeForAdvance] and [close] can wait for a start that
+  /// is still resolving its path / opening the recorder (the phase is still
+  /// `idle` then, so a phase check alone would miss it and leave the shared
+  /// recorder running with no owner).
+  Future<void> startRecording() {
+    final running = _startRun;
+    if (running != null) return running;
+    final run = _startRecording().whenComplete(() {
+      _startRun = null;
+    });
+    _startRun = run;
+    return run;
+  }
+
+  Future<void> _startRecording() async {
+    if (_leaving || isClosed) return;
     try {
       final path = await _resolveFilePath(attemptPublicId, pinnedItemPublicId);
+      if (_leaving || isClosed) return;
       await _recorder.start(path);
+      if (isClosed) {
+        // Nobody is left to stop it: free the shared recorder.
+        await _recorder.stop();
+        return;
+      }
       emit(state.copyWith(recordingPhase: RecordingPhase.recording));
-    } on AudioInputUnavailableException {
-      emit(state.copyWith(recordingPhase: RecordingPhase.unavailable));
     } catch (_) {
-      emit(state.copyWith(recordingPhase: RecordingPhase.unavailable));
+      // Includes AudioInputUnavailableException — one mic-unavailable outcome.
+      if (!isClosed) {
+        emit(state.copyWith(recordingPhase: RecordingPhase.unavailable));
+      }
     }
+  }
+
+  Future<void> _awaitStart() async {
+    try {
+      await _startRun;
+    } catch (_) {}
+  }
+
+  /// Runs [stopRecording] once at a time; concurrent callers share the run.
+  Future<void> _stopOnce() {
+    final running = _stopRun;
+    if (running != null) return running;
+    final run = stopRecording().whenComplete(() {
+      _stopRun = null;
+    });
+    _stopRun = run;
+    return run;
+  }
+
+  /// Called by Next before the answer is submitted: if a recording is still
+  /// running, stops it and persists the partial file so its upload starts in
+  /// the background (never waits for the network). A no-op when nothing is
+  /// recording; failures are swallowed because leaving the task must not
+  /// depend on the recorder ([close] retries the stop).
+  Future<void> finalizeForAdvance() async {
+    _leaving = true;
+    await _awaitStart();
+    if (_stopRun == null && state.recordingPhase != RecordingPhase.recording) {
+      return;
+    }
+    try {
+      await _stopOnce();
+    } catch (_) {}
   }
 
   Future<void> stopRecording() async {
@@ -157,13 +230,14 @@ class AutoRecordCubit extends Cubit<AutoRecordState> {
   @override
   Future<void> close() async {
     unawaited(_rowSubscription.cancel());
+    _leaving = true;
+    await _awaitStart();
     // If navigation interrupts an active recording (e.g. a forced advance),
     // stop and persist the audio before tearing down so the partial answer is
     // uploaded in the background and the recorder is freed for the next task.
-    if (state.recordingPhase == RecordingPhase.recording && !_stopInFlight) {
-      _stopInFlight = true;
+    if (_stopRun != null || state.recordingPhase == RecordingPhase.recording) {
       try {
-        await stopRecording();
+        await _stopOnce();
       } catch (_) {
         // Best-effort: don't block cubit teardown on recorder errors.
       }

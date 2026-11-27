@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -313,5 +315,189 @@ void main() {
       ],
       verify: (_) => verify(() => recorder.stop()).called(1),
     );
+  });
+
+  group('AutoRecordCubit — finalizeForAdvance (Next during recording)', () {
+    test(
+      'stops a running recording, saves one media row and starts its upload',
+      () async {
+        when(
+          () => recorder.stop(),
+        ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+        final cubit = buildCubit()
+          ..emit(
+            const AutoRecordState(recordingPhase: RecordingPhase.recording),
+          );
+
+        await cubit.finalizeForAdvance();
+
+        expect(cubit.state.recordingPhase, RecordingPhase.recorded);
+        verify(
+          () => mediaDao.upsertRecorded(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            localFilePath: '/tmp/attempt-1_item-1.wav',
+          ),
+        ).called(1);
+        verify(
+          () => coordinator.attemptUpload('attempt-1', 'item-1'),
+        ).called(1);
+        await cubit.close();
+      },
+    );
+
+    test('is idempotent with the close-time stop', () async {
+      when(
+        () => recorder.stop(),
+      ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+      final cubit = buildCubit()
+        ..emit(const AutoRecordState(recordingPhase: RecordingPhase.recording));
+
+      await cubit.finalizeForAdvance();
+      await cubit.close();
+
+      verify(() => recorder.stop()).called(1);
+      verify(
+        () => mediaDao.upsertRecorded(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          localFilePath: any(named: 'localFilePath'),
+        ),
+      ).called(1);
+    });
+
+    test('shares a stop that the timer already started', () async {
+      final gate = Completer<String?>();
+      when(() => recorder.stop()).thenAnswer((_) => gate.future);
+      final cubit = buildCubit()
+        ..emit(const AutoRecordState(recordingPhase: RecordingPhase.recording));
+
+      cubit.onTimerSnapshot(
+        const TimerSnapshot(
+          phase: TimerPhase.response,
+          remaining: Duration.zero,
+          currentOrderIndex: 1,
+        ),
+      );
+      final finalized = cubit.finalizeForAdvance();
+      gate.complete('/tmp/attempt-1_item-1.wav');
+      await finalized;
+
+      verify(() => recorder.stop()).called(1);
+      expect(cubit.state.recordingPhase, RecordingPhase.recorded);
+      await cubit.close();
+    });
+
+    test('does nothing when no recording was started', () async {
+      final cubit = buildCubit();
+
+      await cubit.finalizeForAdvance();
+
+      verifyNever(() => recorder.stop());
+      verifyNever(
+        () => mediaDao.upsertRecorded(
+          attemptPublicId: any(named: 'attemptPublicId'),
+          pinnedItemPublicId: any(named: 'pinnedItemPublicId'),
+          localFilePath: any(named: 'localFilePath'),
+        ),
+      );
+      await cubit.close();
+    });
+
+    test('swallows a recorder failure so Next is never blocked', () async {
+      when(() => recorder.stop()).thenThrow(Exception('plugin died'));
+      final cubit = buildCubit()
+        ..emit(const AutoRecordState(recordingPhase: RecordingPhase.recording));
+
+      await expectLater(cubit.finalizeForAdvance(), completes);
+      await cubit.close();
+    });
+  });
+
+  group('AutoRecordCubit — leaving while a start is still resolving', () {
+    const responseSnapshot = TimerSnapshot(
+      phase: TimerPhase.response,
+      remaining: Duration(seconds: 20),
+      currentOrderIndex: 1,
+    );
+
+    test(
+      'Next waits for the in-flight start, then stops and saves the recording',
+      () async {
+        final startGate = Completer<void>();
+        when(() => recorder.start(any())).thenAnswer((_) => startGate.future);
+        when(
+          () => recorder.stop(),
+        ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+        final cubit = buildCubit();
+
+        cubit.onTimerSnapshot(responseSnapshot); // start begins, not finished
+        await Future<void>.delayed(Duration.zero);
+        expect(cubit.state.recordingPhase, RecordingPhase.idle);
+
+        final finalized = cubit.finalizeForAdvance();
+        startGate.complete();
+        await finalized;
+
+        verify(() => recorder.stop()).called(1);
+        verify(
+          () => mediaDao.upsertRecorded(
+            attemptPublicId: 'attempt-1',
+            pinnedItemPublicId: 'item-1',
+            localFilePath: '/tmp/attempt-1_item-1.wav',
+          ),
+        ).called(1);
+        await cubit.close();
+      },
+    );
+
+    test('after Next the timer never starts a new recording', () async {
+      final cubit = buildCubit();
+
+      await cubit.finalizeForAdvance();
+      cubit.onTimerSnapshot(responseSnapshot);
+      await Future<void>.delayed(Duration.zero);
+
+      verifyNever(() => recorder.start(any()));
+      await cubit.close();
+    });
+
+    test(
+      'close() during an in-flight start does not leave the recorder running',
+      () async {
+        final startGate = Completer<void>();
+        when(() => recorder.start(any())).thenAnswer((_) => startGate.future);
+        when(
+          () => recorder.stop(),
+        ).thenAnswer((_) async => '/tmp/attempt-1_item-1.wav');
+        final cubit = buildCubit();
+
+        cubit.onTimerSnapshot(responseSnapshot);
+        await Future<void>.delayed(Duration.zero);
+        final closing = cubit.close();
+        startGate.complete();
+        await closing;
+
+        verify(() => recorder.stop()).called(1);
+      },
+    );
+
+    test('a failing timer-path stop is swallowed, not unhandled', () async {
+      when(() => recorder.stop()).thenThrow(Exception('plugin died'));
+      final cubit = buildCubit()
+        ..emit(const AutoRecordState(recordingPhase: RecordingPhase.recording));
+
+      cubit.onTimerSnapshot(
+        const TimerSnapshot(
+          phase: TimerPhase.response,
+          remaining: Duration.zero,
+          currentOrderIndex: 1,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      verify(() => recorder.stop()).called(1);
+    });
   });
 }

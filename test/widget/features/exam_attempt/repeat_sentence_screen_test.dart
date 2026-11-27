@@ -50,6 +50,9 @@ class _MockAudioPromptRepository extends Mock
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getTemporaryPath() async => '/tmp';
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '/tmp';
 }
 
 /// Fixture matches the app's own dev fixture: `prepSeconds: 12` is the sum

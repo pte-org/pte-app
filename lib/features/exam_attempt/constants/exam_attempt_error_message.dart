@@ -35,6 +35,8 @@ String examAttemptFriendlyErrorMessage(Object error) {
         ExamAttemptStrings.sessionClosedMessage,
       ExamAttemptStrings.notEntitledCode =>
         ExamAttemptStrings.notEntitledMessage,
+      ExamAttemptStrings.attendanceRequiredCode =>
+        ExamAttemptStrings.attendanceRequiredMessage,
       _ => friendlyErrorMessage(error),
     };
   }

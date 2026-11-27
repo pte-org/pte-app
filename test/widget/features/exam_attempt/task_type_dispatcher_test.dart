@@ -50,6 +50,9 @@ class _MockMediaUploadCoordinator extends Mock
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getTemporaryPath() async => '/tmp';
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '/tmp';
 }
 
 TaskView _repeatSentenceTask({required String pinnedItemPublicId}) {
@@ -261,7 +264,7 @@ void main() {
         payload: any(named: 'payload'),
       ),
     ).thenAnswer((_) async {});
-    when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    when(() => syncEngine.submitForAdvance(any())).thenAnswer((_) async {});
     // The dispatcher restores the saved answer before building any screen.
     when(() => outboxDao.getAnswer(any(), any())).thenAnswer((_) async => null);
 

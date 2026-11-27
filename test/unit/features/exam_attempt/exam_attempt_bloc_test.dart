@@ -10,6 +10,7 @@ import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
 import 'package:pte_app/core/sync/submission_preparation_exception.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
@@ -38,6 +39,8 @@ class _MockHeartbeatService extends Mock implements HeartbeatService {}
 
 class _MockLockdownService extends Mock implements LockdownService {}
 
+class _MockAttemptAudioCache extends Mock implements AttemptAudioCache {}
+
 /// Stands in for "Member 3's eventual replacement" — a second, independent
 /// `SessionEntryRepository` implementation used only to prove the
 /// interface seam requires no `ExamAttemptBloc` change (phase-03 Steps 11).
@@ -51,28 +54,46 @@ class _AlternativeSessionEntryRepository implements SessionEntryRepository {
       _sessionPublicId;
 }
 
-TaskView _task({String pinnedItemPublicId = 'item-1'}) {
+// By default every fixture task is the last one according to the server, so a
+// test only reloads the task list when it asks for a mid-exam task.
+TaskView _task({
+  String pinnedItemPublicId = 'item-1',
+  int orderIndex = 4,
+  int totalTasks = 5,
+  String? audioUrl,
+  String? imageUrl,
+}) {
   return TaskView(
     pinnedItemPublicId: pinnedItemPublicId,
-    orderIndex: 1,
-    totalTasks: 5,
+    orderIndex: orderIndex,
+    totalTasks: totalTasks,
     section: 'READING',
     taskType: 'MC_READING_SINGLE',
     title: 'Task title',
     prepSeconds: 30,
     responseSeconds: 60,
+    audioUrl: audioUrl,
+    imageUrl: imageUrl,
   );
 }
 
 AttemptTaskResponse _inProgressResponse({
   String attemptPublicId = 'attempt-1',
   String pinnedItemPublicId = 'item-1',
+  int orderIndex = 4,
+  String? audioUrl,
+  String? imageUrl,
 }) {
   return AttemptTaskResponse(
     attemptPublicId: attemptPublicId,
     attemptStatus: 'IN_PROGRESS',
     completed: false,
-    task: _task(pinnedItemPublicId: pinnedItemPublicId),
+    task: _task(
+      pinnedItemPublicId: pinnedItemPublicId,
+      orderIndex: orderIndex,
+      audioUrl: audioUrl,
+      imageUrl: imageUrl,
+    ),
     lockdownMode: 'NONE',
   );
 }
@@ -112,6 +133,9 @@ void main() {
     when(() => heartbeatService.start(any())).thenReturn(null);
     when(() => heartbeatService.stop()).thenReturn(null);
     when(() => heartbeatService.dispose()).thenReturn(null);
+    when(
+      () => heartbeatService.sessionClosed,
+    ).thenAnswer((_) => const Stream<void>.empty());
     when(() => lockdownService.deactivateLockdown()).thenAnswer((_) async {});
     when(
       () => lockdownService.activateAttemptExitGuard(
@@ -137,7 +161,7 @@ void main() {
     when(() => syncEngine.stopSync()).thenReturn(null);
     when(
       () => syncEngine.taskRejectedExternally,
-    ).thenAnswer((_) => const Stream<void>.empty());
+    ).thenAnswer((_) => const Stream<String>.empty());
     when(
       () => timerService.ticks,
     ).thenAnswer((_) => const Stream<TimerSnapshot>.empty());
@@ -302,6 +326,248 @@ void main() {
       verifyNever(() => repository.fetchNextTask(any()));
     },
   );
+
+  group('NextTaskRequested forward-only guards', () {
+    var clock = DateTime(2026, 11, 22, 10);
+
+    ExamAttemptBloc buildClockedBloc() => ExamAttemptBloc(
+      repository: repository,
+      sessionEntryRepository: sessionEntryRepository,
+      syncEngine: syncEngine,
+      timerService: timerService,
+      mediaUploadCoordinator: mediaUploadCoordinator,
+      lockdownService: lockdownService,
+      heartbeatService: heartbeatService,
+      now: () => clock,
+    );
+
+    void arrangeThreeTasks() {
+      clock = DateTime(2026, 11, 22, 10);
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
+      );
+      when(() => repository.fetchAllTasks('attempt-1')).thenAnswer(
+        (_) async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-1'),
+          _inProgressResponse(pinnedItemPublicId: 'item-2'),
+          _inProgressResponse(pinnedItemPublicId: 'item-3'),
+        ],
+      );
+    }
+
+    Future<void> start(ExamAttemptBloc bloc) async {
+      bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    int indexOf(ExamAttemptBloc bloc) =>
+        (bloc.state as AttemptInProgress).currentIndex;
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'two requests for the same task move exactly one task',
+      setUp: arrangeThreeTasks,
+      build: buildClockedBloc,
+      act: (bloc) async {
+        await start(bloc);
+        bloc.add(const NextTaskRequested(fromPinnedItemPublicId: 'item-1'));
+        bloc.add(const NextTaskRequested(fromPinnedItemPublicId: 'item-1'));
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) {
+        expect(indexOf(bloc), 1);
+        verify(() => syncEngine.setActiveTask('item-2')).called(1);
+        verifyNever(() => syncEngine.setActiveTask('item-3'));
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a tap right after a task became active is ignored; after the cooldown it moves on',
+      setUp: arrangeThreeTasks,
+      build: buildClockedBloc,
+      act: (bloc) async {
+        await start(bloc);
+        bloc.add(
+          const NextTaskRequested(
+            fromPinnedItemPublicId: 'item-1',
+            userInitiated: true,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        clock = clock.add(const Duration(milliseconds: 799));
+        bloc.add(
+          const NextTaskRequested(
+            fromPinnedItemPublicId: 'item-2',
+            userInitiated: true,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(indexOf(bloc), 1);
+        clock = clock.add(const Duration(milliseconds: 2));
+        bloc.add(
+          const NextTaskRequested(
+            fromPinnedItemPublicId: 'item-2',
+            userInitiated: true,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) => expect(indexOf(bloc), 2),
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the first tap after start/resume has no cooldown',
+      setUp: arrangeThreeTasks,
+      build: buildClockedBloc,
+      act: (bloc) async {
+        await start(bloc);
+        bloc.add(
+          const NextTaskRequested(
+            fromPinnedItemPublicId: 'item-1',
+            userInitiated: true,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) => expect(indexOf(bloc), 1),
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a timer/auto request for the active task is not blocked by the cooldown',
+      setUp: arrangeThreeTasks,
+      build: buildClockedBloc,
+      act: (bloc) async {
+        await start(bloc);
+        bloc.add(const NextTaskRequested(fromPinnedItemPublicId: 'item-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(
+          const NextTaskRequested(
+            reason: AdvanceReason.timeExpired,
+            fromPinnedItemPublicId: 'item-2',
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) => expect(indexOf(bloc), 2),
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a rejection signal for a task that is no longer displayed does not skip another task',
+      setUp: () {
+        arrangeThreeTasks();
+        final rejected = StreamController<String>.broadcast();
+        addTearDown(rejected.close);
+        when(
+          () => syncEngine.taskRejectedExternally,
+        ).thenAnswer((_) => rejected.stream);
+        _rejectedControllerForTest = rejected;
+      },
+      build: buildClockedBloc,
+      act: (bloc) async {
+        await start(bloc);
+        bloc.add(const NextTaskRequested(fromPinnedItemPublicId: 'item-1'));
+        await Future<void>.delayed(Duration.zero);
+        _rejectedControllerForTest!.add('item-1');
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) => expect(indexOf(bloc), 1),
+    );
+  });
+
+  group('Next when the prefetched task list is only the current task', () {
+    void arrangeFallback({
+      required Future<List<AttemptTaskResponse>> Function() reload,
+    }) {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+        (_) async =>
+            _inProgressResponse(pinnedItemPublicId: 'item-1', orderIndex: 1),
+      );
+      var calls = 0;
+      when(() => repository.fetchAllTasks('attempt-1')).thenAnswer((_) {
+        // First call is the start prefetch, which fails and leaves one task.
+        if (calls++ == 0) throw const NetworkException('offline');
+        return reload();
+      });
+    }
+
+    Future<void> startThenNext(ExamAttemptBloc bloc) async {
+      bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const NextTaskRequested(fromPinnedItemPublicId: 'item-1'));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the server still has later tasks: reloads the list and moves to the next task',
+      setUp: () => arrangeFallback(
+        reload: () async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-1', orderIndex: 1),
+          _inProgressResponse(pinnedItemPublicId: 'item-2', orderIndex: 2),
+        ],
+      ),
+      build: buildBloc,
+      act: startThenNext,
+      verify: (bloc) {
+        final state = bloc.state as AttemptInProgress;
+        expect(state.task.pinnedItemPublicId, 'item-2');
+        verifyNever(() => repository.forceSubmit(any()));
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the reload also works when the server already marked the current task done',
+      setUp: () => arrangeFallback(
+        reload: () async => [
+          _inProgressResponse(pinnedItemPublicId: 'item-2', orderIndex: 2),
+        ],
+      ),
+      build: buildBloc,
+      act: startThenNext,
+      verify: (bloc) => expect(
+        (bloc.state as AttemptInProgress).task.pinnedItemPublicId,
+        'item-2',
+      ),
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the reload fails: stays on the task and does not submit the exam',
+      setUp: () => arrangeFallback(
+        reload: () async => throw const NetworkException('offline'),
+      ),
+      build: buildBloc,
+      act: startThenNext,
+      verify: (bloc) {
+        expect(
+          (bloc.state as AttemptInProgress).task.pinnedItemPublicId,
+          'item-1',
+        );
+        verifyNever(() => repository.forceSubmit(any()));
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the server agrees it is the last task: submits the exam as before',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(() => repository.startOrResumeAttempt('session-1')).thenAnswer(
+          (_) async => _inProgressResponse(pinnedItemPublicId: 'item-1'),
+        );
+      },
+      build: buildBloc,
+      act: startThenNext,
+      verify: (_) {
+        verify(() => repository.forceSubmit('attempt-1')).called(1);
+      },
+    );
+  });
 
   blocTest<ExamAttemptBloc, ExamAttemptState>(
     'swapping SessionEntryRepository for a different implementation requires no change to ExamAttemptBloc',
@@ -652,6 +918,73 @@ void main() {
     );
 
     blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a forceSubmit() refused with SESSION_CLOSED ends the attempt instead of offering retry',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => repository.forceSubmit('attempt-1'),
+        ).thenThrow(const ForbiddenException('SESSION_CLOSED'));
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptSessionClosed>(),
+      ],
+      verify: (_) {
+        verify(() => lockdownService.allowExitAfterSubmission()).called(1);
+        verify(() => syncEngine.stopSync()).called(1);
+        verify(() => timerService.stop()).called(1);
+        verify(() => mediaUploadCoordinator.stop()).called(1);
+      },
+    );
+
+    final sessionClosedSignal = StreamController<void>.broadcast();
+    tearDownAll(sessionClosedSignal.close);
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'the heartbeat reporting SESSION_CLOSED ends the attempt and stops all syncing',
+      setUp: () {
+        when(
+          () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+        ).thenAnswer((_) async => 'session-1');
+        when(
+          () => repository.startOrResumeAttempt('session-1'),
+        ).thenAnswer((_) async => _inProgressResponse());
+        when(
+          () => heartbeatService.sessionClosed,
+        ).thenAnswer((_) => sessionClosedSignal.stream);
+      },
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        sessionClosedSignal.add(null);
+      },
+      wait: const Duration(milliseconds: 20),
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptSessionClosed>(),
+      ],
+      verify: (_) {
+        verifyNever(() => repository.forceSubmit(any()));
+        verify(() => syncEngine.stopSync()).called(1);
+        verify(() => mediaUploadCoordinator.stop()).called(1);
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
       'a forceSubmit() failure stays on the attempt in a retryable state',
       setUp: () {
         when(
@@ -938,7 +1271,7 @@ void main() {
       'when SyncEngine.taskRejectedExternally emits, the bloc advances locally — '
       'moving to the next item in allTasks without a fetchNextTask server call',
       setUp: () {
-        final rejectedController = StreamController<void>.broadcast();
+        final rejectedController = StreamController<String>.broadcast();
         addTearDown(rejectedController.close);
         when(
           () => syncEngine.taskRejectedExternally,
@@ -963,7 +1296,7 @@ void main() {
       act: (bloc) async {
         bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
         await Future<void>.delayed(Duration.zero);
-        _rejectedControllerForTest!.add(null);
+        _rejectedControllerForTest!.add('item-1');
         await Future<void>.delayed(Duration.zero);
       },
       expect: () => [
@@ -974,6 +1307,103 @@ void main() {
       verify: (_) {
         verifyNever(() => repository.fetchNextTask(any()));
         verify(() => syncEngine.setActiveTask('item-2')).called(1);
+      },
+    );
+  });
+
+  group('Offline listening audio cache', () {
+    late _MockAttemptAudioCache audioCache;
+
+    setUp(() {
+      audioCache = _MockAttemptAudioCache();
+      when(() => audioCache.prefetch(any())).thenAnswer((_) async {});
+      when(() => audioCache.clear()).thenAnswer((_) async {});
+    });
+
+    ExamAttemptBloc buildCachedBloc() => ExamAttemptBloc(
+      repository: repository,
+      sessionEntryRepository: sessionEntryRepository,
+      syncEngine: syncEngine,
+      timerService: timerService,
+      mediaUploadCoordinator: mediaUploadCoordinator,
+      lockdownService: lockdownService,
+      heartbeatService: heartbeatService,
+      audioCache: audioCache,
+    );
+
+    void stubEntry(AttemptTaskResponse first, List<AttemptTaskResponse> all) {
+      when(
+        () => sessionEntryRepository.resolveSessionPublicId('session-1'),
+      ).thenAnswer((_) async => 'session-1');
+      when(
+        () => repository.startOrResumeAttempt('session-1'),
+      ).thenAnswer((_) async => first);
+      when(
+        () => repository.fetchAllTasks('attempt-1'),
+      ).thenAnswer((_) async => all);
+    }
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'prefetches the audio and images of every loaded task once the attempt is in progress',
+      setUp: () => stubEntry(
+        _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
+        [
+          _inProgressResponse(audioUrl: 'https://cdn.test/1.mp3'),
+          _inProgressResponse(
+            pinnedItemPublicId: 'item-2',
+            imageUrl: 'https://cdn.test/2.png',
+          ),
+        ],
+      ),
+      build: buildCachedBloc,
+      act: (bloc) =>
+          bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+      verify: (_) {
+        final urls =
+            verify(() => audioCache.prefetch(captureAny())).captured.single
+                as Iterable<String?>;
+        expect(urls.whereType<String>().toList(), [
+          'https://cdn.test/1.mp3',
+          'https://cdn.test/2.png',
+        ]);
+        verifyNever(() => audioCache.clear());
+      },
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'a failing prefetch never breaks the exam',
+      setUp: () {
+        stubEntry(_inProgressResponse(), [_inProgressResponse()]);
+        when(
+          () => audioCache.prefetch(any()),
+        ).thenAnswer((_) async => throw StateError('disk full'));
+      },
+      build: buildCachedBloc,
+      act: (bloc) =>
+          bloc.add(const SessionResolutionRequested(rawInput: 'session-1')),
+      expect: () => [isA<AttemptStarting>(), isA<AttemptInProgress>()],
+    );
+
+    blocTest<ExamAttemptBloc, ExamAttemptState>(
+      'clears the cached audio when the attempt ends',
+      setUp: () {
+        stubEntry(_inProgressResponse(), [_inProgressResponse()]);
+      },
+      build: buildCachedBloc,
+      act: (bloc) async {
+        bloc.add(const SessionResolutionRequested(rawInput: 'session-1'));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ForceSubmitRequested());
+      },
+      expect: () => [
+        isA<AttemptStarting>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptInProgress>(),
+        isA<AttemptCompleted>(),
+      ],
+      verify: (_) {
+        verify(() => audioCache.clear()).called(1);
       },
     );
   });
@@ -1174,4 +1604,4 @@ void main() {
 /// Holds the per-test StreamController so `act` can reach it after `setUp`
 /// constructs it — `blocTest`'s `setUp`/`act` don't share a closure scope
 /// otherwise.
-StreamController<void>? _rejectedControllerForTest;
+StreamController<String>? _rejectedControllerForTest;

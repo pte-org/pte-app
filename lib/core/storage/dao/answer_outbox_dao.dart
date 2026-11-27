@@ -35,6 +35,27 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
+  /// Stores [payload] as a pending row only when no row exists yet for the
+  /// key; an existing row (any status, any payload) is left untouched.
+  Future<void> insertAnswerIfAbsent({
+    required String attemptPublicId,
+    required String pinnedItemPublicId,
+    required String payload,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await into(answerOutboxTable).insert(
+      AnswerOutboxTableCompanion(
+        attemptPublicId: Value(attemptPublicId),
+        pinnedItemPublicId: Value(pinnedItemPublicId),
+        payload: Value(payload),
+        status: Value(AnswerSyncStatus.pending.name),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
+  }
+
   /// All rows for an attempt, any status — needed by Phase 3's resume
   /// reconciliation.
   Future<List<AnswerOutbox>> queryByAttempt(String attemptPublicId) {
@@ -75,12 +96,28 @@ class AnswerOutboxDao extends DatabaseAccessor<AppDatabase>
         .getSingleOrNull();
   }
 
-  Future<void> markSynced(String attemptPublicId, String pinnedItemPublicId) =>
-      _updateStatus(
-        attemptPublicId,
-        pinnedItemPublicId,
-        AnswerSyncStatus.synced,
-      );
+  /// Marks the row synced only if it still holds [sentPayload] — the payload
+  /// that was actually sent. A newer local write (e.g. the real recording that
+  /// replaced a blank advance answer while that request was in flight) must
+  /// stay pending so it is sent on a later flush instead of being swallowed.
+  Future<void> markSyncedIfUnchanged(
+    String attemptPublicId,
+    String pinnedItemPublicId,
+    String sentPayload,
+  ) {
+    return (update(answerOutboxTable)..where(
+          (t) =>
+              t.attemptPublicId.equals(attemptPublicId) &
+              t.pinnedItemPublicId.equals(pinnedItemPublicId) &
+              t.payload.equals(sentPayload),
+        ))
+        .write(
+          AnswerOutboxTableCompanion(
+            status: Value(AnswerSyncStatus.synced.name),
+            updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+  }
 
   /// Returns a row to retry-pending after a transient failure.
   Future<void> markPending(String attemptPublicId, String pinnedItemPublicId) =>

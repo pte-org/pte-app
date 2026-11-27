@@ -20,8 +20,8 @@ class RawUploadClient {
           Dio(
             BaseOptions(
               connectTimeout: AppConfig.connectTimeout,
-              receiveTimeout: AppConfig.receiveTimeout,
-              sendTimeout: AppConfig.sendTimeout,
+              receiveTimeout: AppConfig.uploadReceiveTimeout,
+              sendTimeout: AppConfig.uploadSendTimeout,
             ),
           );
 

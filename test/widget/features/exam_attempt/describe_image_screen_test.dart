@@ -44,6 +44,9 @@ class _MockSyncEngine extends Mock implements SyncEngine {}
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getTemporaryPath() async => '/tmp';
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => '/tmp';
 }
 
 TaskView _describeImageTask({

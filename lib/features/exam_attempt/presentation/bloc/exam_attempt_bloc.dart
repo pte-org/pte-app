@@ -7,10 +7,12 @@ import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/lockdown_service.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_navigation_constants.dart';
+import 'package:pte_app/features/exam_attempt/constants/exam_attempt_strings.dart';
+import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
 import 'package:pte_app/features/exam_attempt/domain/heartbeat_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/exam_attempt_repository.dart';
 import 'package:pte_app/features/exam_attempt/domain/repositories/session_entry_repository.dart';
-import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_service.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
@@ -33,7 +35,11 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     required MediaUploadCoordinator mediaUploadCoordinator,
     required LockdownService lockdownService,
     required HeartbeatService heartbeatService,
-  }) : _repository = repository,
+    AttemptAudioCache? audioCache,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now,
+       _audioCache = audioCache,
+       _repository = repository,
        _sessionEntryRepository = sessionEntryRepository,
        _syncEngine = syncEngine,
        _timerService = timerService,
@@ -43,13 +49,13 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
        super(const AttemptIdle()) {
     on<SessionResolutionRequested>(_onSessionResolutionRequested);
     on<NextTaskRequested>(_onNextTaskRequested);
-    on<NavigateTaskRequested>(_onNavigateTaskRequested);
     on<TimerSnapshotUpdated>(_onTimerSnapshotUpdated);
     on<TimerTaskAdvancedExternally>(_onTimerTaskAdvancedExternally);
     on<SyncTaskRejectedExternally>(_onSyncTaskRejectedExternally);
     on<ForceSubmitRequested>(_onForceSubmitRequested);
     on<DevPreviewAttemptSeeded>(_onDevPreviewAttemptSeeded);
     on<AppResumed>(_onAppResumed);
+    on<SessionClosedDetected>(_onSessionClosedDetected);
     _timerTicksSubscription = _timerService.ticks.listen(
       (snapshot) => add(TimerSnapshotUpdated(snapshot)),
     );
@@ -57,10 +63,16 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       (_) => add(const TimerTaskAdvancedExternally()),
     );
     _taskRejectedSubscription = _syncEngine.taskRejectedExternally.listen(
-      (_) => add(const SyncTaskRejectedExternally()),
+      (pinnedItemPublicId) =>
+          add(SyncTaskRejectedExternally(pinnedItemPublicId)),
+    );
+    _sessionClosedSubscription = _heartbeatService.sessionClosed.listen(
+      (_) => add(const SessionClosedDetected()),
     );
   }
 
+  final DateTime Function() _now;
+  final AttemptAudioCache? _audioCache;
   final ExamAttemptRepository _repository;
   final SessionEntryRepository _sessionEntryRepository;
   final SyncEngine _syncEngine;
@@ -70,7 +82,16 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
   final HeartbeatService _heartbeatService;
   late final StreamSubscription<TimerSnapshot> _timerTicksSubscription;
   late final StreamSubscription<void> _taskAdvancedSubscription;
-  late final StreamSubscription<void> _taskRejectedSubscription;
+  late final StreamSubscription<String> _taskRejectedSubscription;
+  late final StreamSubscription<void> _sessionClosedSubscription;
+
+  /// When the current task became active through an advance. `null` after a
+  /// fresh start or resume, so reopening the app never triggers the Next
+  /// cooldown.
+  DateTime? _taskActivatedAt;
+
+  /// Read by the Next button so its own cooldown matches this bloc's.
+  DateTime? get taskActivatedAt => _taskActivatedAt;
 
   /// Tracks the running attempt so a stray `NextTaskRequested` after
   /// completion (or before any attempt started) is a no-op, not a crash.
@@ -102,6 +123,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     Emitter<ExamAttemptState> emit,
   ) async {
     emit(const AttemptStarting());
+    _taskActivatedAt = null;
     String? sessionPublicId;
     var exitGuardActivated = false;
     try {
@@ -214,67 +236,98 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
   }
 
-  void _onNextTaskRequested(
+  Future<void> _onNextTaskRequested(
     NextTaskRequested event,
     Emitter<ExamAttemptState> emit,
-  ) {
+  ) async {
     final currentState = state;
     if (currentState is! AttemptInProgress ||
         currentState.submissionStatus != AttemptSubmissionStatus.ready) {
       return;
     }
-    _lastAdvanceReason = event.reason;
-
-    final nextIndex = currentState.currentIndex + 1;
-    if (nextIndex >= currentState.allTasks.length) {
-      add(ForceSubmitRequested(reason: event.reason));
+    // Only the first request for a task may move it: a second one (double
+    // tap, auto-advance plus tap, rejection signal) names a task that is no
+    // longer displayed and must not skip the next one.
+    final fromId = event.fromPinnedItemPublicId;
+    if (fromId != null && fromId != currentState.task.pinnedItemPublicId) {
       return;
     }
+    // A student's tap right after a task became active is most likely a
+    // double tap meant for the previous task.
+    final activatedAt = _taskActivatedAt;
+    if (event.userInitiated &&
+        activatedAt != null &&
+        _now().difference(activatedAt) <
+            ExamAttemptNavigationConstants.nextCooldown) {
+      return;
+    }
+    _lastAdvanceReason = event.reason;
 
-    final nextTask = currentState.allTasks[nextIndex];
+    var progress = currentState;
+    if (progress.currentIndex + 1 >= progress.allTasks.length) {
+      // The prefetched list says this is the last task. Trust it only when
+      // the server agrees; otherwise the list came from the single-task
+      // fallback and the exam must not end here.
+      if (_isLastAccordingToServer(progress.task)) {
+        add(ForceSubmitRequested(reason: event.reason));
+        return;
+      }
+      final reloaded = await _reloadTaskList(progress);
+      if (reloaded == null) return;
+      progress = reloaded;
+    }
+
+    final nextIndex = progress.currentIndex + 1;
+    final nextTask = progress.allTasks[nextIndex];
+    _taskActivatedAt = _now();
     _syncEngine.setActiveTask(nextTask.pinnedItemPublicId);
     _timerService.seedFromTask(nextTask);
     _timerService.startPolling(currentState.attemptPublicId);
     _heartbeatService.start(currentState.attemptPublicId);
     emit(
-      currentState.copyWith(
+      progress.copyWith(
         currentIndex: nextIndex,
         timerSnapshot: _timerService.currentSnapshot,
       ),
     );
   }
 
-  void _onNavigateTaskRequested(
-    NavigateTaskRequested event,
-    Emitter<ExamAttemptState> emit,
-  ) {
-    final currentState = state;
-    if (currentState is! AttemptInProgress ||
-        currentState.submissionStatus != AttemptSubmissionStatus.ready) {
-      return;
+  /// `orderIndex` is the task's own fixed position in the whole attempt and
+  /// `totalTasks` the attempt's task count, so this does not depend on where
+  /// the server pointer currently is.
+  bool _isLastAccordingToServer(TaskView task) =>
+      task.orderIndex + 1 >= task.totalTasks;
+
+  /// Re-reads the remaining tasks when the local list ran out although the
+  /// server still has later ones. Returns the state with [current] followed by
+  /// those later tasks, or `null` (stay on the task, student can tap again)
+  /// when the fetch fails, the attempt moved on, or nothing follows.
+  Future<AttemptInProgress?> _reloadTaskList(AttemptInProgress current) async {
+    final List<TaskView> remaining;
+    try {
+      remaining = await _fetchRemainingTasks(current.attemptPublicId);
+    } catch (_) {
+      return null;
     }
-    _lastAdvanceReason = AdvanceReason.manual;
+    final latest = state;
+    if (latest is! AttemptInProgress ||
+        latest.submissionStatus != AttemptSubmissionStatus.ready ||
+        latest.task.pinnedItemPublicId != current.task.pinnedItemPublicId) {
+      return null;
+    }
+    final later = remaining
+        .where((t) => t.orderIndex > current.task.orderIndex)
+        .toList();
+    if (later.isEmpty) return null;
+    return latest.copyWith(allTasks: [current.task, ...later], currentIndex: 0);
+  }
 
-    final fromIndex = currentState.allTasks.indexWhere(
-      (t) => t.pinnedItemPublicId == event.fromPinnedItemPublicId,
-    );
-    if (fromIndex < 0) return;
-
-    final targetIndex =
-        fromIndex + (event.direction == TaskNavigationDirection.next ? 1 : -1);
-    if (targetIndex < 0 || targetIndex >= currentState.allTasks.length) return;
-
-    final targetTask = currentState.allTasks[targetIndex];
-    _syncEngine.setActiveTask(targetTask.pinnedItemPublicId);
-    _timerService.seedFromTask(targetTask);
-    _timerService.startPolling(currentState.attemptPublicId);
-    _heartbeatService.start(currentState.attemptPublicId);
-    emit(
-      currentState.copyWith(
-        currentIndex: targetIndex,
-        timerSnapshot: _timerService.currentSnapshot,
-      ),
-    );
+  Future<List<TaskView>> _fetchRemainingTasks(String attemptPublicId) async {
+    final responses = await _repository.fetchAllTasks(attemptPublicId);
+    return responses
+        .where((r) => !r.completed && r.task != null)
+        .map((r) => r.task!)
+        .toList();
   }
 
   Exception _asAttemptException(Object error) =>
@@ -307,18 +360,21 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     }
   }
 
-  void _onTimerTaskAdvancedExternally(
+  Future<void> _onTimerTaskAdvancedExternally(
     TimerTaskAdvancedExternally event,
     Emitter<ExamAttemptState> emit,
   ) {
-    _onNextTaskRequested(const NextTaskRequested(), emit);
+    return _onNextTaskRequested(const NextTaskRequested(), emit);
   }
 
-  void _onSyncTaskRejectedExternally(
+  Future<void> _onSyncTaskRejectedExternally(
     SyncTaskRejectedExternally event,
     Emitter<ExamAttemptState> emit,
   ) {
-    _onNextTaskRequested(const NextTaskRequested(), emit);
+    return _onNextTaskRequested(
+      NextTaskRequested(fromPinnedItemPublicId: event.pinnedItemPublicId),
+      emit,
+    );
   }
 
   Future<void> _onForceSubmitRequested(
@@ -366,6 +422,10 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
         canRetry: response.canRetry,
       );
     } catch (e) {
+      if (_isSessionClosed(e)) {
+        await _endBecauseSessionClosed(attemptPublicId, emit);
+        return;
+      }
       final latestState = state;
       if (latestState is AttemptInProgress &&
           latestState.attemptPublicId == attemptPublicId) {
@@ -442,6 +502,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       final safeIndex = resumeIndex < 0 ? 0 : resumeIndex;
       final resumeTask = freshTasks[safeIndex];
 
+      _prefetchAudio(freshTasks);
       _syncEngine.setActiveTask(resumeTask.pinnedItemPublicId);
       _timerService.seedFromTask(resumeTask);
       _timerService.startPolling(attemptPublicId);
@@ -485,8 +546,68 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // If it fails, let the caller keep the attempt active and expose Retry;
     // forceSubmit is idempotent, so the next retry can re-run this boundary.
     await _lockdownService.allowExitAfterSubmission();
+    await _tearDownAttempt();
+    final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
+    _lastAdvanceReason = AdvanceReason.manual;
+    emit(
+      AttemptCompleted(
+        attemptPublicId,
+        timeExpired: timeExpired,
+        attemptNumber: attemptNumber,
+        remainingRetries: remainingRetries,
+        canRetry: canRetry,
+      ),
+    );
+  }
 
+  bool _isSessionClosed(Object error) =>
+      error is ForbiddenException &&
+      error.message == ExamAttemptStrings.sessionClosedCode;
+
+  Future<void> _onSessionClosedDetected(
+    SessionClosedDetected event,
+    Emitter<ExamAttemptState> emit,
+  ) async {
+    final attemptPublicId = _attemptPublicId;
+    if (attemptPublicId == null) return;
+    await _endBecauseSessionClosed(attemptPublicId, emit);
+  }
+
+  /// The session closed under the student: the server already submitted the
+  /// attempt with whatever it had received, so there is nothing left to
+  /// retry. Stops all sync, releases the exam guard and lets the student leave.
+  Future<void> _endBecauseSessionClosed(
+    String attemptPublicId,
+    Emitter<ExamAttemptState> emit,
+  ) async {
+    if (_attemptPublicId != attemptPublicId) return;
+    try {
+      await _lockdownService.allowExitAfterSubmission();
+    } on Object catch (_) {
+      // The exam is over either way; a failing native unlock must not keep
+      // the student on a screen that can no longer do anything.
+    }
+    await _tearDownAttempt();
+    _lastAdvanceReason = AdvanceReason.manual;
+    emit(AttemptSessionClosed(attemptPublicId));
+  }
+
+  /// Background download of the attempt's listening audio and task images so
+  /// prompts keep playing and images keep showing offline. Never blocks or
+  /// fails the exam: a task whose media is not cached simply streams.
+  void _prefetchAudio(List<TaskView> tasks) {
+    final cache = _audioCache;
+    if (cache == null) return;
+    unawaited(
+      cache
+          .prefetch(tasks.expand((t) => [t.imageUrl, t.audioUrl]))
+          .catchError((Object _) {}),
+    );
+  }
+
+  Future<void> _tearDownAttempt() async {
     _attemptPublicId = null;
+    unawaited(_audioCache?.clear());
     _syncEngine.setActiveTask(null);
     _syncEngine.stopSync();
     _timerService.stop();
@@ -513,17 +634,6 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
       // The native permission is already open; a failed flag teardown cannot
       // turn the completion surface into an unacknowledged exit path.
     }
-    final timeExpired = _lastAdvanceReason == AdvanceReason.timeExpired;
-    _lastAdvanceReason = AdvanceReason.manual;
-    emit(
-      AttemptCompleted(
-        attemptPublicId,
-        timeExpired: timeExpired,
-        attemptNumber: attemptNumber,
-        remainingRetries: remainingRetries,
-        canRetry: canRetry,
-      ),
-    );
   }
 
   Future<void> _emitFromResponse(
@@ -566,13 +676,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     // Falls back to single-task mode on error — exam still runs correctly.
     List<TaskView> allTasks;
     try {
-      final responses = await _repository.fetchAllTasks(
-        response.attemptPublicId,
-      );
-      allTasks = responses
-          .where((r) => !r.completed && r.task != null)
-          .map((r) => r.task!)
-          .toList();
+      allTasks = await _fetchRemainingTasks(response.attemptPublicId);
       if (allTasks.isEmpty) allTasks = [task];
     } catch (_) {
       allTasks = [task];
@@ -583,6 +687,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     );
     final safeIndex = currentIndex < 0 ? 0 : currentIndex;
 
+    _prefetchAudio(allTasks);
     _syncEngine.setActiveTask(task.pinnedItemPublicId);
     // Started on every in-progress transition, not just the first — a
     // no-op while already running (MediaUploadCoordinator.start()'s own
@@ -647,6 +752,7 @@ class ExamAttemptBloc extends Bloc<ExamAttemptEvent, ExamAttemptState> {
     unawaited(_timerTicksSubscription.cancel());
     unawaited(_taskAdvancedSubscription.cancel());
     unawaited(_taskRejectedSubscription.cancel());
+    unawaited(_sessionClosedSubscription.cancel());
     // Best-effort: if the bloc is being torn down while a lockdown
     // session is still active (force-quit, hot-restart, etc.) we want
     // the window back to a normal state. Errors are silently ignored

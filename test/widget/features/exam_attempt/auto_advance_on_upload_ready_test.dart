@@ -43,7 +43,7 @@ void main() {
     syncEngine = _MockSyncEngine();
     autoRecordCubit = _MockAutoRecordCubit();
     cubitStateController = StreamController<AutoRecordState>.broadcast();
-    when(() => syncEngine.flushOne(any())).thenAnswer((_) async {});
+    when(() => syncEngine.submitForAdvance(any())).thenAnswer((_) async {});
   });
 
   tearDown(() => cubitStateController.close());
@@ -89,12 +89,12 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pump();
 
-        verifyNever(() => syncEngine.flushOne(any()));
+        verifyNever(() => syncEngine.submitForAdvance(any()));
         verifyNever(() => bloc.add(any()));
       });
 
       testWidgets(
-        'the moment uploadStatus transitions to ready, flushOne is called then NextTaskRequested is dispatched — '
+        'the moment uploadStatus transitions to ready, submitForAdvance is called then NextTaskRequested is dispatched — '
         'automatically, with no user interaction',
         (tester) async {
           stubCubitState(
@@ -110,8 +110,77 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          verify(() => syncEngine.flushOne('item-1')).called(1);
-          verify(() => bloc.add(const NextTaskRequested())).called(1);
+          verify(() => syncEngine.submitForAdvance('item-1')).called(1);
+          verify(
+            () => bloc.add(
+              const NextTaskRequested(fromPinnedItemPublicId: 'item-1'),
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'advances as soon as the recording row is written locally, without waiting for the upload',
+        (tester) async {
+          stubCubitState(
+            const AutoRecordState(recordingPhase: RecordingPhase.recorded),
+          );
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.recorded,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verify(() => syncEngine.submitForAdvance('item-1')).called(1);
+          verify(
+            () => bloc.add(
+              const NextTaskRequested(fromPinnedItemPublicId: 'item-1'),
+            ),
+          ).called(1);
+
+          // The upload progressing and finishing later must not advance again.
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pump();
+          cubitStateController.add(
+            const AutoRecordState(
+              recordingPhase: RecordingPhase.recorded,
+              uploadStatus: PendingMediaUploadStatus.ready,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => syncEngine.submitForAdvance(any()));
+          verifyNever(() => bloc.add(any()));
+        },
+      );
+
+      testWidgets(
+        'a row that already existed on screen entry (no recording made here) never auto-advances',
+        (tester) async {
+          stubCubitState(const AutoRecordState());
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => syncEngine.submitForAdvance(any()));
+          verifyNever(() => bloc.add(any()));
         },
       );
 
@@ -145,8 +214,53 @@ void main() {
           // consumed, so calling `verify(...).called(1)` a second time for the
           // same interaction would spuriously fail even if production code
           // never double-advanced.
-          verify(() => syncEngine.flushOne('item-1')).called(1);
-          verify(() => bloc.add(const NextTaskRequested())).called(1);
+          verify(() => syncEngine.submitForAdvance('item-1')).called(1);
+          verify(
+            () => bloc.add(
+              const NextTaskRequested(fromPinnedItemPublicId: 'item-1'),
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'a failed submit does not advance, and a later ready event can retry',
+        (tester) async {
+          var calls = 0;
+          when(() => syncEngine.submitForAdvance(any())).thenAnswer((_) async {
+            if (++calls == 1) throw Exception('boom');
+          });
+          stubCubitState(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+
+          cubitStateController.add(
+            const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready),
+          );
+          await tester.pump();
+          await tester.pump();
+          verifyNever(() => bloc.add(any()));
+
+          cubitStateController.add(
+            const AutoRecordState(
+              uploadStatus: PendingMediaUploadStatus.uploading,
+            ),
+          );
+          await tester.pump();
+          cubitStateController.add(
+            const AutoRecordState(uploadStatus: PendingMediaUploadStatus.ready),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verify(
+            () => bloc.add(
+              const NextTaskRequested(fromPinnedItemPublicId: 'item-1'),
+            ),
+          ).called(1);
         },
       );
     },

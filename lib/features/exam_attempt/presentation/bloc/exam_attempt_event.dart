@@ -1,5 +1,4 @@
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
-import 'package:pte_app/features/exam_attempt/domain/task_navigation_direction.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
 
 sealed class ExamAttemptEvent {
@@ -34,43 +33,38 @@ final class SessionResolutionRequested extends ExamAttemptEvent {
 /// Advances to the next task for the currently running attempt. A no-op
 /// (not a crash) if dispatched with no attempt running — e.g. a stray
 /// event arriving after `AttemptCompleted` (phase-03 Design Constraints).
+///
+/// [fromPinnedItemPublicId] names the task the request was made for. The bloc
+/// drops the event when a different task is already active, so two requests
+/// for the same task (double tap, auto-advance plus tap, rejection signal)
+/// move exactly one task. `null` skips that guard (internal events only).
+///
+/// [userInitiated] marks a student's tap; only those are dropped during the
+/// short cooldown after a task becomes active.
 final class NextTaskRequested extends ExamAttemptEvent {
-  const NextTaskRequested({this.reason = AdvanceReason.manual});
-
-  final AdvanceReason reason;
-
-  // Value equality (rather than the default identity) so a `NextTaskRequested`
-  // built at runtime with an explicit `reason:` (as `TaskAdvanceButton._advance`
-  // always does, including for the default reason) compares equal to a
-  // `const NextTaskRequested()` literal with the same reason — mocktail's
-  // `verify` and bloc_test's `expectLater(bloc, emits(...))` both rely on `==`.
-  @override
-  bool operator ==(Object other) =>
-      other is NextTaskRequested && other.reason == reason;
-
-  @override
-  int get hashCode => reason.hashCode;
-}
-
-/// Explicit Previous/Next action. Unlike [NextTaskRequested], this moves the
-/// server pointer in either direction and is guarded by the pinned exam mode.
-final class NavigateTaskRequested extends ExamAttemptEvent {
-  const NavigateTaskRequested({
-    required this.fromPinnedItemPublicId,
-    required this.direction,
+  const NextTaskRequested({
+    this.reason = AdvanceReason.manual,
+    this.fromPinnedItemPublicId,
+    this.userInitiated = false,
   });
 
-  final String fromPinnedItemPublicId;
-  final TaskNavigationDirection direction;
+  final AdvanceReason reason;
+  final String? fromPinnedItemPublicId;
+  final bool userInitiated;
 
+  // Value equality (rather than the default identity) so mocktail's `verify`
+  // and bloc_test's `expectLater(bloc, emits(...))` can compare a runtime-built
+  // event with a `const` literal.
   @override
   bool operator ==(Object other) =>
-      other is NavigateTaskRequested &&
+      other is NextTaskRequested &&
+      other.reason == reason &&
       other.fromPinnedItemPublicId == fromPinnedItemPublicId &&
-      other.direction == direction;
+      other.userInitiated == userInitiated;
 
   @override
-  int get hashCode => Object.hash(fromPinnedItemPublicId, direction);
+  int get hashCode =>
+      Object.hash(reason, fromPinnedItemPublicId, userInitiated);
 }
 
 /// Dispatched internally by the `TimerService.ticks` subscription — not
@@ -96,7 +90,10 @@ final class TimerTaskAdvancedExternally extends ExamAttemptEvent {
 /// [TimerTaskAdvancedExternally], since the client's local "current task"
 /// view is equally stale here (phase-07 Design Constraints).
 final class SyncTaskRejectedExternally extends ExamAttemptEvent {
-  const SyncTaskRejectedExternally();
+  const SyncTaskRejectedExternally(this.pinnedItemPublicId);
+
+  /// The task the server rejected; ignored if it is no longer displayed.
+  final String pinnedItemPublicId;
 }
 
 /// User-initiated, irreversible: ends the attempt immediately regardless of
@@ -110,6 +107,12 @@ final class ForceSubmitRequested extends ExamAttemptEvent {
   const ForceSubmitRequested({this.reason = AdvanceReason.manual});
 
   final AdvanceReason reason;
+}
+
+/// The server reported `SESSION_CLOSED` for the running attempt (heartbeat or
+/// submit). Ends the attempt locally; the server already settled it.
+final class SessionClosedDetected extends ExamAttemptEvent {
+  const SessionClosedDetected();
 }
 
 /// `kDebugMode`-only: seeds [task] straight into `AttemptInProgress` without
