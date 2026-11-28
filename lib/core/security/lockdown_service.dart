@@ -13,6 +13,15 @@ import 'package:pte_app/core/security/lockdown_mode.dart';
 import 'package:pte_app/core/security/models/violation_event.dart';
 import 'package:pte_app/core/security/violation_reporter.dart';
 
+/// Returns monotonic elapsed time. Used for violation debounce.
+/// This is a static function so it can be called without an instance.
+Duration Function() _defaultMonotonicElapsed = () {
+  _stopwatch ??= Stopwatch()..start();
+  return _stopwatch!.elapsed;
+};
+
+Stopwatch? _stopwatch;
+
 /// Thrown by [LockdownService.activateLockdown] when at least one
 /// underlying platform call failed. The list of [failedChecks] gives
 /// the UI enough information to render the
@@ -59,6 +68,7 @@ class LockdownService {
       Future<String> Function(String)? assetLoader,
     })?
     forbiddenConfigLoader,
+    Duration Function()? monotonicElapsed,
   }) : _windowManager = windowManager,
        _processManager = processManager,
        _clipboard = clipboard,
@@ -66,7 +76,8 @@ class LockdownService {
        _violationReporter = violationReporter,
        _logger = logger,
        _forbiddenConfigLoader =
-           forbiddenConfigLoader ?? ForbiddenAppsConfig.load;
+           forbiddenConfigLoader ?? ForbiddenAppsConfig.load,
+       _monotonicElapsed = monotonicElapsed ?? _defaultMonotonicElapsed;
 
   final WindowManagerChannel _windowManager;
   final ProcessManagerChannel _processManager;
@@ -78,6 +89,7 @@ class LockdownService {
     Future<String> Function(String)? assetLoader,
   })
   _forbiddenConfigLoader;
+  final Duration Function() _monotonicElapsed;
 
   ForbiddenAppsConfig? _forbiddenAppsConfig;
 
@@ -87,7 +99,7 @@ class LockdownService {
   bool _attemptExitGuardActive = false;
   bool _exitAllowed = false;
   bool _violationMonitoringActive = false;
-  final Map<ViolationType, DateTime> _lastViolationAt = {};
+  final Map<ViolationType, Duration> _lastViolationAt = {};
   static const _violationDebounce = Duration(seconds: 1);
   final List<StreamSubscription<String>> _violationSubscriptions = [];
 
@@ -533,13 +545,15 @@ class LockdownService {
       );
       return;
     }
-    final now = DateTime.now();
+    final monotonicNow = _monotonicElapsed();
     final previous = _lastViolationAt[type];
-    if (previous != null && now.difference(previous) < _violationDebounce) {
+    if (previous != null &&
+        monotonicNow.inMicroseconds - previous.inMicroseconds <
+            _violationDebounce.inMicroseconds) {
       _logger.d('Debounced repeated violation: ${type.name}');
       return;
     }
-    _lastViolationAt[type] = now;
+    _lastViolationAt[type] = monotonicNow;
     _logger.w('Violation detected: ${type.name}');
     if (!_violationStreamController.isClosed) {
       _violationStreamController.add(type);
@@ -552,7 +566,7 @@ class LockdownService {
         attemptPublicId: attemptId,
         type: type,
         severity: severity,
-        timestamp: now,
+        timestamp: DateTime.now(),
         metadata: metadata,
       ),
     );
