@@ -67,6 +67,14 @@ final class NotCurrentTaskException extends ConflictException {
   const NotCurrentTaskException(super.message);
 }
 
+/// A submission or save was attempted after the exam deadline (attempt grace window).
+/// `pte-api`'s `AttemptDeadlinePassedException` (`message: "ATTEMPT_DEADLINE_PASSED"`).
+/// The local outbox row is terminal; the submission cannot be retried
+/// (phase-04 deadline enforcement, FR-02).
+final class AttemptDeadlinePassedException extends ConflictException {
+  const AttemptDeadlinePassedException(super.message);
+}
+
 /// The attempt reached a terminal status before some other call did —
 /// `pte-api`'s `AttemptAlreadyCompleteException` (`message: "ATTEMPT_ALREADY_COMPLETE"`),
 /// thrown by several endpoints (`submitAnswer`, `playAudio`, `forceSubmit`, `heartbeat`)

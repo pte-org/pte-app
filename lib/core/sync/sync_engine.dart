@@ -348,6 +348,15 @@ class SyncEngine {
         e.message,
       );
       _taskRejectedController.add(answer.pinnedItemPublicId);
+    } on AttemptDeadlinePassedException catch (e) {
+      // The attempt's grace window has passed. The outbox row is terminal and
+      // cannot be retried. Submit is still accepted by the server, but save
+      // attempts are rejected (phase-04 deadline enforcement, FR-02).
+      await _outboxDao.markTerminalRejected(
+        answer.attemptPublicId,
+        answer.pinnedItemPublicId,
+        e.message,
+      );
     } on ConflictException catch (e) {
       // Generic fallback — an already-submitted answer or any other/future
       // 409 cause not yet given its own type. Still terminal (Phase 2's
