@@ -1,18 +1,27 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import 'package:pte_app/core/config/app_config.dart';
 import 'package:pte_app/core/network/api_exceptions.dart';
+import 'package:pte_app/core/time/server_clock.dart';
 
 /// Thin wrapper over [Dio] used by every feature repository. Callers pass
 /// the **full** gateway-relative path (e.g. `/api/v1/auth/login`) — the
 /// underlying Dio instance's base URL intentionally excludes `/api`, so
 /// omitting it here would 404 at the gateway. Errors are mapped to
 /// [ApiException] subtypes here so every call site branches on type, never
-/// on a raw status code.
+/// on a raw status code. Syncs [ServerClock] on every successful response
+/// from the HTTP `Date` header (FR-02).
 class ApiClient {
-  ApiClient({required Dio dio}) : _dio = dio;
+  ApiClient({
+    required Dio dio,
+    ServerClock? serverClock,
+  })  : _dio = dio,
+        _serverClock = serverClock ?? ServerClock();
 
   final Dio _dio;
+  final ServerClock _serverClock;
 
   Future<Response<T>> get<T>(
     String path, {
@@ -46,13 +55,10 @@ class ApiClient {
   /// (phase-02 Design Constraints). Do not add a shortcut call site.
   ///
   /// A 409 here is remapped from the generic [ConflictException] to
-  /// [NotCurrentTaskException] by inspecting the response body's `message`
-  /// field — this endpoint-specific remap, not a change to [_mapError]
-  /// itself, is what keeps every other 409 call site's behavior untouched
-  /// (phase-07 Design Constraints). Used to also remap `RESPONSE_WINDOW_EXPIRED`
-  /// to a dedicated exception type — removed (client-side-exam-timer Phase 7)
-  /// once the server-side exception producing that message was deleted in
-  /// Phase 5; the server can no longer send it.
+  /// [NotCurrentTaskException] or [AttemptDeadlinePassedException] by inspecting
+  /// the response body's `message` field — this endpoint-specific remap, not a
+  /// change to [_mapError] itself, is what keeps every other 409 call site's
+  /// behavior untouched (phase-07/phase-04 Design Constraints).
   Future<Response<void>> submitAnswer({
     required String attemptPublicId,
     required String pinnedItemPublicId,
@@ -66,6 +72,7 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'ATTEMPT_DEADLINE_PASSED' => AttemptDeadlinePassedException(e.message),
         _ => e,
       };
     }
@@ -87,6 +94,7 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'ATTEMPT_DEADLINE_PASSED' => AttemptDeadlinePassedException(e.message),
         _ => e,
       };
     }
@@ -149,6 +157,7 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'ATTEMPT_DEADLINE_PASSED' => AttemptDeadlinePassedException(e.message),
         _ => e,
       };
     }
@@ -175,6 +184,7 @@ class ApiClient {
     } on ConflictException catch (e) {
       throw switch (e.message) {
         'NOT_CURRENT_TASK' => NotCurrentTaskException(e.message),
+        'ATTEMPT_DEADLINE_PASSED' => AttemptDeadlinePassedException(e.message),
         _ => e,
       };
     }
@@ -198,9 +208,23 @@ class ApiClient {
 
   Future<Response<T>> _run<T>(Future<Response<dynamic>> Function() call) async {
     try {
-      return _asTypedResponse<T>(await call());
+      final response = await call();
+      _syncServerClock(response);
+      return _asTypedResponse<T>(response);
     } on DioException catch (e) {
       throw _mapError(e);
+    }
+  }
+
+  /// Syncs [ServerClock] with the HTTP `Date` header (RFC 7231) if present.
+  void _syncServerClock(Response<dynamic> response) {
+    final dateHeader = response.headers.value('date');
+    if (dateHeader == null) return;
+    try {
+      final serverTime = HttpDate.parse(dateHeader);
+      _serverClock.syncWith(serverTime);
+    } catch (e) {
+      // Ignore parse errors; malformed Date headers don't block the request
     }
   }
 

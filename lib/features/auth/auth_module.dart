@@ -9,6 +9,7 @@ import 'package:pte_app/core/network/interceptors/token_refresh_interceptor.dart
 import 'package:pte_app/core/network/proactive_refresh_scheduler.dart';
 import 'package:pte_app/core/network/token_refresher.dart';
 import 'package:pte_app/core/storage/token_store.dart';
+import 'package:pte_app/core/time/server_clock.dart';
 import 'package:pte_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:pte_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:pte_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -45,11 +46,14 @@ void setupAuthModule() {
     ),
   );
 
+  getIt.registerLazySingleton<ServerClock>(() => ServerClock());
+
   getIt.registerLazySingleton<ApiClient>(
     () => ApiClient(
       dio: _newGatewayDio()
         ..interceptors.add(AuthHeaderInterceptor(tokenStore: getIt()))
         ..interceptors.add(TokenRefreshInterceptor(refresher: getIt())),
+      serverClock: getIt<ServerClock>(),
     ),
   );
 

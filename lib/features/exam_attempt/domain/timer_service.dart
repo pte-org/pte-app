@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:pte_app/core/time/server_clock.dart';
 import 'package:pte_app/features/exam_attempt/domain/task_view.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_phase.dart';
 import 'package:pte_app/features/exam_attempt/domain/timer_snapshot.dart';
@@ -14,30 +15,27 @@ typedef TimerScheduler =
 const Duration _localTickInterval = Duration(seconds: 1);
 
 /// Client-side-exam-timer refactor (Phase 3): countdown and prep→response
-/// phase transition run entirely on-device, anchored to wall-clock deadlines
-/// computed once from [TaskView.prepSeconds]/[TaskView.responseSeconds] at
-/// [seedFromTask] — never a server poll/reconciliation. Deliberately
-/// `DateTime.now()`-anchored, not `Stopwatch`-anchored (the prior design's
-/// FR-09 explicitly avoided `DateTime.now()` specifically to resist a
-/// student changing their device clock — that anti-cheat concern no longer
-/// applies now that server-side deadline enforcement itself is gone; see
-/// `research/refactor_polling.md`). A wall-clock deadline also means
-/// [currentSnapshot] is correct immediately after the app is backgrounded/
-/// resumed for any length of time, with no special-case reconciliation
-/// needed — recomputed fresh from `DateTime.now()` vs. the fixed deadline on
-/// every read, unaffected by how long a [Timer] callback was delayed.
+/// phase transition run entirely on-device, anchored to server-time deadlines
+/// from [TaskView.examEndTime]. All deadlines are server-provided, so timer
+/// computes time left as `deadline - serverClock.now()`. The [ServerClock]
+/// anchors to server time (from HTTP `Date` header or response field) and
+/// advances only via monotonic elapsed, so device wall-clock changes cannot
+/// extend or shrink the deadline (FR-02).
 ///
-/// Known, accepted residual gap (code-reviewer LOW finding): a benign
-/// wall-clock jump mid-task (OS NTP resync, a manual date/time change for a
-/// reason unrelated to cheating) could still visibly skip/jump the countdown
-/// or flip phase early/late — this is about robustness, not the adversarial
-/// clock-tampering concern FR-09 addressed, and is judged acceptable given
-/// the same tradeoff.
+/// A wall-clock deadline also means [currentSnapshot] is correct immediately
+/// after the app is backgrounded/resumed for any length of time, with no
+/// special-case reconciliation needed — recomputed fresh from
+/// [ServerClock.now()] vs. the fixed deadline on every read, unaffected by
+/// how long a [Timer] callback was delayed.
 class TimerService {
-  TimerService({TimerScheduler? scheduler})
-    : _scheduler = scheduler ?? Timer.new;
+  TimerService({
+    TimerScheduler? scheduler,
+    ServerClock? serverClock,
+  })  : _scheduler = scheduler ?? Timer.new,
+        _serverClock = serverClock ?? ServerClock();
 
   final TimerScheduler _scheduler;
+  final ServerClock _serverClock;
 
   final StreamController<TimerSnapshot> _ticksController =
       StreamController<TimerSnapshot>.broadcast();
@@ -75,7 +73,7 @@ class TimerService {
   Stream<void> get taskAdvancedExternally => _taskAdvancedController.stream;
 
   TimerSnapshot get currentSnapshot {
-    final now = DateTime.now();
+    final now = _serverClock.now();
     final deadline = _phase == TimerPhase.prep
         ? _prepDeadline
         : _responseDeadline;
@@ -96,15 +94,15 @@ class TimerService {
       duration.isNegative ? Duration.zero : duration;
 
   /// Bootstraps the countdown from a freshly-fetched [TaskView] — computes
-  /// local wall-clock deadlines from [TaskView.prepSeconds]/[TaskView.responseSeconds]
-  /// anchored to `DateTime.now()` at this exact call, per FR-01. A zero-prep
+  /// server-time deadlines from [TaskView.prepSeconds]/[TaskView.responseSeconds]
+  /// anchored to `serverClock.now()` at this exact call, per FR-02. A zero-prep
   /// task (`prepSeconds == 0`) starts directly in [TimerPhase.response],
   /// matching the server's own equivalent collapse-immediately behavior.
   /// Does not itself (re)start the tick/phase-transition timer chain — the
   /// caller ([ExamAttemptBloc]) calls [startPolling] right after, exactly as
   /// it always has.
   void seedFromTask(TaskView task) {
-    final now = DateTime.now();
+    final now = _serverClock.now();
     _currentOrderIndex = task.orderIndex;
     _phase = task.prepSeconds > 0 ? TimerPhase.prep : TimerPhase.response;
     _prepDeadline = now.add(Duration(seconds: task.prepSeconds));
@@ -156,7 +154,7 @@ class TimerService {
     final deadline = _prepDeadline;
     if (deadline == null) return;
     _phaseTransitionTimer = _scheduler(
-      _nonNegative(deadline.difference(DateTime.now())),
+      _nonNegative(deadline.difference(_serverClock.now())),
       () {
         if (generation != _generation) return;
         _phase = TimerPhase.response;

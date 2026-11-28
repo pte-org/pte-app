@@ -11,6 +11,7 @@ import 'package:pte_app/core/storage/dao/answer_outbox_dao.dart';
 import 'package:pte_app/core/storage/dao/pending_media_upload_dao.dart';
 import 'package:pte_app/core/sync/media_upload_coordinator.dart';
 import 'package:pte_app/core/sync/sync_engine.dart';
+import 'package:pte_app/core/time/server_clock.dart';
 import 'package:pte_app/features/exam_attempt/listening/data/audio_player_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/speaking_writing/data/audio_recorder_service_impl.dart';
 import 'package:pte_app/features/exam_attempt/data/attempt_audio_cache.dart';
@@ -47,13 +48,13 @@ void setupExamAttemptModule() {
     () => AudioPromptRepositoryImpl(apiClient: getIt<ApiClient>()),
   );
 
-  // TimerService takes no repository — client-side-exam-timer Phase 3 made
-  // it a pure local wall-clock countdown, no network calls at all. The
-  // `TimerRepository`/`TimerRepositoryImpl` registration this used to depend
-  // on (and the dead `/timer`-calling `ApiClient.fetchTimerState` it wrapped)
-  // was deleted entirely in Phase 7's cross-repo cleanup pass, once Phase 5
-  // deleted the server-side `/timer` endpoint it called.
-  getIt.registerLazySingleton<TimerService>(() => TimerService());
+  // TimerService is now anchored to ServerClock (FR-02) so device wall-clock
+  // changes cannot extend or shrink the exam deadline. The injection of
+  // ServerClock here and the ApiClient's sync-on-every-response logic ensure
+  // the timer follows server time, not the local device clock.
+  getIt.registerLazySingleton<TimerService>(
+    () => TimerService(serverClock: getIt<ServerClock>()),
+  );
 
   // Presence signal for the parallel connectivity-monitoring feature
   // (client-side-exam-timer Phase 4, FR-04) — entirely decoupled from
